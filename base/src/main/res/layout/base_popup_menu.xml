@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <com.pichs.xwidget.view.XImageView
+        android:id="@+id/iv_arrow"
+        android:layout_width="wrap_content"
+        android:layout_height="12dp"
+        android:layout_gravity="end"
+        android:layout_marginEnd="16dp"
+        android:adjustViewBounds="true"
+        android:src="@drawable/ic_bubble_arrow_top"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:xp_colorFilter="@color/content_background_color" />
+
+    <com.pichs.xwidget.cardview.XCardFrameLayout
+        android:id="@+id/cl_menu_bg"
+        android:layout_width="150dp"
+        android:layout_height="wrap_content"
+        android:background="@color/content_background_color"
+        app:xp_radius="12dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_menu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:overScrollMode="never"
+            tools:itemCount="4"
+            tools:listitem="@layout/base_popup_menu_item_layout" />
+
+    </com.pichs.xwidget.cardview.XCardFrameLayout>
+
+</LinearLayout>

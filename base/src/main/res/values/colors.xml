@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="tool_bar_color">#ffffff</color>
+    <color name="tool_bar_text_color">#333333</color>
+    <color name="root_background_color">#f1f1f1</color>
+
+    <color name="transparent">#00000000</color>
+    <color name="toast_background_color">#80000000</color>
+
+    <color name="dialog_background_color">#ffffff</color>
+    <color name="dialog_title_text_color">#222222</color>
+    <color name="dialog_content_text_color">#333333</color>
+    <color name="dialog_btn_text_color">#7807FA</color>
+    <color name="dialog_btn_text_pressed_color">#7807FA</color>
+    <color name="dialog_content_background_color">#ffffff</color>
+    <color name="dialog_content_background_pressed_color">#f1f1f1</color>
+
+    <color name="content_background_shadow_color">#000000</color>
+
+    <color name="content_background_color">#ffffff</color>
+    <color name="content_background_pressed_color">#f1f1f1</color>
+    <color name="content_text_color">#333333</color>
+
+    <color name="sub_content_text_color">#666666</color>
+
+    <color name="content_text_hint_color">#666666</color>
+
+    <color name="content_item_divider">#999999</color>
+
+    <color name="float_btn_bg">#7807FA</color>
+    <color name="float_btn_text_color">#ffffff</color>
+
+    <color name="bottom_bar_top_divider">#c9c9c9</color>
+    <color name="bottom_bar_background_color">#f1f1f1</color>
+    <color name="bottom_bar_text_normal_color">#c1c1c1</color>
+    <color name="bottom_bar_text_selected_color">#7807FA</color>
+
+
+    <color name="btn_background_color">#0689F1</color>
+    <color name="btn_background_cube_color">#0468B6</color>
+    <color name="btn_text_color">#ffffff</color>
+    <color name="banner_text_color">#FFFFFF</color>
+    <color name="banner_background_color">#80000000</color>
+    <color name="banner_indicator_normal_color">#E6E6E6</color>
+    <color name="banner_indicator_selected_color">#FF5722</color>
+
+</resources>
