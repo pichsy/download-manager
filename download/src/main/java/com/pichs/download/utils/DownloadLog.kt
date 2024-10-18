@@ -4,7 +4,7 @@ import android.util.Log
 
 object DownloadLog {
 
-    private var isDebug = false
+    private var isDebug = true
     fun setDebug(isDebug: Boolean) {
         this.isDebug = isDebug
     }

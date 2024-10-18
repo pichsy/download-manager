@@ -1,9 +1,12 @@
 package com.pichs.download.utils
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.RandomAccessFile
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
 object FileUtils {
     private const val MAX_FILENAME_LENGTH = 32
@@ -17,7 +20,7 @@ object FileUtils {
      * 重新建一个文件。
      * 如果目录不存在，则创建目录。
      */
-    fun checkAndCreateFileSafe(file: File): Boolean {
+    suspend fun checkAndCreateFileSafe(file: File): Boolean {
         try {// 文件处理。
             if (!file.exists()) {
                 return createFile(file)
@@ -33,6 +36,43 @@ object FileUtils {
             return false
         }
     }
+
+    /**
+     * 检查文件是否存在
+     */
+    suspend fun isFileExists(file: File): Boolean {
+        return withContext(Dispatchers.IO) {
+            file.exists()
+        }
+    }
+
+    /**
+     * 检查文件是否完整或有效
+     * @param file 要检查的文件
+     * @param totalLength 预期的文件大小（字节）
+     * @param fileMD5 预期的 MD5 值（可选）
+     * @return 文件是否完整有效
+     */
+    suspend fun isFileValid(file: File, totalLength: Long, fileMD5: String? = null): Boolean {
+        return withContext(Dispatchers.IO) {
+            if (!file.exists() || !file.isFile) {
+                return@withContext false
+            }
+            // 检查文件大小
+            if (file.length() != totalLength) {
+                return@withContext false
+            }
+            // 如果提供了 MD5，则验证 MD5
+            if (fileMD5 != null) {
+                val actualMd5 = MD5Utils.fileCheckMD5(file)
+                if (actualMd5 != fileMD5) {
+                    return@withContext false
+                }
+            }
+            true
+        }
+    }
+
 
     /**
      * 检查并创建文件
@@ -41,65 +81,60 @@ object FileUtils {
      * 重新建一个文件。
      * 如果目录不存在，则创建目录。
      */
-    fun checkAndCreateFileSafeWithLength(file: File, length: Long): Boolean {
-        try {// 文件处理。
-            if (!file.exists()) {
-                if (createFile(file)) {
-                    // 预分配文件大小
-                    RandomAccessFile(file, "rw").use { randomAccessFile ->
-                        randomAccessFile.setLength(length)
-                    }
-                    return true
+    suspend fun checkAndCreateFileSafeWithLength(file: File, length: Long): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {// 文件处理。
+                if (file.exists() && file.isFile && file.length() == length) {
+                    return@withContext true
                 }
-            } else if (file.isDirectory) {
-                // 如果文件被建成文件夹了，则删除目录
-                checkAndDeleteFile(file)
-                if (createFile(file)) {
-                    // 预分配文件大小
-                    RandomAccessFile(file, "rw").use { randomAccessFile ->
-                        randomAccessFile.setLength(length)
+                if (!file.exists()) {
+                    if (createFile(file)) {
+                        // 预分配文件大小
+                        RandomAccessFile(file, "rwd").use { randomAccessFile ->
+                            randomAccessFile.setLength(length)
+                        }
+                        return@withContext true
                     }
-                    return true
-                }
-            } else {
-                // 文件大小文件肯定存在了并且是个文件
-                if (file.length() != length) {
-                    return true
+
                 } else {
+                    // 如果文件被建成文件夹了，则删除目录
+                    // 文件大小文件肯定存在了并且是个文件
                     checkAndDeleteFile(file)
                     if (createFile(file)) {
                         // 预分配文件大小
-                        RandomAccessFile(file, "rw").use { randomAccessFile ->
+                        RandomAccessFile(file, "rwd").use { randomAccessFile ->
                             randomAccessFile.setLength(length)
                         }
-                        return true
+                        return@withContext true
                     }
                 }
+            } catch (e: Exception) {
+                DownloadLog.e(e) { "checkAndCreateFileSafe: 创建文件失败:${file.absolutePath}" }
+                return@withContext false
             }
-        } catch (e: Exception) {
-            DownloadLog.e(e) { "checkAndCreateFileSafe: 创建文件失败:${file.absolutePath}" }
-            return false
+            return@withContext false
         }
-        return false
     }
 
     /**
      * 创建文件
      */
-    fun createFile(file: File): Boolean {
-        try {
-            if (!file.exists()) {
-                if (file.parentFile?.exists() != true) {
-                    file.parentFile?.mkdirs()
+    suspend fun createFile(file: File): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (!file.exists()) {
+                    if (file.parentFile?.exists() != true) {
+                        file.parentFile?.mkdirs()
+                    }
+                    return@withContext file.createNewFile()
+                } else {
+                    return@withContext true
                 }
-                return file.createNewFile()
-            } else {
-                return true
+            } catch (e: Exception) {
+                DownloadLog.e(e) { "createFile: 创建文件失败:${file.absolutePath}" }
             }
-        } catch (e: Exception) {
-            DownloadLog.e(e) { "createFile: 创建文件失败:${file.absolutePath}" }
+            return@withContext false
         }
-        return false
     }
 
 
@@ -107,7 +142,7 @@ object FileUtils {
      * 删除文件或者文件夹
      * @return 是否删除成功
      */
-    fun checkAndDeleteFile(file: File): Boolean {
+    suspend fun checkAndDeleteFile(file: File): Boolean {
         if (!file.exists()) return true
         if (file.isDirectory) {
             return checkAndDeleteDir(file)
@@ -118,7 +153,7 @@ object FileUtils {
     /**
      * 删除文件夹
      */
-    private fun checkAndDeleteDir(file: File): Boolean {
+    private suspend fun checkAndDeleteDir(file: File): Boolean {
         return file.deleteRecursively()
     }
 
@@ -126,8 +161,9 @@ object FileUtils {
      * 生成文件名,带后缀的。
      */
     fun generateFilename(fileName: String?, url: String, contentType: String?): String {
+        val trimFileName = fileName?.trim()
         // 判断filename带不带后缀，如果带后缀，直接返回
-        if (fileName != null && fileName.contains('.')) return fileName
+        if (trimFileName != null && trimFileName.contains('.')) return trimFileName
         // 如果不带后缀，则从url中获取后缀后拼接到fileName后面
 
         val decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8.name())
@@ -135,8 +171,8 @@ object FileUtils {
 
         val extension = getExtensionFromContentType(contentType) ?: lastPart.substringAfterLast('.', "")
 
-        if (!fileName.isNullOrEmpty() && fileName.isNotBlank()) {
-            return addExtensionIfMissing(fileName, extension)
+        if (!trimFileName.isNullOrEmpty() && trimFileName.isNotBlank()) {
+            return addExtensionIfMissing(trimFileName, extension)
         } else if (lastPart.isEmpty()) {
             return "${MD5Utils.md5(url)}${if (extension.isNotEmpty()) ".$extension" else ""}"
         } else {
@@ -174,6 +210,28 @@ object FileUtils {
             "$filename.$extension"
         } else {
             filename
+        }
+    }
+
+    fun rename(tempFile: File, finalFile: File): Boolean {
+        try {
+            if (!tempFile.exists()) return false
+            if (finalFile.exists()) {
+                finalFile.delete()
+                DownloadLog.d { "download666: 文件重命名:${tempFile.absolutePath} finalFile.delete()" }
+            }
+            if (tempFile.renameTo(finalFile)) {
+                tempFile.delete()
+                DownloadLog.d { "download666: 文件重命名:${tempFile.absolutePath} renameTo" }
+                return true
+            }
+            Files.copy(tempFile.toPath(), finalFile.toPath())
+            tempFile.delete()
+            DownloadLog.d { "download666: 文件重命名:${tempFile.absolutePath} Files.copy" }
+            return true
+        } catch (e: Exception) {
+            DownloadLog.e(e) { "download666: 文件重命名:${tempFile.absolutePath} Exception" }
+            return false
         }
     }
 

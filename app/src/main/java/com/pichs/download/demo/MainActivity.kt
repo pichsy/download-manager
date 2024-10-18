@@ -8,12 +8,16 @@ import com.drake.brv.utils.linear
 import com.drake.brv.utils.setup
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
+import com.pichs.download.breakpoint.DownloadBreakPointManger
+import com.pichs.download.breakpoint.DownloadChunkManager
 import com.pichs.download.call.DownloadCall
 import com.pichs.download.call.DownloadMultiCall
 import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemDonwloadListBinding
+import com.pichs.download.utils.DownloadTaskUtils
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.ext.click
+import com.pichs.shanhai.base.utils.LogUtils
 import com.pichs.shanhai.base.utils.toast.ToastUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -49,6 +53,14 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             DownloadItem(url = zhishangtanbing, name = "zhishangtanbing"),
         )
 
+        DownloadBreakPointManger.queryAll()?.forEach {
+            LogUtils.d("download666", "查询到的下载任务:$it")
+        }
+
+        DownloadChunkManager.queryAll()?.forEach {
+            LogUtils.d("download666", "查询到的下载任务分块:$it")
+        }
+
         initRecyclerView()
     }
 
@@ -82,7 +94,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             .download(
                                 com.pichs.download.DownloadTask.Builder()
                                     .build {
-                                        it.url = zhishangtanbing
+                                        it.url = item.url
 
                                         it.fileName = item.name + ".apk"
 
@@ -102,19 +114,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             .download(
                                 com.pichs.download.DownloadTask.Builder()
                                     .build {
-                                        it.url = bizhiduoduo
-
+                                        it.url = item.url
                                         it.fileName = item.name + ".apk"
-
                                         it.filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-
-
+                                        it.taskId = DownloadTaskUtils.generateTaskId(it.url, it.filePath, it.fileName)
                                     }
                             ) { task, totalBytesRead, contentLength, progress, speed ->
                                 lifecycleScope.launch(Dispatchers.Main) {
                                     itemBinding.progressBar.progress = progress
                                     itemBinding.tvProgress.text = "$progress%"
                                     itemBinding.btnDownload.text = "下载中:${speed / 1024}Kb/s"
+                                    LogUtils.d("download666", "下载进度:$progress")
                                 }
                             }
                     }

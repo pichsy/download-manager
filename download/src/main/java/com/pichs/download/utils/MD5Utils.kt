@@ -1,5 +1,6 @@
 package com.pichs.download.utils
 
+import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.security.MessageDigest
@@ -11,8 +12,6 @@ import java.security.NoSuchAlgorithmException
  * @author Crane
  */
 object MD5Utils {
-    private var digest: MessageDigest? = null
-
     /**
      * MD5 encode
      *
@@ -20,21 +19,11 @@ object MD5Utils {
      * @return
      */
     @Synchronized
-    fun md5(data: String): String {
-        if (digest == null) {
-            try {
-                digest = MessageDigest.getInstance("MD5")
-                return encodeHex(digest!!.digest())
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+    fun md5(str: String): String {
         try {
-            if (digest == null) {
-                return ""
-            }
-            digest?.update(data.toByteArray(charset("utf-8")))
-            return encodeHex(digest!!.digest())
+            val digest = MessageDigest.getInstance("MD5")
+            digest.update(str.toByteArray(charset("utf-8")))
+            return encodeHex(digest.digest())
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -46,32 +35,27 @@ object MD5Utils {
      */
     @Synchronized
     fun fileCheckMD5(filename: String?): String {
-        if (digest == null) {
-            try {
-                digest = MessageDigest.getInstance("MD5")
-            } catch (e: NoSuchAlgorithmException) {
-                e.printStackTrace()
-            }
-        }
+        return if (filename.isNullOrEmpty()) "" else fileCheckMD5(File(filename))
+    }
+
+    @Synchronized
+    fun fileCheckMD5(file: File?): String {
+        if (file == null) return ""
+        if (!file.exists()) return ""
         try {
-            val fis: InputStream = FileInputStream(filename)
-            val buffer = ByteArray(1024)
-            var numRead: Int
-            do {
-                numRead = fis.read(buffer)
-                if (numRead > 0) {
-                    digest?.update(buffer, 0, numRead)
+            val digest = MessageDigest.getInstance("MD5")
+            FileInputStream(file).use { fis ->
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                while (fis.read(buffer).also { bytesRead = it } != -1) {
+                    digest.update(buffer, 0, bytesRead)
                 }
-            } while (numRead != -1)
-            fis.close()
+            }
+            return encodeHex(digest.digest())
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return if (digest != null) {
-            encodeHex(digest!!.digest())
-        } else {
-            ""
-        }
+        return ""
     }
 
     private fun encodeHex(bytes: ByteArray): String {
@@ -81,7 +65,7 @@ object MD5Utils {
             if (bytes[i].toInt() and 0xff < 0x10) {
                 buf.append("0")
             }
-            buf.append(java.lang.Long.toString((bytes[i].toInt() and 0xff).toLong(), 16))
+            buf.append((bytes[i].toInt() and 0xff).toLong().toString(16))
             i++
         }
         return buf.toString()
