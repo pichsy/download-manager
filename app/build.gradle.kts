@@ -129,6 +129,7 @@ android {
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
     api(project(":base"))
-    api(project(":downloader"))
+    api(project(":download"))
+    api(project(":okdownload"))
 
 }

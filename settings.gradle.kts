@@ -25,4 +25,5 @@ dependencyResolutionManagement {
 rootProject.name = "download-manager"
 include(":app")
 include(":base")
-include(":downloader")
+include(":okdownload")
+include(":download")

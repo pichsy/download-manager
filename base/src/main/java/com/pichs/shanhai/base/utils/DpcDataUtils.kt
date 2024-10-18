@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
+import com.pichs.xbase.utils.MD5
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
