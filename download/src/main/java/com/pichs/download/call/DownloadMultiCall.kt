@@ -269,11 +269,10 @@ class ProgressTracker(private val totalLength: Long) {
     }
 
     fun shouldUpdateProgress(): Boolean {
-        val currentTime = System.currentTimeMillis()
-        return currentTime - lastUpdateTime.get() >= PROGRESS_UPDATE_INTERVAL
+        return System.currentTimeMillis() - lastUpdateTime.get() >= PROGRESS_UPDATE_INTERVAL
     }
 
     companion object {
-        private const val PROGRESS_UPDATE_INTERVAL = 1000 // 1 second
+        private const val PROGRESS_UPDATE_INTERVAL = 1500 // 1 second
     }
 }

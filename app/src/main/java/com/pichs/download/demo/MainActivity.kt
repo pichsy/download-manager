@@ -120,12 +120,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                                         it.taskId = DownloadTaskUtils.generateTaskId(it.url, it.filePath, it.fileName)
                                     }
                             ) { task, totalBytesRead, contentLength, progress, speed ->
-                                lifecycleScope.launch(Dispatchers.Main) {
-                                    itemBinding.progressBar.progress = progress
-                                    itemBinding.tvProgress.text = "$progress%"
-                                    itemBinding.btnDownload.text = "下载中:${speed / 1024}Kb/s"
-                                    LogUtils.d("download666", "下载进度:$progress")
-                                }
+//                                lifecycleScope.launch(Dispatchers.Main) {
+//                                    itemBinding.progressBar.progress = progress
+//                                    itemBinding.tvProgress.text = "$progress%"
+//                                    itemBinding.btnDownload.text = "下载中:${speed / 1024}Kb/s"
+                                    LogUtils.d("download666", "${item.name}的下载进度:$progress ，速度:${speed / 1024}Kb/s")
+//                                }
                             }
                     }
                 }
