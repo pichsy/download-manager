@@ -6,6 +6,8 @@ import com.pichs.download.breakpoint.DownloadBreakPointData
 import com.pichs.download.breakpoint.DownloadBreakPointManger
 import com.pichs.download.breakpoint.DownloadChunk
 import com.pichs.download.breakpoint.DownloadChunkManager
+import com.pichs.download.callback.DownloadListener
+import com.pichs.download.dispatcher.DispatcherListener
 import com.pichs.download.utils.DownloadLog
 import com.pichs.download.utils.FileUtils
 import com.pichs.download.utils.MD5Utils
@@ -17,7 +19,6 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.invoke
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -29,7 +30,7 @@ import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
 import java.util.concurrent.atomic.AtomicLong
 
-class DownloadMultiCall : CoroutineScope by MainScope() {
+class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() {
 
     companion object {
         // 8MB，缓冲区
@@ -61,19 +62,31 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
         }
     }
 
+    private var listener: DispatcherListener? = null
+
+    fun setListener(downloadListener: DispatcherListener): DownloadMultiCall {
+        this.listener = downloadListener
+        return this
+    }
+
     private var job: Job? = null
 
-    fun download(task: DownloadTask?, onProgress: (DownloadTask, Long, Long, Int, Long) -> Unit) {
-        DownloadLog.d { "DownloadCall download: ${task?.downloadInfo?.url}" }
+    fun startCall(): DownloadMultiCall {
+        DownloadLog.d { "download666 DownloadCall download: ${task.downloadInfo?.url}" }
         job = launch(Dispatchers.IO) {
             try {
-                val url = task?.downloadInfo?.url ?: throw IOException("Url is null")
+                val url = task.downloadInfo?.url ?: throw IOException("Url is null")
                 val filePath = task.downloadInfo?.filePath ?: throw IOException("File path is null")
                 val headerData = OkHttpHelper.getFileTotalLengthFromUrl(url)
                 val totalLength = headerData.contentLength
                 if (totalLength <= 0L) throw IOException("Content length is zero or negative")
                 val contentType = headerData.contentType
                 val fileName = FileUtils.generateFilename(task.downloadInfo?.fileName, url, contentType)
+
+                task.downloadInfo?.apply {
+                    this.fileName = fileName
+                    this.filePath = filePath
+                }
 
                 val file = File(filePath, fileName)
 
@@ -87,22 +100,27 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
 
                 // 检查最终文件是否已经存在且有效
                 // todo 后期要追加这个下载。
-                if (FileUtils.isFileValid(finalFile, totalLength, fileMD5 = null)) {
-                    onProgress(task, totalLength, totalLength, 100, 0)
+                if (FileUtils.isFileValid(finalFile, totalLength, fileMD5 = task.downloadInfo?.fileMD5)) {
+                    // 下载完成。直接返回
+                    listener?.onComplete(this@DownloadMultiCall, task)
                     // updateBreakPointData(null, totalLength)
                     return@launch
                 }
 
                 FileUtils.checkAndCreateFileSafeWithLength(tempFile, totalLength)
 
-                // Get or create breakpoint info
-                val breakpointInfo = getOrCreateBreakpointInfo(task, totalLength, fileName)
+                // 获取或者新增：breakpoint Data
+                val breakpointInfo = getOrCreateBreakpointData(task, totalLength, fileName)
                 val progressTracker = ProgressTracker(totalLength)
                 progressTracker.addProgress(breakpointInfo.currentLength ?: 0L)
 
                 val blockCount = getBlockCount(totalLength)
                 DownloadLog.d { "download666: 下载分块数量 chunkCount:$blockCount ,totalLength:$totalLength" }
                 val chunks = DownloadChunkManager.queryChunkByTaskId(task.downloadInfo?.taskId ?: "")
+
+                // 开始下载
+                task.downloadInfo?.totalLength = totalLength
+                listener?.onStart(this@DownloadMultiCall, task, totalLength)
 
                 val jobs = List(blockCount) { index ->
                     async(Dispatchers.IO) {
@@ -117,7 +135,9 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
                                     this.progress = progress
                                     this.status = 1 // 下载中
                                 }
-                                onProgress(task, currentBytes, totalLength, progress, speed)
+                                DownloadLog.d { "download666: filePath:${file.absolutePath}下载进度 progress:$progress" }
+                                listener?.onProgress(this@DownloadMultiCall, task, currentBytes, totalLength, progress, speed)
+//                                onProgress(task, currentBytes, totalLength, progress, speed)
                                 launch {
                                     // todo 更新数据库缓存。
                                     DownloadChunkManager.upsert(chunkUpdate)
@@ -139,13 +159,14 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
                     this.progress = progress
                     this.status = 1 // 下载中
                 }
-                onProgress(task, totalLength, totalLength, 100, 0)
+                listener?.onProgress(this@DownloadMultiCall, task, totalLength, totalLength, 100, 0)
                 updateBreakPointData(breakpointInfo, totalLength)
                 onDownloadComplete(task)
             } catch (e: Exception) {
                 onDownloadFailed(task, e)
             }
         }
+        return this
     }
 
     private suspend fun downloadPart(
@@ -211,7 +232,7 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
         }
     }
 
-    private suspend fun getOrCreateBreakpointInfo(task: DownloadTask, totalLength: Long, fileName: String): DownloadBreakPointData {
+    private suspend fun getOrCreateBreakpointData(task: DownloadTask, totalLength: Long, fileName: String): DownloadBreakPointData {
         val taskId = task.downloadInfo?.taskId ?: ""
         val existingInfo = DownloadBreakPointManger.queryByTaskId(taskId)
         return if (existingInfo != null) {
@@ -266,21 +287,59 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
 
     private suspend fun onDownloadComplete(task: DownloadTask) {
         task.downloadInfo?.status = 3 // 完成
+        listener?.onComplete(this@DownloadMultiCall, task)
         DownloadBreakPointManger.deleteByTaskId(task.downloadInfo?.taskId ?: "")
         DownloadChunkManager.deleteChunkByTaskId(task.downloadInfo?.taskId ?: "")
     }
 
     private suspend fun onDownloadFailed(task: DownloadTask?, error: Exception) {
         task?.downloadInfo?.status = 4 // 失败
+        listener?.onError(this@DownloadMultiCall, task, error)
+    }
+
+    fun resumeCall(): DownloadMultiCall {
+        startCall()
+        return this
     }
 
     /**
      * 取消下载。
      */
-    fun cancel() {
+    fun pauseCall(): DownloadMultiCall {
         job?.cancel()
         job = null
+        task.downloadInfo?.status = 2 // 暂停
+        listener?.onPause(this@DownloadMultiCall, task)
+        return this
     }
+
+    /**
+     * 取消下载并删除文件。
+     */
+    fun cancelCall(): DownloadMultiCall {
+        job?.cancel()
+        job = null
+        task.downloadInfo?.status = 6 // 取消
+        listener?.onCancel(this@DownloadMultiCall, task)
+        return this
+    }
+
+    /**
+     * 清除下载任务。
+     */
+    fun clearCall(): DownloadMultiCall {
+        job?.cancel()
+        job = null
+        launch(Dispatchers.IO) {
+            // 清除数据库数据
+            DownloadBreakPointManger.deleteByTaskId(task.downloadInfo?.taskId ?: "")
+            DownloadChunkManager.deleteChunkByTaskId(task.downloadInfo?.taskId ?: "")
+        }
+        task.downloadInfo?.status = 7 // 清除
+        listener?.onCancel(this@DownloadMultiCall, task)
+        return this
+    }
+
 }
 
 class ProgressTracker(private val totalLength: Long) {

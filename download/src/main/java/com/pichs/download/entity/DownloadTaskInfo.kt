@@ -14,7 +14,8 @@ data class DownloadTaskInfo(
     var currentLength: Long? = 0,
     var totalLength: Long? = 0,
     var progress: Int? = 0,
-    // 0：等待下载，1：下载中，2：暂停，3：完成，4：失败, 5:等待wifi
+    var fileMD5: String? = null,
+    //-1:未开始， 0：等待下载，1：下载中，2：暂停，3：完成，4：失败, 5:等待wifi
     var status: Int = -1,
     var info: DownloadBreakPointData? = null
 ) : Parcelable {

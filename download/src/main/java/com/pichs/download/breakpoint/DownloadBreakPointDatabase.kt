@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.pichs.download.Downloader
+import java.security.AccessController.getContext
 
 @Database(entities = [DownloadChunk::class, DownloadBreakPointData::class], version = 1, exportSchema = false)
 abstract class DownloadBreakPointDatabase : RoomDatabase() {
@@ -16,7 +17,7 @@ abstract class DownloadBreakPointDatabase : RoomDatabase() {
         val database by lazy {
             Room
                 .databaseBuilder(
-                    Downloader.getContext().createDeviceProtectedStorageContext(),
+                    Downloader.with().getContext().createDeviceProtectedStorageContext(),
                     DownloadBreakPointDatabase::class.java,
                     DB_NAME
                 )

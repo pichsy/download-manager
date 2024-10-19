@@ -1,13 +1,12 @@
 package com.pichs.download.callback
 
-import android.app.TaskInfo
+import com.pichs.download.DownloadTask
 
 interface IDownloadListener {
-
-    fun onStart(taskInfo: TaskInfo?)
-    fun onProgress(taskInfo: TaskInfo?, progress: Int, currentLength: Long, totalLength: Long, speed: Long)
-    fun onComplete(taskInfo: TaskInfo?)
-    fun onError(taskInfo: TaskInfo?, e: Throwable?)
-    fun onCancel(taskInfo: TaskInfo?)
-
+    fun onStart(task: DownloadTask?, totalLength: Long)
+    fun onPause(task: DownloadTask?)
+    fun onProgress(task: DownloadTask?, currentLength: Long, totalLength: Long, progress: Int, speed: Long)
+    fun onComplete(task: DownloadTask?)
+    fun onError(task: DownloadTask?, e: Throwable?)
+    fun onCancel(task: DownloadTask?)
 }

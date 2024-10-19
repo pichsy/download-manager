@@ -1,15 +1,15 @@
 package com.pichs.download.entity
 
-import java.util.concurrent.PriorityBlockingQueue
-
 /**
  * 下载状态
  */
 
 object DownloadStatus {
 
+    const val DEFAULT = -1
+
     // 等待下载
-    const val WAIT = 0
+    const val WAITING = 0
 
     // 下载中
     const val DOWNLOADING = 1
@@ -21,5 +21,8 @@ object DownloadStatus {
     const val COMPLETED = 3
 
     // 下载失败
-    const val FAIL = 4
+    const val ERROR = 4
+
+    // 已取消
+    const val CANCEL = 4
 }

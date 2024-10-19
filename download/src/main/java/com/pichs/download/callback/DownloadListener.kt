@@ -1,21 +1,29 @@
 package com.pichs.download.callback
 
-import android.app.TaskInfo
+import com.pichs.download.DownloadTask
 
-class DownloadListener : IDownloadListener {
-    override fun onStart(taskInfo: TaskInfo?) {
+/**
+ * Created by pichs on 2017/8/3.
+ * 进度监听
+ */
+abstract class DownloadListener : IDownloadListener {
+    override fun onStart(task: DownloadTask?, totalLength: Long) {
     }
 
-    override fun onProgress(taskInfo: TaskInfo?, progress: Int, currentLength: Long, totalLength: Long, speed: Long) {
+    override fun onPause(task: DownloadTask?) {
+
     }
 
-    override fun onComplete(taskInfo: TaskInfo?) {
+    override fun onProgress(task: DownloadTask?, currentLength: Long, totalLength: Long, progress: Int, speed: Long) {
     }
 
-    override fun onError(taskInfo: TaskInfo?, e: Throwable?) {
+    override fun onComplete(task: DownloadTask?) {
     }
 
-    override fun onCancel(taskInfo: TaskInfo?) {
+    override fun onError(task: DownloadTask?, e: Throwable?) {
+    }
+
+    override fun onCancel(task: DownloadTask?) {
     }
 
 }
