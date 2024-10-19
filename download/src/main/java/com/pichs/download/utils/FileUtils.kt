@@ -7,6 +7,9 @@ import java.io.RandomAccessFile
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
+import java.nio.ByteBuffer
 
 object FileUtils {
     private const val MAX_FILENAME_LENGTH = 32
@@ -83,36 +86,35 @@ object FileUtils {
      */
     suspend fun checkAndCreateFileSafeWithLength(file: File, length: Long): Boolean {
         return withContext(Dispatchers.IO) {
-            try {// 文件处理。
-                if (file.exists() && file.isFile && file.length() == length) {
-                    return@withContext true
-                }
-                if (!file.exists()) {
-                    if (createFile(file)) {
-                        // 预分配文件大小
-                        RandomAccessFile(file, "rwd").use { randomAccessFile ->
-                            randomAccessFile.setLength(length)
+            try {
+                when {
+                    file.exists() && file.isFile && file.length() == length -> true
+                    !file.exists() || (file.exists() && !file.isFile) -> {
+                        if (file.exists()) {
+                            checkAndDeleteFile(file)
                         }
-                        return@withContext true
+                        if (createFile(file)) {
+                            allocateFileSize(file, length)
+                            true
+                        } else {
+                            false
+                        }
                     }
-
-                } else {
-                    // 如果文件被建成文件夹了，则删除目录
-                    // 文件大小文件肯定存在了并且是个文件
-                    checkAndDeleteFile(file)
-                    if (createFile(file)) {
-                        // 预分配文件大小
-                        RandomAccessFile(file, "rwd").use { randomAccessFile ->
-                            randomAccessFile.setLength(length)
-                        }
-                        return@withContext true
+                    else -> {
+                        allocateFileSize(file, length)
+                        true
                     }
                 }
             } catch (e: Exception) {
                 DownloadLog.e(e) { "checkAndCreateFileSafe: 创建文件失败:${file.absolutePath}" }
-                return@withContext false
+                false
             }
-            return@withContext false
+        }
+    }
+
+    private fun allocateFileSize(file: File, length: Long) {
+        FileChannel.open(file.toPath(), StandardOpenOption.WRITE).use { channel ->
+            channel.truncate(length)
         }
     }
 

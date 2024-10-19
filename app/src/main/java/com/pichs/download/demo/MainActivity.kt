@@ -20,7 +20,9 @@ import com.pichs.shanhai.base.ext.click
 import com.pichs.shanhai.base.utils.LogUtils
 import com.pichs.shanhai.base.utils.toast.ToastUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
 
@@ -53,19 +55,20 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             DownloadItem(url = zhishangtanbing, name = "zhishangtanbing"),
         )
 
-        DownloadBreakPointManger.queryAll()?.forEach {
-            LogUtils.d("download666", "查询到的下载任务:$it")
-        }
+        lifecycleScope.launch {
+            DownloadBreakPointManger.queryAll()?.forEach {
+                LogUtils.d("download666", "查询到的下载任务:$it")
+            }
 
-        DownloadChunkManager.queryAll()?.forEach {
-            LogUtils.d("download666", "查询到的下载任务分块:$it")
+            DownloadChunkManager.queryAll()?.forEach {
+                LogUtils.d("download666", "查询到的下载任务分块:$it")
+            }
         }
 
         initRecyclerView()
     }
 
     private fun initListener() {
-
         binding.ivDownloadManager.setOnClickListener {
             startActivity(Intent(this, DownloadManagerActivity::class.java))
         }
@@ -73,16 +76,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         binding.ivSearch.setOnClickListener {
             ToastUtils.show("搜索")
         }
-
     }
 
 
     @SuppressLint("SetTextI18n")
     private fun initRecyclerView() {
-
         binding.recyclerView.linear().setup {
             addType<DownloadItem>(R.layout.item_donwload_list)
-
             onBind {
                 val item = getModel<DownloadItem>()
                 val itemBinding = getBinding<ItemDonwloadListBinding>()
@@ -90,7 +90,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
                 itemBinding.btnDownload.click {
                     if (modelPosition == 0) {
-                        DownloadCall()
+                        DownloadMultiCall()
                             .download(
                                 com.pichs.download.DownloadTask.Builder()
                                     .build {
@@ -127,10 +127,23 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                                     LogUtils.d("download666", "${item.name}的下载进度:$progress ，速度:${speed / 1024}Kb/s")
                                 }
                             }
+
+//                        var progress = 0
+//                        lifecycleScope.launch(Dispatchers.IO) {
+//                            while (true) {
+//                                progress++
+//                                delay(1000)
+//                                withContext(Dispatchers.Main) {
+//                                    itemBinding.progressBar.progress = progress
+//                                    itemBinding.tvProgress.text = "$progress%"
+//                                    itemBinding.btnDownload.text = "下载中:${progress * 1.5 / 1024}Kb/s"
+//                                }
+//                            }
+//                        }
+
                     }
                 }
             }
-
         }.models = list
     }
 

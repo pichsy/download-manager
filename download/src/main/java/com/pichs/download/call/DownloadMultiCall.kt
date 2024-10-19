@@ -12,10 +12,12 @@ import com.pichs.download.utils.MD5Utils
 import com.pichs.download.utils.OkHttpHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.invoke
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -33,7 +35,7 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
         // 8MB，缓冲区
         private const val BUFFER_SIZE = 64 * 1024
 
-        // 经过验证3块 可以达到10M/s的速度。比较合理。
+        //todo 经过验证3块 可以达到10M/s的速度。比较合理。
         // 再大就不行了。
 
         // 1 connection: [10M)
@@ -59,10 +61,11 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
         }
     }
 
+    private var job: Job? = null
 
     fun download(task: DownloadTask?, onProgress: (DownloadTask, Long, Long, Int, Long) -> Unit) {
         DownloadLog.d { "DownloadCall download: ${task?.downloadInfo?.url}" }
-        launch(Dispatchers.IO) {
+        job = launch(Dispatchers.IO) {
             try {
                 val url = task?.downloadInfo?.url ?: throw IOException("Url is null")
                 val filePath = task.downloadInfo?.filePath ?: throw IOException("File path is null")
@@ -86,7 +89,7 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
                 // todo 后期要追加这个下载。
                 if (FileUtils.isFileValid(finalFile, totalLength, fileMD5 = null)) {
                     onProgress(task, totalLength, totalLength, 100, 0)
-                    updateProgress(task, totalLength, totalLength, 100, 0)
+                    // updateBreakPointData(null, totalLength)
                     return@launch
                 }
 
@@ -99,20 +102,27 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
 
                 val blockCount = getBlockCount(totalLength)
                 DownloadLog.d { "download666: 下载分块数量 chunkCount:$blockCount ,totalLength:$totalLength" }
+                val chunks = DownloadChunkManager.queryChunkByTaskId(task.downloadInfo?.taskId ?: "")
 
                 val jobs = List(blockCount) { index ->
                     async(Dispatchers.IO) {
-                        val chunk = getOrCreateChunk(task.downloadInfo?.taskId ?: "", index, totalLength, blockCount)
-                        downloadPart(url, tempFile, chunk, progressTracker) { currentBytes ->
+                        val chunk = getOrCreateChunk(chunks, task.downloadInfo?.taskId ?: "", index, totalLength, blockCount)
+                        downloadPart(url, tempFile, chunk, progressTracker) { chunkUpdate, currentBytes ->
                             if (progressTracker.shouldUpdateProgress()) {
                                 val speed = progressTracker.calculateSpeed()
                                 val progress = progressTracker.getProgress()
-                                async {
-                                    withContext(Dispatchers.Main) {
-                                        onProgress(task, currentBytes, totalLength, progress, speed)
-                                    }
+                                task.downloadInfo?.apply {
+                                    this.currentLength = currentBytes
+                                    this.totalLength = totalLength
+                                    this.progress = progress
+                                    this.status = 1 // 下载中
                                 }
-//                                updateProgress(task, currentBytes, totalLength, progress, speed)
+                                onProgress(task, currentBytes, totalLength, progress, speed)
+                                launch {
+                                    // todo 更新数据库缓存。
+                                    DownloadChunkManager.upsert(chunkUpdate)
+                                    updateBreakPointData(breakpointInfo, currentBytes)
+                                }
                             }
                         }
                     }
@@ -123,8 +133,14 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
                 DownloadLog.d { "download666: 文件重命名 isRenameSuccess:$isRenameSuccess" }
                 if (!isRenameSuccess) throw IOException("文件重命名失败！")
                 // 确保最终进度为100%
+                task.downloadInfo?.apply {
+                    this.currentLength = totalLength
+                    this.totalLength = totalLength
+                    this.progress = progress
+                    this.status = 1 // 下载中
+                }
                 onProgress(task, totalLength, totalLength, 100, 0)
-//                updateProgress(task, totalLength, totalLength, 100, 0)
+                updateBreakPointData(breakpointInfo, totalLength)
                 onDownloadComplete(task)
             } catch (e: Exception) {
                 onDownloadFailed(task, e)
@@ -137,7 +153,7 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
         file: File,
         chunk: DownloadChunk,
         progressTracker: ProgressTracker,
-        onPartProgress: (Long) -> Unit
+        onPartProgress: CoroutineScope.(chunk: DownloadChunk, progress: Long) -> Unit
     ) {
         var retries = 3
         var delayRetry = 3000L
@@ -152,7 +168,6 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
                 if (!response.isSuccessful) throw IOException("Unexpected code $response")
 
                 val body = response.body ?: throw IOException("Null response body")
-
                 withContext(Dispatchers.IO) {
                     body.source().use { source ->
                         // Cursor 优化后的代码
@@ -166,8 +181,7 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
                                 channel.write(buffer)
                                 val currentBytes = progressTracker.addProgress(bytesRead.toLong())
                                 chunk.downloadedBytes += bytesRead
-                                // DownloadChunkManager.upsert(chunk)
-                                onPartProgress(currentBytes)
+                                onPartProgress(chunk, currentBytes)
                             }
                         }
                         // old 代码。
@@ -197,7 +211,7 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
         }
     }
 
-    private fun getOrCreateBreakpointInfo(task: DownloadTask, totalLength: Long, fileName: String): DownloadBreakPointData {
+    private suspend fun getOrCreateBreakpointInfo(task: DownloadTask, totalLength: Long, fileName: String): DownloadBreakPointData {
         val taskId = task.downloadInfo?.taskId ?: ""
         val existingInfo = DownloadBreakPointManger.queryByTaskId(taskId)
         return if (existingInfo != null) {
@@ -216,8 +230,13 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
         }
     }
 
-    private fun getOrCreateChunk(taskId: String, index: Int, totalLength: Long, blockCount: Int): DownloadChunk {
-        val chunks = DownloadChunkManager.queryChunkByTaskId(taskId)
+    private suspend fun getOrCreateChunk(
+        chunks: MutableList<DownloadChunk>?,
+        taskId: String,
+        index: Int,
+        totalLength: Long,
+        blockCount: Int
+    ): DownloadChunk {
         return chunks?.find { it.chunkIndex == index } ?: run {
             val chunkSize = totalLength / blockCount
             val startByte = index * chunkSize
@@ -234,28 +253,33 @@ class DownloadMultiCall : CoroutineScope by MainScope() {
         }
     }
 
-    private fun updateProgress(task: DownloadTask, currentLength: Long, totalLength: Long, progress: Int, speed: Long) {
-        task.downloadInfo?.apply {
-            this.currentLength = currentLength
-            this.totalLength = totalLength
-            this.progress = progress
-            this.status = 1 // 下载中
-        }
-        DownloadBreakPointManger.queryByTaskId(task.downloadInfo?.taskId ?: "")?.let {
+    private suspend fun updateBreakPointData(
+        breakPointData: DownloadBreakPointData?,
+        currentLength: Long,
+    ) {
+        breakPointData?.let {
             it.currentLength = currentLength
             it.updateTime = System.currentTimeMillis()
             DownloadBreakPointManger.upsert(it)
         }
     }
 
-    private fun onDownloadComplete(task: DownloadTask) {
+    private suspend fun onDownloadComplete(task: DownloadTask) {
         task.downloadInfo?.status = 3 // 完成
         DownloadBreakPointManger.deleteByTaskId(task.downloadInfo?.taskId ?: "")
         DownloadChunkManager.deleteChunkByTaskId(task.downloadInfo?.taskId ?: "")
     }
 
-    private fun onDownloadFailed(task: DownloadTask?, error: Exception) {
+    private suspend fun onDownloadFailed(task: DownloadTask?, error: Exception) {
         task?.downloadInfo?.status = 4 // 失败
+    }
+
+    /**
+     * 取消下载。
+     */
+    fun cancel() {
+        job?.cancel()
+        job = null
     }
 }
 
@@ -293,7 +317,12 @@ class ProgressTracker(private val totalLength: Long) {
         return System.currentTimeMillis() - lastUpdateTime.get() >= PROGRESS_UPDATE_INTERVAL
     }
 
+    fun shouldUpdateCache(): Boolean {
+        return System.currentTimeMillis() - lastUpdateTime.get() >= CACHE_UPDATE_INTERVAL
+    }
+
     companion object {
-        private const val PROGRESS_UPDATE_INTERVAL = 3000 // 1 second
+        private const val PROGRESS_UPDATE_INTERVAL = 1000 // 1 second
+        private const val CACHE_UPDATE_INTERVAL = 1500 // 1 second
     }
 }
