@@ -13,7 +13,7 @@ import java.io.*
 class DownloadCall : CoroutineScope by (CoroutineScope(SupervisorJob() + Dispatchers.Main)) {
 
     companion object {
-        private const val BUFFER_SIZE = 8 * 1024
+        private const val BUFFER_SIZE = 64 * 1024
         private const val PROGRESS_UPDATE_INTERVAL = 1000L // in milliseconds
     }
 

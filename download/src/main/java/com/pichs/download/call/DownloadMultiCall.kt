@@ -1,7 +1,6 @@
 package com.pichs.download.call
 
 
-import android.util.Log
 import com.pichs.download.DownloadTask
 import com.pichs.download.breakpoint.DownloadBreakPointData
 import com.pichs.download.breakpoint.DownloadBreakPointManger
@@ -13,7 +12,7 @@ import com.pichs.download.utils.MD5Utils
 import com.pichs.download.utils.OkHttpHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
@@ -22,39 +21,40 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.io.File
 import java.io.IOException
-import java.io.RandomAccessFile
 import java.net.SocketTimeoutException
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
 import java.util.concurrent.atomic.AtomicLong
 
-class DownloadMultiCall : CoroutineScope by (CoroutineScope(SupervisorJob() + Dispatchers.Main)) {
+class DownloadMultiCall : CoroutineScope by MainScope() {
 
     companion object {
         // 8MB，缓冲区
-        private const val BUFFER_SIZE = 16  * 1024L
+        private const val BUFFER_SIZE = 64 * 1024
 
-        // 1 connection: [0, 1MB)
-        const val ONE_CONNECTION_UPPER_LIMIT: Long = (1024 * 1024L)
+        // 经过验证3块 可以达到10M/s的速度。比较合理。
+        // 再大就不行了。
 
-        // 2 connection: [1MB, 5MB)
-        const val TWO_CONNECTION_UPPER_LIMIT: Long = (5 * 1024 * 1024L)
+        // 1 connection: [10M)
+        const val ONE_CONNECTION_UPPER_LIMIT: Long = (10 * 1024 * 1024L)
 
-        // 3 connection: [5MB, 50MB)
-        const val THREE_CONNECTION_UPPER_LIMIT: Long = (50 * 1024 * 1024L)
+        // 2 connection: [50)
+        const val TWO_CONNECTION_UPPER_LIMIT: Long = (70 * 1024 * 1024L)
 
-        // 4 connection: [50MB, 100MB)
-        const val FOUR_CONNECTION_UPPER_LIMIT: Long = (100 * 1024 * 1024L)
+        // 4 connection: [100MB)
+        const val THREE_CONNECTION_UPPER_LIMIT: Long = (90 * 1024 * 1024L)
+
+        // 4 connection: [120MB)
+        const val FOUR_CONNECTION_UPPER_LIMIT: Long = (150 * 1024 * 1024L)
 
         private fun getBlockCount(totalLength: Long): Int {
-            return if (totalLength < ONE_CONNECTION_UPPER_LIMIT) {
+            return if (totalLength <= ONE_CONNECTION_UPPER_LIMIT) {
                 1
-            } else if (totalLength < TWO_CONNECTION_UPPER_LIMIT) {
-                1
-            } else if (totalLength < THREE_CONNECTION_UPPER_LIMIT) {
-               2
-            } else if (totalLength < FOUR_CONNECTION_UPPER_LIMIT) {
-              3
+            } else if (totalLength <= TWO_CONNECTION_UPPER_LIMIT) {
+                2
             } else {
-                4
+                3
             }
         }
     }
@@ -107,9 +107,12 @@ class DownloadMultiCall : CoroutineScope by (CoroutineScope(SupervisorJob() + Di
                             if (progressTracker.shouldUpdateProgress()) {
                                 val speed = progressTracker.calculateSpeed()
                                 val progress = progressTracker.getProgress()
-
-                                onProgress(task, currentBytes, totalLength, progress, speed)
-                                updateProgress(task, currentBytes, totalLength, progress, speed)
+                                async {
+                                    withContext(Dispatchers.Main) {
+                                        onProgress(task, currentBytes, totalLength, progress, speed)
+                                    }
+                                }
+//                                updateProgress(task, currentBytes, totalLength, progress, speed)
                             }
                         }
                     }
@@ -121,7 +124,7 @@ class DownloadMultiCall : CoroutineScope by (CoroutineScope(SupervisorJob() + Di
                 if (!isRenameSuccess) throw IOException("文件重命名失败！")
                 // 确保最终进度为100%
                 onProgress(task, totalLength, totalLength, 100, 0)
-                updateProgress(task, totalLength, totalLength, 100, 0)
+//                updateProgress(task, totalLength, totalLength, 100, 0)
                 onDownloadComplete(task)
             } catch (e: Exception) {
                 onDownloadFailed(task, e)
@@ -137,6 +140,7 @@ class DownloadMultiCall : CoroutineScope by (CoroutineScope(SupervisorJob() + Di
         onPartProgress: (Long) -> Unit
     ) {
         var retries = 3
+        var delayRetry = 3000L
         while (retries > 0) {
             try {
                 val request = Request.Builder()
@@ -151,25 +155,42 @@ class DownloadMultiCall : CoroutineScope by (CoroutineScope(SupervisorJob() + Di
 
                 withContext(Dispatchers.IO) {
                     body.source().use { source ->
-                        RandomAccessFile(file, "rwd").use { randomAccessFile ->
-                            randomAccessFile.seek(chunk.start)
-                            val buffer = ByteArray(BUFFER_SIZE.toInt())
+                        // Cursor 优化后的代码
+                        FileChannel.open(file.toPath(), StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.READ).use { channel ->
+                            channel.position(chunk.start)
+                            val buffer = ByteBuffer.allocate(BUFFER_SIZE)
                             var bytesRead: Int
-                            while (source.read(buffer).also { bytesRead = it } != -1) {
-                                randomAccessFile.write(buffer, 0, bytesRead)
+                            while (source.read(buffer.array(), 0, BUFFER_SIZE).also { bytesRead = it } != -1) {
+                                buffer.clear()
+                                buffer.limit(bytesRead)
+                                channel.write(buffer)
                                 val currentBytes = progressTracker.addProgress(bytesRead.toLong())
                                 chunk.downloadedBytes += bytesRead
-                                DownloadChunkManager.upsert(chunk)
+                                // DownloadChunkManager.upsert(chunk)
                                 onPartProgress(currentBytes)
                             }
                         }
+                        // old 代码。
+//                        RandomAccessFile(file, "rwd").use { randomAccessFile ->
+//                            randomAccessFile.seek(chunk.start)
+//                            val buffer = ByteArray(BUFFER_SIZE.toInt())
+//                            var bytesRead: Int
+//                            while (source.read(buffer).also { bytesRead = it } != -1) {
+//                                randomAccessFile.write(buffer, 0, bytesRead)
+//                                val currentBytes = progressTracker.addProgress(bytesRead.toLong())
+//                                chunk.downloadedBytes += bytesRead
+//                                DownloadChunkManager.upsert(chunk)
+//                                onPartProgress(currentBytes)
+//                            }
+//                        }
                     }
                 }
                 return
             } catch (e: SocketTimeoutException) {
                 retries--
                 if (retries == 0) throw e
-                delay(5000)
+                delay(delayRetry)
+                delayRetry *= 2
             } catch (e: IOException) {
                 throw e
             }
@@ -273,6 +294,6 @@ class ProgressTracker(private val totalLength: Long) {
     }
 
     companion object {
-        private const val PROGRESS_UPDATE_INTERVAL = 1500 // 1 second
+        private const val PROGRESS_UPDATE_INTERVAL = 3000 // 1 second
     }
 }
