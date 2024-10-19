@@ -10,16 +10,12 @@ import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
 import com.pichs.download.DownloadTask
 import com.pichs.download.Downloader
-import com.pichs.download.breakpoint.DownloadBreakPointManger
-import com.pichs.download.breakpoint.DownloadChunkManager
 import com.pichs.download.call.DownloadMultiCall
 import com.pichs.download.callback.DownloadListener
-import com.pichs.download.callback.IDownloadListener
 import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemDonwloadListBinding
 import com.pichs.download.dispatcher.DispatcherListener
-import com.pichs.download.entity.DownloadTaskInfo
-import com.pichs.download.utils.DownloadTaskUtils
+import com.pichs.download.utils.TaskIdUtils
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.ext.click
 import com.pichs.shanhai.base.utils.LogUtils
@@ -49,11 +45,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         initListener()
 
         list.add(
-            DownloadItem(url = bizhiduoduo, name = "bizhiduoduo"),
+            DownloadItem(url = bizhiduoduo, name = "bizhiduoduo",packageName = "com.didichuxing.doraemonkit"),
         )
 
         list.add(
-            DownloadItem(url = zhishangtanbing, name = "zhishangtanbing"),
+            DownloadItem(url = zhishangtanbing, name = "zhishangtanbing",packageName = "com.tencent.zhishangtanbing"),
         )
 
         lifecycleScope.launch {
@@ -90,7 +86,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             url = item.url
                             fileName = item.name + ".apk"
                             filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-                            taskId = DownloadTaskUtils.generateTaskId(url, filePath, fileName)
+                            taskId = TaskIdUtils.generateTaskId(url, filePath, fileName, item.packageName)
                         }
                         Downloader.with().addTask(task)
                         Downloader.with().addListener(task.getTaskId(), object : DownloadListener() {
@@ -146,7 +142,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                                 url = item.url
                                 fileName = item.name + ".apk"
                                 filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-                                taskId = DownloadTaskUtils.generateTaskId(url, filePath, fileName)
+                                taskId = TaskIdUtils.generateTaskId(url, filePath, fileName, item.packageName)
                             }
                         ).setListener(object : DispatcherListener {
                             override fun onStart(call: DownloadMultiCall, task: DownloadTask?, totalLength: Long) {

@@ -212,34 +212,40 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), 
         addDownloadTask(
             url = kugou,
             name = "酷狗音乐",
+            packageName = "com.kugou.android",
         )
         addDownloadTask(
             url = kuwo,
             name = "酷我音乐",
+            packageName = "com.kuwo.android",
         )
         addDownloadTask(
             url = douyin,
             name = "抖音",
+            packageName = "com.ss.android.ugc.aweme",
         )
         addDownloadTask(
             url = kuaishou,
             name = "快手",
+            packageName = "com.kuaishou.nebula",
         )
         addDownloadTask(
             url = wangzhe,
             name = "王者荣耀",
+            packageName = "com.eg.android.AlipayGphone",
         )
         addDownloadTask(
             url = taptap,
             name = "taptap",
+            packageName = "com.taptap.android",
         )
         addDownloadTask(
             url = kuaishoujisuban,
             name = "快手的极速版",
+            packageName = "com.kuaishou.android",
         )
 
         binding.recyclerView.bindingAdapter.models = downloadTasks
-
     }
 
     private fun startInstall(item: DownloadBean) {
@@ -266,8 +272,8 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), 
         }
     }
 
-    fun addDownloadTask(url: String, name: String) {
-        val newTask = DownloadBean(url = url, name = name, status = DownloadStatus.DEFAULT)
+    fun addDownloadTask(url: String, name: String,packageName:String) {
+        val newTask = DownloadBean(url = url, name = name, status = DownloadStatus.DEFAULT, packageName = packageName)
         downloadTasks.add(newTask)
     }
 

@@ -15,6 +15,7 @@ data class DownloadTaskInfo(
     var totalLength: Long? = 0,
     var progress: Int? = 0,
     var fileMD5: String? = null,
+    var tag: String? = null,
     //-1:未开始， 0：等待下载，1：下载中，2：暂停，3：完成，4：失败, 5:等待wifi
     var status: Int = -1,
     var info: DownloadBreakPointData? = null

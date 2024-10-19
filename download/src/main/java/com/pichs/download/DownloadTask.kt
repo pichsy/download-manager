@@ -2,7 +2,7 @@ package com.pichs.download
 
 import com.pichs.download.callback.IDownloadListener
 import com.pichs.download.entity.DownloadTaskInfo
-import com.pichs.download.utils.DownloadTaskUtils
+import com.pichs.download.utils.TaskIdUtils
 
 class DownloadTask(var downloadInfo: DownloadTaskInfo? = null) {
 
@@ -11,7 +11,7 @@ class DownloadTask(var downloadInfo: DownloadTaskInfo? = null) {
             val info = DownloadTaskInfo()
             block.invoke(info)
             if (info.taskId.isEmpty()) {
-                info.taskId = DownloadTaskUtils.generateTaskId(info.url, info.filePath, info.fileName)
+                info.taskId = TaskIdUtils.generateTaskId(info.url, info.filePath, info.fileName, info.tag ?: "")
             }
             return DownloadTask(info)
         }

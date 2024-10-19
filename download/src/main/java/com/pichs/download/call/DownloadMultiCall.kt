@@ -8,6 +8,7 @@ import com.pichs.download.breakpoint.DownloadChunk
 import com.pichs.download.breakpoint.DownloadChunkManager
 import com.pichs.download.callback.DownloadListener
 import com.pichs.download.dispatcher.DispatcherListener
+import com.pichs.download.entity.DownloadStatus
 import com.pichs.download.utils.DownloadLog
 import com.pichs.download.utils.FileUtils
 import com.pichs.download.utils.MD5Utils
@@ -120,6 +121,7 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
 
                 // 开始下载
                 task.downloadInfo?.totalLength = totalLength
+                task.downloadInfo?.status = DownloadStatus.DOWNLOADING // 下载中
                 listener?.onStart(this@DownloadMultiCall, task, totalLength)
 
                 val jobs = List(blockCount) { index ->
@@ -157,7 +159,7 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
                     this.currentLength = totalLength
                     this.totalLength = totalLength
                     this.progress = progress
-                    this.status = 1 // 下载中
+                    this.status = DownloadStatus.DOWNLOADING // 下载中
                 }
                 listener?.onProgress(this@DownloadMultiCall, task, totalLength, totalLength, 100, 0)
                 updateBreakPointData(breakpointInfo, totalLength)
@@ -286,14 +288,14 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
     }
 
     private suspend fun onDownloadComplete(task: DownloadTask) {
-        task.downloadInfo?.status = 3 // 完成
+        task.downloadInfo?.status = DownloadStatus.COMPLETED // 完成
         listener?.onComplete(this@DownloadMultiCall, task)
         DownloadBreakPointManger.deleteByTaskId(task.downloadInfo?.taskId ?: "")
         DownloadChunkManager.deleteChunkByTaskId(task.downloadInfo?.taskId ?: "")
     }
 
     private suspend fun onDownloadFailed(task: DownloadTask?, error: Exception) {
-        task?.downloadInfo?.status = 4 // 失败
+        task?.downloadInfo?.status = DownloadStatus.ERROR // 失败
         listener?.onError(this@DownloadMultiCall, task, error)
     }
 
@@ -308,7 +310,7 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
     fun pauseCall(): DownloadMultiCall {
         job?.cancel()
         job = null
-        task.downloadInfo?.status = 2 // 暂停
+        task.downloadInfo?.status = DownloadStatus.PAUSE // 暂停
         listener?.onPause(this@DownloadMultiCall, task)
         return this
     }
@@ -319,7 +321,7 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
     fun cancelCall(): DownloadMultiCall {
         job?.cancel()
         job = null
-        task.downloadInfo?.status = 6 // 取消
+        task.downloadInfo?.status = DownloadStatus.CANCEL // 取消
         listener?.onCancel(this@DownloadMultiCall, task)
         return this
     }
@@ -335,53 +337,11 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
             DownloadBreakPointManger.deleteByTaskId(task.downloadInfo?.taskId ?: "")
             DownloadChunkManager.deleteChunkByTaskId(task.downloadInfo?.taskId ?: "")
         }
-        task.downloadInfo?.status = 7 // 清除
+        task.downloadInfo?.status = DownloadStatus.CANCEL // 清除
         listener?.onCancel(this@DownloadMultiCall, task)
         return this
     }
 
 }
 
-class ProgressTracker(private val totalLength: Long) {
-    private val downloadedBytes = AtomicLong(0)
-    private val lastUpdateTime = AtomicLong(System.currentTimeMillis())
-    private val lastBytesRead = AtomicLong(0)
 
-    fun addProgress(bytes: Long): Long {
-        return downloadedBytes.addAndGet(bytes).coerceAtMost(totalLength)
-    }
-
-    fun getProgress(): Int {
-        return ((downloadedBytes.get().toDouble() / totalLength) * 100).toInt().coerceIn(0, 100)
-    }
-
-    fun calculateSpeed(): Long {
-        val currentTime = System.currentTimeMillis()
-        val currentBytes = downloadedBytes.get()
-        val timeDiff = (currentTime - lastUpdateTime.get()) / 1000.0
-        val bytesDiff = currentBytes - lastBytesRead.get()
-        val speed = if (timeDiff > 0) (bytesDiff / timeDiff).toLong() else 0L
-
-        lastUpdateTime.set(currentTime)
-        lastBytesRead.set(currentBytes)
-
-        return speed
-    }
-
-    fun getTotalDownloaded(): Long {
-        return downloadedBytes.get()
-    }
-
-    fun shouldUpdateProgress(): Boolean {
-        return System.currentTimeMillis() - lastUpdateTime.get() >= PROGRESS_UPDATE_INTERVAL
-    }
-
-    fun shouldUpdateCache(): Boolean {
-        return System.currentTimeMillis() - lastUpdateTime.get() >= CACHE_UPDATE_INTERVAL
-    }
-
-    companion object {
-        private const val PROGRESS_UPDATE_INTERVAL = 1000 // 1 second
-        private const val CACHE_UPDATE_INTERVAL = 1500 // 1 second
-    }
-}
