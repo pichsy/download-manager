@@ -4,6 +4,8 @@ import android.content.Context
 import com.pichs.download.breakpoint.DownloadBreakPointManger
 import com.pichs.download.callback.IDownloadListener
 import com.pichs.download.dispatcher.DownloadQueueDispatcher
+import com.pichs.download.entity.DownloadTaskInfo
+import com.pichs.download.utils.TaskIdUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -40,7 +42,7 @@ class Downloader {
             val breakPointList = DownloadBreakPointManger.queryAll()
             val taskList = mutableListOf<DownloadTask>()
             breakPointList?.forEach { info ->
-                val task = DownloadTask.build {
+                val task = DownloadTask.create {
                     url = info.url
                     progress = info.progress
                     status = info.status
@@ -57,28 +59,38 @@ class Downloader {
         }
     }
 
-    fun getTaskList(): MutableList<DownloadTask> {
-        return downloadQueueDispatcher.getAllTasks()
+    /**
+     * 获取所有活跃任务，包含running task
+     */
+    fun getTaskAllActivatedList(): MutableList<DownloadTask> {
+        return downloadQueueDispatcher.getAllActivatedTasks()
+    }
+
+    /**
+     * 获取所有正在下载的任务
+     */
+    fun getAllRunningTaskList(): MutableList<DownloadTask> {
+        return downloadQueueDispatcher.getRunningTasks()
     }
 
     fun getTaskById(taskId: String): DownloadTask? {
         return downloadQueueDispatcher.getTask(taskId)
     }
 
-    fun addListener(taskId: String, listener: IDownloadListener?) {
+    /**
+     * 绑定监听器
+     * 用于其他位置监听
+     */
+    fun bindListener(taskId: String, listener: IDownloadListener?) {
         downloadQueueDispatcher.addListener(taskId, listener)
     }
 
-    fun removeListener(taskId: String) {
-        downloadQueueDispatcher.removeListener(taskId)
-    }
-
-    fun addTask(task: DownloadTask) {
-        downloadQueueDispatcher.addTask(task)
-    }
-
-    fun removeTask(taskId: String) {
-        downloadQueueDispatcher.removeTask(taskId)
+    /**
+     * 解绑监听器
+     * 用于其他位置解绑监听
+     */
+    fun unbindListener(taskId: String, listener: IDownloadListener?) {
+        downloadQueueDispatcher.removeListener(taskId, listener)
     }
 
     fun pauseTask(taskId: String) {
@@ -90,7 +102,7 @@ class Downloader {
     }
 
     fun cancelTask(taskId: String) {
-        downloadQueueDispatcher.removeTask(taskId)
+        downloadQueueDispatcher.cancelTask(taskId)
     }
 
     fun cancelAllTask() {
@@ -107,6 +119,45 @@ class Downloader {
 
     fun isTaskExists(taskId: String): Boolean {
         return downloadQueueDispatcher.isTaskExists(taskId)
+    }
+
+
+    class Builder {
+
+        private var listener: IDownloadListener? = null
+        val downloadTask: DownloadTask = DownloadTask(DownloadTaskInfo())
+
+        fun setListener(listener: IDownloadListener?): Builder {
+            this.listener = listener
+            return this
+        }
+
+        fun setTaskId(taskId: String): Builder {
+            downloadTask.downloadInfo?.taskId = taskId
+            return this
+        }
+
+        fun setDownloadTaskInfo(block: DownloadTaskInfo.() -> Unit): Builder {
+            downloadTask.downloadInfo?.let {
+                block(it)
+            }
+            return this
+        }
+
+        fun build(): DownloadTask {
+            downloadTask.apply {
+                if (this.downloadInfo?.taskId.isNullOrEmpty()) {
+                    this.downloadInfo?.taskId = TaskIdUtils.generateTaskId(
+                        this.downloadInfo.url,
+                        this.downloadInfo.filePath,
+                        this.downloadInfo.fileName,
+                        this.downloadInfo.tag ?: this.downloadInfo.fileMD5 ?: ""
+                    )
+                }
+                addListener(listener)
+            }
+            return downloadTask
+        }
     }
 
 }

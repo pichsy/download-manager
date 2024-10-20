@@ -6,7 +6,6 @@ import com.pichs.download.breakpoint.DownloadBreakPointData
 import com.pichs.download.breakpoint.DownloadBreakPointManger
 import com.pichs.download.breakpoint.DownloadChunk
 import com.pichs.download.breakpoint.DownloadChunkManager
-import com.pichs.download.callback.DownloadListener
 import com.pichs.download.dispatcher.DispatcherListener
 import com.pichs.download.entity.DownloadStatus
 import com.pichs.download.utils.DownloadLog
@@ -322,6 +321,11 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
         job?.cancel()
         job = null
         task.downloadInfo?.status = DownloadStatus.CANCEL // 取消
+        launch(Dispatchers.IO) {
+            // 清除数据库数据
+            DownloadBreakPointManger.deleteByTaskId(task.downloadInfo?.taskId ?: "")
+            DownloadChunkManager.deleteChunkByTaskId(task.downloadInfo?.taskId ?: "")
+        }
         listener?.onCancel(this@DownloadMultiCall, task)
         return this
     }
@@ -332,12 +336,12 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
     fun clearCall(): DownloadMultiCall {
         job?.cancel()
         job = null
+        task.downloadInfo?.status = DownloadStatus.CANCEL // 清除
         launch(Dispatchers.IO) {
             // 清除数据库数据
             DownloadBreakPointManger.deleteByTaskId(task.downloadInfo?.taskId ?: "")
             DownloadChunkManager.deleteChunkByTaskId(task.downloadInfo?.taskId ?: "")
         }
-        task.downloadInfo?.status = DownloadStatus.CANCEL // 清除
         listener?.onCancel(this@DownloadMultiCall, task)
         return this
     }

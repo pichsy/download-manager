@@ -1,5 +1,6 @@
 package com.pichs.download.breakpoint
 
+import com.pichs.download.utils.DownloadLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -10,26 +11,53 @@ object DownloadBreakPointManger {
     const val TABLE_NAME_BREAK_POINT = "xp_download_break_point_info"
     private fun getDao() = DownloadBreakPointDatabase.database.breakPointDao()
     suspend fun upsert(data: DownloadBreakPointData) = withContext(Dispatchers.IO) {
-        getDao().upsert(data)
+        try {
+            getDao().upsert(data)
+        } catch (e: Exception) {
+            -1L
+        }
     }
 
     suspend fun queryByTaskId(taskId: String) = withContext(Dispatchers.IO) {
-        getDao().queryByTaskId(taskId)
+        try {
+            getDao().queryByTaskId(taskId)
+        } catch (e: Exception) {
+            DownloadLog.e(e) { "Exception queryByTaskId:" }
+            null
+        }
     }
 
     suspend fun queryByUrl(url: String) = withContext(Dispatchers.IO) {
-        getDao().queryByUrl(url)
+        try {
+            getDao().queryByUrl(url)
+        } catch (e: Exception) {
+            DownloadLog.e(e) { "Exception queryByUrl:" }
+            null
+        }
     }
 
     suspend fun deleteByTaskId(taskId: String) = withContext(Dispatchers.IO) {
-        getDao().deleteByTaskId(taskId)
+        try {
+            getDao().deleteByTaskId(taskId)
+        } catch (e: Exception) {
+            DownloadLog.e(e) { "Exception deleteByTaskId:" }
+        }
     }
 
     suspend fun queryAll() = withContext(Dispatchers.IO) {
-        getDao().queryAll()
+        try {
+            getDao().queryAll()
+        } catch (e: Exception) {
+            DownloadLog.e(e) { "Exception queryAll:" }
+            mutableListOf()
+        }
     }
 
     suspend fun deleteAll() = withContext(Dispatchers.IO) {
-        getDao().deleteAll()
+        try {
+            getDao().deleteAll()
+        } catch (e: Exception) {
+            DownloadLog.e(e) { "Exception deleteAll:" }
+        }
     }
 }

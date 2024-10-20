@@ -4,11 +4,16 @@ import com.pichs.download.DownloadTask
 import com.pichs.download.call.DownloadMultiCall
 import com.pichs.download.callback.IDownloadListener
 import com.pichs.download.entity.DownloadStatus
+import com.pichs.download.utils.DownloadLog
+import com.pichs.download.utils.FileUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okio.Path.Companion.toPath
+import java.io.File
+import java.nio.file.Files
 import java.util.Collections
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.Comparator
@@ -51,13 +56,20 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
     private var mDownloadListenerWrap = DownloadTaskWrapper()
 
     // 添加下载任务
-    fun addTask(task: DownloadTask) {
+    fun pushTask(task: DownloadTask) {
         launch {
             mutexLock.withLock {
                 // 首先应该检测当前任务是否已经存在
                 if (!isTaskExists(task.getTaskId())) {
+                    task.downloadInfo?.status = DownloadStatus.WAITING
                     val call = DownloadMultiCall(task).setListener(mDownloadListenerWrap)
                     allActivatedDownloadCall.add(call)
+                    // 当准备时。
+                    mListenersMap[task.getTaskId()]?.let {
+                        it.forEach { listener ->
+                            listener.onPrepare(task)
+                        }
+                    }
                     startNextTaskIfAvailable()
                 } else {
                     // todo 如果已经存在，则不需要再次添加
@@ -88,19 +100,13 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
 
     /**
      * 绑定任务监听
+     * 建议放在 addTask 之前
+     * 因为会回调添加时回调。
      */
     fun addListener(taskId: String?, listener: IDownloadListener?) {
         if (taskId.isNullOrEmpty()) return
         if (listener == null) return
         mListenersMap.getOrPut(taskId) { mutableListOf() }.add(listener)
-    }
-
-    /**
-     * 解绑任务监听
-     */
-    fun removeListener(taskId: String?) {
-        if (taskId.isNullOrEmpty()) return
-        mListenersMap.remove(taskId)
     }
 
     /**
@@ -178,6 +184,8 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
             if (task == null) return
             launch {
                 mutexLock.withLock {
+                    // 删除tmp文件
+                    FileUtils.deleteFile(task.getTmpFileAbsolutePath())
                     // 将当前任务从正在下载的任务队列中移除
                     runningTaskDownloadCall.remove(call)
                     // 添加到总任务中
@@ -188,6 +196,11 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
                     }
                     // 移除监听
                     mListenersMap.remove(task.getTaskId())
+                    // todo 清除已下载的缓存文件。
+                    // todo 理论上应该清除数据库缓存
+
+
+
                     nextTaskIfAvailable()
                 }
             }
@@ -238,7 +251,7 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
     }
 
     // 删除下载任务
-    fun removeTask(taskId: String) {
+    fun cancelTask(taskId: String) {
         launch aa@{
             mutexLock.withLock {
                 runningTaskDownloadCall.find { it.task.getTaskId() == taskId }?.let {
@@ -292,10 +305,13 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
         }
     }
 
-    // 获取所有下载任务
-    fun getAllTasks(): MutableList<DownloadTask> {
+    fun getRunningTasks(): MutableList<DownloadTask> {
+        return runningTaskDownloadCall.map { it.task }.toMutableList()
+    }
 
-        return mutableListOf()
+    // 获取所有下载任务
+    fun getAllActivatedTasks(): MutableList<DownloadTask> {
+        return allActivatedDownloadCall.map { it.task }.toMutableList()
     }
 
     // 获取最近完成的任务

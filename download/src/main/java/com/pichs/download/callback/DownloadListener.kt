@@ -7,11 +7,13 @@ import com.pichs.download.DownloadTask
  * 进度监听
  */
 abstract class DownloadListener : IDownloadListener {
+    override fun onPrepare(task: DownloadTask?) {
+    }
+
     override fun onStart(task: DownloadTask?, totalLength: Long) {
     }
 
     override fun onPause(task: DownloadTask?) {
-
     }
 
     override fun onProgress(task: DownloadTask?, currentLength: Long, totalLength: Long, progress: Int, speed: Long) {

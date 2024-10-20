@@ -3,6 +3,7 @@ package com.pichs.download.utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
@@ -100,6 +101,7 @@ object FileUtils {
                             false
                         }
                     }
+
                     else -> {
                         allocateFileSize(file, length)
                         true
@@ -144,7 +146,7 @@ object FileUtils {
      * 删除文件或者文件夹
      * @return 是否删除成功
      */
-    suspend fun checkAndDeleteFile(file: File): Boolean {
+    private suspend fun checkAndDeleteFile(file: File): Boolean {
         if (!file.exists()) return true
         if (file.isDirectory) {
             return checkAndDeleteDir(file)
@@ -233,6 +235,34 @@ object FileUtils {
             return true
         } catch (e: Exception) {
             DownloadLog.e(e) { "download666: 文件重命名:${tempFile.absolutePath} Exception" }
+            return false
+        }
+    }
+
+
+    /**
+     * 删除文件。
+     */
+    fun deleteFile(fileAbsPath: String?): Boolean {
+        try {
+            if (fileAbsPath.isNullOrEmpty()) {
+                return true
+            }
+            fileAbsPath.let { tf ->
+                val file = File(tf)
+                if (!file.exists()) {
+                    return true
+                }
+                val isDelete = Files.deleteIfExists(file.toPath())
+                if (isDelete) {
+                    DownloadLog.d { "删除文件:(${tf})成功" }
+                } else {
+                    DownloadLog.d { "删除文件:($tf)失败" }
+                }
+                return isDelete
+            }
+        } catch (e: IOException) {
+            DownloadLog.e(e) { "删除文件异常:" }
             return false
         }
     }

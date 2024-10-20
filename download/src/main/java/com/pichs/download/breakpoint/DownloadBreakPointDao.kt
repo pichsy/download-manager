@@ -12,7 +12,7 @@ import com.pichs.download.breakpoint.DownloadBreakPointManger.TABLE_NAME_BREAK_P
 interface DownloadBreakPointDao {
 
     @Upsert
-    fun upsert(downloadBreakPoint: DownloadBreakPointData)
+    fun upsert(downloadBreakPoint: DownloadBreakPointData): Long
 
     @Query("SELECT * FROM `${TABLE_NAME_BREAK_POINT}` WHERE taskId = :taskId")
     fun queryByTaskId(taskId: String): DownloadBreakPointData?

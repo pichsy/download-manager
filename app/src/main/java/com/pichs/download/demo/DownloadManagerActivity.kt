@@ -6,6 +6,7 @@ import com.drake.brv.utils.bindingAdapter
 import com.drake.brv.utils.linear
 import com.drake.brv.utils.setup
 import com.pichs.download.DownloadTask
+import com.pichs.download.Downloader
 import com.pichs.download.callback.IDownloadListener
 import com.pichs.download.demo.databinding.ActivityDownloadManagerBinding
 import com.pichs.download.demo.databinding.ItemDownloadTaskBinding
@@ -163,26 +164,31 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), 
                 val item = getModel<DownloadBean>()
                 when (item.status) {
                     -1 -> {
-                        // 可能未进行下载。点击后添加任务中。
-                        DownloadTask.build {
-                            url = item.url
-                            filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-                            fileName = item.name + ".apk"
-                        }.also {
-                            item.task = it
-                        }.addToQueue().addListener(this@DownloadManagerActivity)
+                        Downloader.Builder()
+                            .setListener(this@DownloadManagerActivity)
+                            .setDownloadTaskInfo {
+                                url = item.url
+                                filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
+                                fileName = item.name + ".apk"
+                            }
+                            .build()
+                            .also { item.task = it }
+                            .pushTask()
+
                     }
 
                     0 -> {
                         // 可能未进行下载。点击后添加任务中。
-                        DownloadTask.build {
-                            url = item.url
-                            filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-                            fileName = item.name + ".apk"
-                        }.also {
-                            item.task = it
-                        }.addToQueue().addListener(this@DownloadManagerActivity)
-
+                        Downloader.Builder()
+                            .setListener(this@DownloadManagerActivity)
+                            .setDownloadTaskInfo {
+                                url = item.url
+                                filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
+                                fileName = item.name + ".apk"
+                            }
+                            .build()
+                            .also { item.task = it }
+                            .pushTask()
                     }
 
                     2 -> {
@@ -272,9 +278,14 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), 
         }
     }
 
-    fun addDownloadTask(url: String, name: String,packageName:String) {
+    fun addDownloadTask(url: String, name: String, packageName: String) {
         val newTask = DownloadBean(url = url, name = name, status = DownloadStatus.DEFAULT, packageName = packageName)
         downloadTasks.add(newTask)
+    }
+
+    override fun onPrepare(task: DownloadTask?) {
+        if (task == null) return
+        updateTaskStatus(task, DownloadStatus.WAITING)
     }
 
 

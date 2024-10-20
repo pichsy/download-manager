@@ -1,5 +1,6 @@
 package com.pichs.download.breakpoint
 
+import android.provider.ContactsContract.CommonDataKinds.Im
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
@@ -14,7 +15,7 @@ interface DownloadChunkDao {
      * 插入断点信息,如果存在则更新
      */
     @Upsert(entity = DownloadChunk::class)
-    fun upsert(info: DownloadChunk)
+    fun upsert(info: DownloadChunk): Long
 
     /**
      * 查询任务id对应的断点信息列表

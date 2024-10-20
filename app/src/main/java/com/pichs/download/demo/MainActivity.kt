@@ -45,11 +45,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         initListener()
 
         list.add(
-            DownloadItem(url = bizhiduoduo, name = "bizhiduoduo",packageName = "com.didichuxing.doraemonkit"),
+            DownloadItem(url = bizhiduoduo, name = "bizhiduoduo", packageName = "com.didichuxing.doraemonkit"),
         )
 
         list.add(
-            DownloadItem(url = zhishangtanbing, name = "zhishangtanbing",packageName = "com.tencent.zhishangtanbing"),
+            DownloadItem(url = zhishangtanbing, name = "zhishangtanbing", packageName = "com.tencent.zhishangtanbing"),
         )
 
         lifecycleScope.launch {
@@ -79,104 +79,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 val item = getModel<DownloadItem>()
                 val itemBinding = getBinding<ItemDonwloadListBinding>()
                 itemBinding.tvAppName.text = item.name
-
-                itemBinding.btnDownload.click {
-                    if (modelPosition == 0) {
-                        val task = DownloadTask.build {
-                            url = item.url
-                            fileName = item.name + ".apk"
-                            filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-                            taskId = TaskIdUtils.generateTaskId(url, filePath, fileName, item.packageName)
-                        }
-                        Downloader.with().addTask(task)
-                        Downloader.with().addListener(task.getTaskId(), object : DownloadListener() {
-                            override fun onProgress(task: DownloadTask?, currentLength: Long, totalLength: Long, progress: Int, speed: Long) {
-                                lifecycleScope.launch(Dispatchers.Main) {
-                                    itemBinding.progressBar.progress = progress
-                                    itemBinding.tvProgress.text = "$progress%"
-                                    itemBinding.btnDownload.text = "下载中:${speed / 1024}Kb/s"
-                                }
-                            }
-                        })
-                    }
-//                    DownloadMultiCall(DownloadTask.build {
-//                        url = item.url
-//                        fileName = item.name + ".apk"
-//                        filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-//                    })
-//                        .setListener(object : DispatcherListener {
-//                            override fun onStart(call: DownloadMultiCall, task: DownloadTask?, totalLength: Long) {
-//                            }
-//
-//                            override fun onPause(call: DownloadMultiCall, task: DownloadTask?) {
-//                            }
-//
-//                            override fun onProgress(
-//                                call: DownloadMultiCall,
-//                                task: DownloadTask?,
-//                                currentLength: Long,
-//                                totalLength: Long,
-//                                progress: Int,
-//                                speed: Long
-//                            ) {
-//                                lifecycleScope.launch(Dispatchers.Main) {
-//                                    itemBinding.progressBar.progress = progress
-//                                    itemBinding.tvProgress.text = "$progress%"
-//                                    itemBinding.btnDownload.text = "下载中:${speed / 1024}Kb/s"
-//                                }
-//                            }
-//
-//                            override fun onComplete(call: DownloadMultiCall, task: DownloadTask?) {
-//                            }
-//
-//                            override fun onError(call: DownloadMultiCall, task: DownloadTask?, e: Throwable?) {
-//                            }
-//
-//                            override fun onCancel(call: DownloadMultiCall, task: DownloadTask?) {
-//                            }
-//                        })
-//                        .startCall()
-                    if (modelPosition == 1) {
-                        DownloadMultiCall(
-                            DownloadTask.build {
-                                url = item.url
-                                fileName = item.name + ".apk"
-                                filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-                                taskId = TaskIdUtils.generateTaskId(url, filePath, fileName, item.packageName)
-                            }
-                        ).setListener(object : DispatcherListener {
-                            override fun onStart(call: DownloadMultiCall, task: DownloadTask?, totalLength: Long) {
-                            }
-
-                            override fun onPause(call: DownloadMultiCall, task: DownloadTask?) {
-                            }
-
-                            override fun onProgress(
-                                call: DownloadMultiCall,
-                                task: DownloadTask?,
-                                currentLength: Long,
-                                totalLength: Long,
-                                progress: Int,
-                                speed: Long
-                            ) {
-                                lifecycleScope.launch(Dispatchers.Main) {
-                                    itemBinding.progressBar.progress = progress
-                                    itemBinding.tvProgress.text = "$progress%"
-                                    itemBinding.btnDownload.text = "下载中:${speed / 1024}Kb/s"
-                                }
-                            }
-
-                            override fun onComplete(call: DownloadMultiCall, task: DownloadTask?) {
-                            }
-
-                            override fun onError(call: DownloadMultiCall, task: DownloadTask?, e: Throwable?) {
-                            }
-
-                            override fun onCancel(call: DownloadMultiCall, task: DownloadTask?) {
-                            }
-                        }).startCall()
-                    }
-                }
             }
         }.models = list
     }

@@ -3,27 +3,33 @@ package com.pichs.download
 import com.pichs.download.callback.IDownloadListener
 import com.pichs.download.entity.DownloadTaskInfo
 import com.pichs.download.utils.TaskIdUtils
+import java.io.File
 
-class DownloadTask(var downloadInfo: DownloadTaskInfo? = null) {
+class DownloadTask(val downloadInfo: DownloadTaskInfo) {
 
     companion object {
-        fun build(block: DownloadTaskInfo.() -> Unit): DownloadTask {
+        fun create(block: DownloadTaskInfo.() -> Unit): DownloadTask {
             val info = DownloadTaskInfo()
-            block.invoke(info)
-            if (info.taskId.isEmpty()) {
-                info.taskId = TaskIdUtils.generateTaskId(info.url, info.filePath, info.fileName, info.tag ?: "")
+            info.block()
+            if (info.taskId.isNullOrEmpty()) {
+                info.taskId = TaskIdUtils.generateTaskId(
+                    info.url,
+                    info.fileName,
+                    info.filePath,
+                    info.tag ?: info.fileMD5 ?: ""
+                )
             }
             return DownloadTask(info)
         }
     }
 
-    fun addToQueue(): DownloadTask {
-        Downloader.with().addTask(this)
+    fun pushTask(): DownloadTask {
+        Downloader.with().downloadQueueDispatcher.pushTask(this)
         return this
     }
 
     fun addListener(listener: IDownloadListener?): DownloadTask {
-        Downloader.with().addListener(getTaskId(), listener)
+        Downloader.with().downloadQueueDispatcher.addListener(getTaskId(), listener)
         return this
     }
 
@@ -41,6 +47,20 @@ class DownloadTask(var downloadInfo: DownloadTaskInfo? = null) {
 
     fun getFileName(): String {
         return downloadInfo?.fileName ?: ""
+    }
+
+    /**
+     * 获取文件绝对路径
+     */
+    fun getFileAbsolutePath(): String? {
+        return downloadInfo.getFileAbsolutePath()
+    }
+
+    /**
+     * 获取临时文件绝对路径
+     */
+    fun getTmpFileAbsolutePath(): String? {
+        return downloadInfo.getTmpFileAbsolutePath()
     }
 
     fun getFileTotalSize(): Long {
