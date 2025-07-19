@@ -99,7 +99,7 @@ object LogUtils {
         log(LEVEL_ERROR, globalTag, msg)
     }
 
-    fun e(tag: String, msg: String, e: Throwable) {
+    fun e(tag: String, msg: String, e: Throwable?) {
         log(LEVEL_ERROR, tag, "$msg,===>e:${Log.getStackTraceString(e)}")
     }
 

@@ -14,7 +14,7 @@
 
         <provider
             android:name="com.pichs.shanhai.base.provider.ShanhaiProvider"
-            android:authorities="com.pichs.shanhai.provider"
+            android:authorities="${applicationId}.provider"
             android:directBootAware="true"
             android:enabled="true"
             android:exported="true"

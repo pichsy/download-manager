@@ -24,9 +24,9 @@ fun calculateVersionCode(vn: String): Int {
 
 ext {
     // 使用set重写上面的
-    set("compileSdk", 34)
+    set("compileSdk", 35)
     set("minSdk", 26)
-    set("targetSdk", 34)
+    set("targetSdk", 35)
     set("javaVersion", "17")
     set("versionName", "1.0.0")
     set("versionCode", calculateVersionCode((get("versionName") ?: "1.0.0").toString()))

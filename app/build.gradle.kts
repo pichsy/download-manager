@@ -47,16 +47,16 @@ android {
     // 根据上面的签名信息，创建正确的签名配置
     signingConfigs {
         // 配置 release 签名,签名开启 v1，V2 签名
-        create("appstore") {
-            storeFile = file("./appstore.jks")
-            storePassword = "shanhai123"
-            keyAlias = "shanhai"
-            keyPassword = "shanhai123"
-            enableV1Signing = true
-            enableV2Signing = true
-            enableV3Signing = false
-            enableV4Signing = false
-        }
+//        create("appstore") {
+//            storeFile = file("./appstore.jks")
+//            storePassword = "shanhai123"
+//            keyAlias = "shanhai"
+//            keyPassword = "shanhai123"
+//            enableV1Signing = true
+//            enableV2Signing = true
+//            enableV3Signing = false
+//            enableV4Signing = false
+//        }
     }
 
 
@@ -66,13 +66,13 @@ android {
             isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // 签名
-            signingConfig = signingConfigs.getByName("appstore")
+//            signingConfig = signingConfigs.getByName("appstore")
         }
         debug {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // 签名
-            signingConfig = signingConfigs.getByName("appstore")
+//            signingConfig = signingConfigs.getByName("appstore")
         }
     }
 

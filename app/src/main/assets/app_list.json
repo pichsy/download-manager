@@ -1,0 +1,39 @@
+{
+  "appList": [
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/17/8/120_5ad581241e85331cade6e9f67d91a790.apk?nrd=0&fname=%E7%BA%A2%E6%9E%9C%E5%85%8D%E8%B4%B9%E7%9F%AD%E5%89%A7&productid=2011&packageid=205466253&pkg=com.phoenix.read&vcode=68132&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=8396801&apprd=8396801&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F04%2F17%2F6%2F125_eef17124a951910ac1908c24b928841c_con.png&did=6d610a147b740ab9af63b2fce83937f3&md5=c509b5bcb159f35182b2604c339dbfe9",
+      "packageName": "com.phoenix.read",
+      "name": "红果免费短剧",
+      "size": 12345678,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/04/17/6/125_eef17124a951910ac1908c24b928841c_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/15/8/110_6259e2b7f55110c4428ebea3b4d900fc.apk?nrd=0&fname=%E9%85%B7%E7%8B%97%E9%9F%B3%E4%B9%90&productid=2011&packageid=603947454&pkg=com.kugou.android&vcode=20249&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=34221&apprd=34221&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F16%2F9%2F110_bc7ea59b236a60f37b243c3b7e156cd0_con.png&did=fd209811baca5a1805db955e97f9d364&md5=898a886d6b6f87924cc14b5be5b3cbde",
+      "packageName": "com.kugou.android",
+      "name": "酷狗音乐",
+      "size": 87654321,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/16/9/110_bc7ea59b236a60f37b243c3b7e156cd0_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/17/1/106_7256c9891a275eaf258f1b9c5065ccd2.apk?nrd=0&fname=%E5%93%94%E5%93%A9%E5%93%94%E5%93%A9&productid=2011&packageid=402065988&pkg=tv.danmaku.bili&vcode=8540300&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=281291&apprd=281291&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F17%2F7%2F106_b6c6f007066467d3c41898ba9aa71596_con.png&did=3a2fb3ffec11de6a8603909307779855&md5=defda94aea438c1c4826b5433b615e83",
+      "packageName": "tv.danmaku.bili",
+      "name": "哔哩哔哩",
+      "size": 87654321,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/17/7/106_b6c6f007066467d3c41898ba9aa71596_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/16/5/120_c349ae314a58e7e6845d5cf997f84fb9.apk?nrd=0&fname=%E6%8A%96%E9%9F%B3&productid=2011&packageid=501171096&pkg=com.ss.android.ugc.aweme&vcode=350101&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=7461948&apprd=7461948&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F02%2F12%2F4%2F110_67eb1a13e53e57586bd5754787356d82_con.png&did=4d9c13f6f555c4ad535cb9007b3c1f48&md5=4d2613e5c6cfa145f7977aa4a3379220",
+      "packageName": "com.ss.android.ugc.aweme",
+      "name": "抖音",
+      "size": 87654321,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/02/12/4/110_67eb1a13e53e57586bd5754787356d82_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/18/7/106_7ecdbbdf1e31a9038a03adcc79c7d280.apk?nrd=0&fname=%E5%A3%81%E7%BA%B8%E5%A4%9A%E5%A4%9A&productid=2011&packageid=205474543&pkg=com.shoujiduoduo.wallpaper&vcode=70006970&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=5784049&apprd=5784049&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F16%2F9%2F110_fc5b4af4b487e0de0f7adfe11d9793db_con.png&did=5b047d7ee12c0735a4ccf51329d291e8&md5=e7e49144578fe97da68794446c381ca1",
+      "packageName": "com.shoujiduoduo.wallpaper",
+      "name": "壁纸多多",
+      "size": 87654321,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/16/9/110_fc5b4af4b487e0de0f7adfe11d9793db_con_130x130.png"
+    }
+  ]
+}

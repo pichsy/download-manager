@@ -63,23 +63,4 @@ dependencies {
     api(libs.androidx.room.ktx)
     api(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
-    //api(libs.glide)
-
-
-    // 下载器
-//    // 核心下载库，普通文件下载，必选
-//    api("com.gankao.downloadkit:downloadkit-core:1.1.4")
-//    // 下载任务本地保存扩展，基于mmkv实现，可选
-//    api("com.gankao.downloadkit:downloadkit-mmkv:1.1.2")
-//    // m3u8下载转换mp4，可选
-//    api("com.gankao.downloadkit:downloadkit-m3u8:1.1.1")
-
-
-//    // 转换为kts
-//    implementation("me.laoyuyu.aria:core:3.8.16")
-//    ksp("me.laoyuyu.aria:compiler:3.8.16")
-//    implementation("me.laoyuyu.aria:ftp:3.8.16")
-//    implementation("me.laoyuyu.aria:sftp:3.8.16")
-//    implementation("me.laoyuyu.aria:m3u8:3.8.16")
-
 }

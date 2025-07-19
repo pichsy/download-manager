@@ -67,6 +67,10 @@ dependencies {
     api(libs.easywindow)
 
     api(libs.xwidget)
+    api(libs.filepicker)
+    api(libs.androidx.media3.exoplayer)
+    api(libs.androidx.media3.ui)
+
     api(libs.xbase)
 
     // liveEventBus
