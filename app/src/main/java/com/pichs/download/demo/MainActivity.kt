@@ -6,9 +6,11 @@ import android.content.res.Configuration
 import android.os.Environment
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.drake.brv.utils.bindingAdapter
 import com.drake.brv.utils.grid
 import com.drake.brv.utils.linear
 import com.drake.brv.utils.setup
+import com.google.common.collect.Multimaps.index
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
 import com.pichs.download.DownloadTask
@@ -167,7 +169,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         .setListener(OnDownloadListener())
                         .setDownloadTaskInfo {
                             url = item.url
-                            filePath = externalCacheDir?.absolutePath ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
+                            filePath =
+                                externalCacheDir?.absolutePath ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
                             fileName = item.name + ".apk"
                             extra = item.name
                         }
@@ -184,44 +187,73 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
      * 下载监听器
      */
     inner class OnDownloadListener : DownloadListener() {
-        override fun onStart(task: DownloadTask?, totalLength: Long) {
-            LogUtils.d(
-                "download888",
-                "下载进度 app:${task?.downloadInfo?.fileName}: 开始下载：${task?.downloadInfo?.filePath},${task?.downloadInfo?.url}, name:${task?.downloadInfo?.fileName},"
-            )
+        override fun onPrepare(task: DownloadTask?) {
+            if (task == null) return
+            LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 准备下载：${task.downloadInfo.filePath}, ${task.downloadInfo.url}, name:${task.downloadInfo.fileName}")
+            updateTaskStatus(task, DownloadStatus.WAITING)
         }
 
-        override fun onPrepare(task: DownloadTask?) {
-            LogUtils.d(
-                "download888",
-                "下载进度 app:${task?.downloadInfo?.fileName}: 准备下载：${task?.downloadInfo?.filePath}, ${task?.downloadInfo?.url}, name:${task?.downloadInfo?.fileName}"
-            )
+
+        override fun onStart(task: DownloadTask?, totalLength: Long) {
+            if (task == null) return
+            LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 开始下载：${task.downloadInfo.filePath}, ${task.downloadInfo.url}, name:${task.downloadInfo.fileName}")
+            updateTaskStatus(task, DownloadStatus.DOWNLOADING)
         }
 
         override fun onPause(task: DownloadTask?) {
-            LogUtils.d(
-                "download888",
-                "下载进度 app:${task?.downloadInfo?.fileName}: 下载暂停：${task?.downloadInfo?.filePath}, ${task?.downloadInfo?.url}, name:${task?.downloadInfo?.fileName}"
-            )
-        }
-
-        override fun onComplete(task: DownloadTask?) {
-            LogUtils.d("download888", "下载进度 app:${task?.downloadInfo?.fileName}: 下载完毕：${task?.downloadInfo?.filePath}")
+            if (task == null) return
+            LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 下载暂停：${task.downloadInfo.filePath}, ${task.downloadInfo.url}, name:${task.downloadInfo.fileName}")
+            updateTaskStatus(task, DownloadStatus.PAUSE)
         }
 
         override fun onProgress(task: DownloadTask?, currentLength: Long, totalLength: Long, progress: Int, speed: Long) {
-            LogUtils.d(
-                "download888",
-                "下载进度 app:${task?.downloadInfo?.fileName}: $progress%, speed: $speed, currentLength: $currentLength, totalLength: $totalLength"
-            )
+            LogUtils.d("Manager:下载进度888 app:${task?.downloadInfo?.fileName}: $progress%, speed: $speed, currentLength: $currentLength, totalLength: $totalLength")
+            if (task == null) return
+            updateTaskProgress(task, progress, currentLength, totalLength, speed)
         }
 
-        override fun onCancel(task: DownloadTask?) {
-            LogUtils.d("download888", "下载进度 app:${task?.downloadInfo?.fileName}: 下载取消")
+        override fun onComplete(task: DownloadTask?) {
+            if (task == null) return
+            LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 下载完毕：${task.downloadInfo.filePath}")
+            updateTaskStatus(task, DownloadStatus.COMPLETED)
         }
 
         override fun onError(task: DownloadTask?, e: Throwable?) {
-            LogUtils.e("download888", "下载进度 app:${task?.downloadInfo?.fileName}: 下载失败: ${e?.message}", e)
+            if (task == null) return
+            LogUtils.e("", "Manager:下载进度888 app:${task.downloadInfo.fileName}: 下载失败: ${e?.message}", e)
+            updateTaskStatus(task, DownloadStatus.ERROR)
+        }
+
+        override fun onCancel(task: DownloadTask?) {
+            if (task == null) return
+            LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 下载取消")
+            updateTaskStatus(task, DownloadStatus.CANCEL)
+        }
+    }
+
+
+    private fun updateTaskStatus(task: DownloadTask, status: Int) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            val index = list.indexOfFirst { it.task?.getTaskId() == task.getTaskId() }
+            if (index != -1) {
+                list.getOrNull(index)?.task?.downloadInfo?.status = status
+                binding.recyclerView.bindingAdapter.notifyItemChanged(index, "status")
+            }
+        }
+    }
+
+    private fun updateTaskProgress(task: DownloadTask, progress: Int, currentLength: Long, totalLength: Long, speed: Long) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            val index = list.indexOfFirst { it.task?.getTaskId() == task.getTaskId() }
+            if (index != -1) {
+                list.getOrNull(index)?.task?.downloadInfo?.apply {
+                    this.progress = progress
+                    this.currentLength = currentLength
+                    this.totalLength = totalLength
+                    this.speed = speed
+                }
+                binding.recyclerView.bindingAdapter.notifyItemChanged(index, "progress")
+            }
         }
     }
 
