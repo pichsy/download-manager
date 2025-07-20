@@ -88,8 +88,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         .setListener(OnDownloadListener())
                         .setDownloadTaskInfo {
                             url = item.url
-                            filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
+                            filePath = externalCacheDir?.absolutePath ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
                             fileName = item.name + ".apk"
+                            extra = item.name
                         }
                         .build()
                         .pushTask()
@@ -105,28 +106,42 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     inner class OnDownloadListener : DownloadListener() {
         override fun onStart(task: DownloadTask?, totalLength: Long) {
             LogUtils.d(
-                "download666",
+                "download888",
                 "下载进度 app:${task?.downloadInfo?.fileName}: 开始下载：${task?.downloadInfo?.filePath},${task?.downloadInfo?.url}, name:${task?.downloadInfo?.fileName},"
             )
         }
 
+        override fun onPrepare(task: DownloadTask?) {
+            LogUtils.d(
+                "download888",
+                "下载进度 app:${task?.downloadInfo?.fileName}: 准备下载：${task?.downloadInfo?.filePath}, ${task?.downloadInfo?.url}, name:${task?.downloadInfo?.fileName}"
+            )
+        }
+
+        override fun onPause(task: DownloadTask?) {
+            LogUtils.d(
+                "download888",
+                "下载进度 app:${task?.downloadInfo?.fileName}: 下载暂停：${task?.downloadInfo?.filePath}, ${task?.downloadInfo?.url}, name:${task?.downloadInfo?.fileName}"
+            )
+        }
+
         override fun onComplete(task: DownloadTask?) {
-            LogUtils.d("download666", "下载进度 app:${task?.downloadInfo?.fileName}: 下载完毕：${task?.downloadInfo?.filePath}")
+            LogUtils.d("download888", "下载进度 app:${task?.downloadInfo?.fileName}: 下载完毕：${task?.downloadInfo?.filePath}")
         }
 
         override fun onProgress(task: DownloadTask?, currentLength: Long, totalLength: Long, progress: Int, speed: Long) {
             LogUtils.d(
-                "download666",
+                "download888",
                 "下载进度 app:${task?.downloadInfo?.fileName}: $progress%, speed: $speed, currentLength: $currentLength, totalLength: $totalLength"
             )
         }
 
         override fun onCancel(task: DownloadTask?) {
-            LogUtils.d("download666", "下载进度 app:${task?.downloadInfo?.fileName}: 下载取消")
+            LogUtils.d("download888", "下载进度 app:${task?.downloadInfo?.fileName}: 下载取消")
         }
 
         override fun onError(task: DownloadTask?, e: Throwable?) {
-            LogUtils.e("download666", "下载进度 app:${task?.downloadInfo?.fileName}: 下载失败: ${e?.message}", e)
+            LogUtils.e("download888", "下载进度 app:${task?.downloadInfo?.fileName}: 下载失败: ${e?.message}", e)
         }
     }
 

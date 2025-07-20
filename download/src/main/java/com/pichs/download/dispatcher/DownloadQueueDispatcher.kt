@@ -1,5 +1,6 @@
 package com.pichs.download.dispatcher
 
+import android.util.Log
 import com.pichs.download.DownloadTask
 import com.pichs.download.call.DownloadMultiCall
 import com.pichs.download.callback.IDownloadListener
@@ -45,6 +46,9 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
 
     private val mListenersMap = ConcurrentHashMap<String, MutableList<IDownloadListener>>()
 
+    // 全局监听
+    private val globalListeners = Collections.synchronizedList(mutableListOf<IDownloadListener>())
+
     // 所有有效任务队列。排除 completedTasks
     private val allActivatedDownloadCall = Collections.synchronizedList(mutableListOf<DownloadMultiCall>())
     private val runningTaskDownloadCall = Collections.synchronizedList(mutableListOf<DownloadMultiCall>())
@@ -69,6 +73,10 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
                         it.forEach { listener ->
                             listener.onPrepare(task)
                         }
+                    }
+                    // 全局监听
+                    globalListeners.forEach { l ->
+                        l.onPrepare(task)
                     }
                     startNextTaskIfAvailable()
                 } else {
@@ -96,6 +104,16 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
     fun getTask(taskId: String): DownloadTask? {
         return completedTasks.filterValues { it.getTaskId() == taskId }.values.firstOrNull()
             ?: allActivatedDownloadCall.find { it.task.getTaskId() == taskId }?.task
+    }
+
+    fun addGlobalListener(listener: IDownloadListener?) {
+        if (listener == null) return
+        globalListeners.add(listener)
+    }
+
+    fun removeGlobalListener(listener: IDownloadListener?) {
+        if (listener == null) return
+        globalListeners.remove(listener)
     }
 
     /**
@@ -134,8 +152,15 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
                     if (!runningTaskDownloadCall.contains(call)) {
                         runningTaskDownloadCall.add(call)
                     }
+
+                    task.downloadInfo.totalLength = totalLength
+
                     mListenersMap[task.getTaskId()]?.forEach {
                         it.onStart(task, totalLength)
+                    }
+                    // 全局监听
+                    globalListeners.forEach { l ->
+                        l.onStart(task, totalLength)
                     }
                 }
             }
@@ -146,6 +171,14 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
                 mutexLock.withLock {
                     // 将当前任务从正在下载的任务队列中移除
                     runningTaskDownloadCall.remove(call)
+                    // 回调
+                    mListenersMap[task?.getTaskId()]?.forEach {
+                        it.onPause(task)
+                    }
+                    // 全局监听
+                    globalListeners.forEach { l ->
+                        l.onPause(task)
+                    }
                     nextTaskIfAvailable()
                 }
             }
@@ -153,8 +186,19 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
 
         override fun onProgress(call: DownloadMultiCall, task: DownloadTask?, currentLength: Long, totalLength: Long, progress: Int, speed: Long) {
             if (task == null) return
+            task.downloadInfo.speed = speed
+            task.downloadInfo.currentLength = currentLength
+            task.downloadInfo.totalLength = totalLength
+            task.downloadInfo.progress = progress
+
             mListenersMap[task.getTaskId()]?.forEach {
                 it.onProgress(task, currentLength, totalLength, progress, speed)
+            }
+            DownloadLog.d { "DwonaloadDispatchers ==== 》》onProgress: globalListeners=${globalListeners.size}" }
+            // 全局监听
+            globalListeners.forEach { l ->
+                DownloadLog.d { "DwonaloadDispatchers ==== 》globalListeners 》onProgress:" }
+                l.onProgress(task, currentLength, totalLength, progress, speed)
             }
         }
 
@@ -168,12 +212,21 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
                     runningTaskDownloadCall.remove(call)
                     // 从总任务中也要移除
                     allActivatedDownloadCall.remove(call)
+
+                    task.downloadInfo.progress = 100
+
                     // 回调
                     mListenersMap[task.getTaskId()]?.forEach {
                         it.onComplete(task)
                     }
+                    // 全局监听
+                    globalListeners.forEach { l ->
+                        l.onComplete(task)
+                    }
                     // 移除监听
                     mListenersMap.remove(task.getTaskId())
+                    // 删除tmp文件
+                    // FileUtils.deleteFile(task.getTmpFileAbsolutePath())
                     // 开始下一个任务
                     startNextTaskIfAvailable()
                 }
@@ -191,16 +244,24 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
                     // 添加到总任务中
                     allActivatedDownloadCall.remove(call)
                     // 回调
+
+                    task.downloadInfo.speed = 0L
+
+                    task.downloadInfo.progress = 0
+
                     mListenersMap[task.getTaskId()]?.forEach {
                         it.onCancel(task)
                     }
+
+                    // 全局监听
+                    globalListeners.forEach { l ->
+                        l.onCancel(task)
+                    }
+
                     // 移除监听
                     mListenersMap.remove(task.getTaskId())
                     // todo 清除已下载的缓存文件。
                     // todo 理论上应该清除数据库缓存
-
-
-
                     nextTaskIfAvailable()
                 }
             }
@@ -212,9 +273,14 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
                 mutexLock.withLock {
                     // 将当前任务从正在下载的任务队列中移除,只是出错了，还是可以重新下载的。
                     runningTaskDownloadCall.remove(call)
+                    task.downloadInfo.speed = 0L
                     // 添加到总任务中
                     mListenersMap[task.getTaskId()]?.forEach {
                         it.onError(task, e)
+                    }
+                    // 全局监听
+                    globalListeners.forEach { l ->
+                        l.onError(task, e)
                     }
                     nextTaskIfAvailable()
                 }

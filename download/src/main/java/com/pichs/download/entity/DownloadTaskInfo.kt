@@ -10,8 +10,8 @@ import java.io.File
 data class DownloadTaskInfo(
     var taskId: String = "",
     var url: String = "",
-    var filePath: String? = null,
-    var fileName: String? = null,
+    var filePath: String = "",
+    var fileName: String = "",
     var currentLength: Long = 0,
     var totalLength: Long = 0,
     var progress: Int = 0,
@@ -20,7 +20,10 @@ data class DownloadTaskInfo(
     var tag: String? = null,
     //-1:未开始， 0：等待下载，1：下载中，2：暂停，3：完成，4：失败, 5:等待wifi
     var status: Int = DownloadStatus.DEFAULT,
-    var info: DownloadBreakPointData? = null
+    var info: DownloadBreakPointData? = null,
+    // 这个是额外的字段，可以用于存储一些额外的信息
+    var speed: Long = 0L,
+    var extra: String? = null,
 ) : Parcelable {
 
     fun isNotStart() = status == DownloadStatus.DEFAULT
@@ -39,16 +42,16 @@ data class DownloadTaskInfo(
 
     fun isSuccess() = status == DownloadStatus.COMPLETED
 
-    fun getFileAbsolutePath(): String? {
-        if (filePath.isNullOrEmpty() || fileName.isNullOrEmpty()) {
-            return null
+    fun getFileAbsolutePath(): String {
+        if (filePath.isEmpty() || fileName.isEmpty()) {
+            return ""
         }
         return "$filePath${File.separator}$fileName"
     }
 
-    fun getTmpFileAbsolutePath(): String? {
-        if (filePath.isNullOrEmpty() || fileName.isNullOrEmpty()) {
-            return null
+    fun getTmpFileAbsolutePath(): String {
+        if (filePath.isEmpty() || fileName.isEmpty()) {
+            return ""
         }
         return "$filePath${File.separator}${fileName}.tmp"
     }

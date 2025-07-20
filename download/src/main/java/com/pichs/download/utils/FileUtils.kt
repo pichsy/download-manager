@@ -209,7 +209,7 @@ object FileUtils {
         return contentType?.let { ContentTypeMapper.getExtensionFromContentType(it) }
     }
 
-    private fun addExtensionIfMissing(filename: String, extension: String): String {
+    fun addExtensionIfMissing(filename: String, extension: String): String {
         return if (extension.isNotEmpty() && !filename.endsWith(".$extension", ignoreCase = true)) {
             "$filename.$extension"
         } else {
@@ -267,4 +267,8 @@ object FileUtils {
         }
     }
 
+}
+
+fun String.addApkExtensionIfMissing(): String {
+    return FileUtils.addExtensionIfMissing(this, ".apk")
 }

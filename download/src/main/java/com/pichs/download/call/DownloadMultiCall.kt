@@ -247,6 +247,7 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
                 fileName = fileName,
                 totalLength = totalLength,
                 currentLength = 0,
+                extra = task.downloadInfo.extra
             )
             DownloadBreakPointManger.upsert(newInfo)
             newInfo

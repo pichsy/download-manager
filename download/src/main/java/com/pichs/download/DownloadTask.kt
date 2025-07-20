@@ -91,8 +91,6 @@ class DownloadTask(val downloadInfo: DownloadTaskInfo) {
 
     fun isWaitWifi() = getStatus() == DownloadStatus.WAITING_WIFI
 
-    fun isSuccess() = getStatus() == DownloadStatus.COMPLETED
-
     override fun toString(): String {
         return downloadInfo?.toString() ?: ""
     }

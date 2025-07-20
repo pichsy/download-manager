@@ -34,6 +34,14 @@ class Downloader {
         return mContext
     }
 
+    fun addGlobalListener(listener: IDownloadListener?) {
+        downloadQueueDispatcher.addGlobalListener(listener)
+    }
+
+    fun removeGlobalListener(listener: IDownloadListener?) {
+        downloadQueueDispatcher.removeGlobalListener(listener)
+    }
+
     /**
      * 查询断点信息，调出历史下载数据。
      */
@@ -43,6 +51,7 @@ class Downloader {
             val taskList = mutableListOf<DownloadTask>()
             breakPointList?.forEach { info ->
                 val task = DownloadTask.create {
+                    taskId = info.taskId
                     url = info.url
                     progress = info.progress
                     status = info.status
@@ -53,6 +62,7 @@ class Downloader {
                     tag = info.tag
                     this.info = info
                     this.currentLength = info.currentLength
+                    extra = info.extra
                 }
                 taskList.add(task)
             }
