@@ -60,6 +60,10 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), 
                             itemBinding.btnDownload.text = "下载"
                         }
 
+                        DownloadStatus.DOWNLOADING -> {
+                            itemBinding.btnDownload.text = "下载中"
+                        }
+
                         DownloadStatus.WAITING -> {
                             itemBinding.btnDownload.text = "等待中"
                         }
@@ -100,6 +104,9 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), 
                 when (item.downloadInfo.status) {
                     DownloadStatus.DEFAULT -> {
                         itemBinding.btnDownload.text = "下载"
+                    }
+                    DownloadStatus.DOWNLOADING -> {
+                        itemBinding.btnDownload.text = "下载中"
                     }
 
                     DownloadStatus.WAITING -> {
@@ -150,6 +157,11 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), 
                             }
                             .build()
                             .pushTask()
+                    }
+
+                    DownloadStatus.DOWNLOADING -> {
+                        // 暂停下载
+                        Downloader.with().pauseTask(item.getTaskId())
                     }
 
                     DownloadStatus.PAUSE -> {

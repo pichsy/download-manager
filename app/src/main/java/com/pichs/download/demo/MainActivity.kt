@@ -19,8 +19,11 @@ import com.pichs.download.callback.IDownloadListener
 import com.pichs.download.demo.DownloadManagerActivity
 import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemDonwloadListBinding
+import com.pichs.download.demo.databinding.ItemDownloadTaskBinding
 import com.pichs.download.demo.databinding.ItemGridDownloadBeanBinding
 import com.pichs.download.dispatcher.DispatcherListener
+import com.pichs.download.entity.DownloadStatus
+import com.pichs.download.utils.SpeedUtils
 import com.pichs.download.utils.TaskIdUtils
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.ext.click
@@ -74,6 +77,50 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private fun initRecyclerView() {
         binding.recyclerView.grid(4).setup {
             addType<DownloadItem>(R.layout.item_grid_download_bean)
+            onPayload { payloads ->
+                val tag = payloads.firstOrNull()?.toString()
+                val item = getModel<DownloadTask>()
+                val itemBinding = getBinding<ItemDownloadTaskBinding>()
+                LogUtils.d("下载管理：onPayload=====item=${item.downloadInfo.status}, tag=$tag")
+                if (tag == "status") {
+                    when (item.downloadInfo.status) {
+                        DownloadStatus.DEFAULT -> {
+                            itemBinding.btnDownload.text = "下载"
+                        }
+
+                        DownloadStatus.DOWNLOADING -> {
+                            itemBinding.btnDownload.text = "下载中"
+                        }
+
+                        DownloadStatus.WAITING -> {
+                            itemBinding.btnDownload.text = "等待中"
+                        }
+
+                        DownloadStatus.PAUSE -> {
+                            itemBinding.btnDownload.text = "暂停"
+                        }
+
+                        DownloadStatus.COMPLETED -> {
+                            itemBinding.btnDownload.text = "安装"
+                        }
+
+                        DownloadStatus.ERROR, DownloadStatus.CANCEL -> {
+                            // 下载出错。
+                            itemBinding.btnDownload.text = "重新下载"
+                        }
+
+                        DownloadStatus.WAITING_WIFI -> {
+                            // 等待wifi下载
+                            itemBinding.btnDownload.text = "等待wifi"
+                        }
+                    }
+                } else if (tag == "progress") {
+                    itemBinding.progressBar.progress = item.downloadInfo.progress ?: 0
+                    itemBinding.tvProgress.text = "${item.downloadInfo.progress ?: 0}%"
+                    itemBinding.tvSpeed.text = SpeedUtils.formatDownloadSpeed(item.downloadInfo.speed)
+                }
+            }
+
             onBind {
                 val item = getModel<DownloadItem>()
                 val itemBinding = getBinding<ItemGridDownloadBeanBinding>()
@@ -81,6 +128,38 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 Glide.with(itemBinding.ivCover)
                     .load(item.icon ?: "https://android-artworks.25pp.com/fs08/2025/07/10/4/110_f93562a47e4623a0037084abae9f4cc3_con_130x130.png")
                     .into(itemBinding.ivCover)
+
+                when (item.task?.downloadInfo?.status) {
+                    DownloadStatus.DEFAULT -> {
+                        itemBinding.btnDownload.text = "下载"
+                    }
+
+                    DownloadStatus.DOWNLOADING -> {
+                        itemBinding.btnDownload.text = "下载中"
+                    }
+
+                    DownloadStatus.WAITING -> {
+                        itemBinding.btnDownload.text = "等待中"
+                    }
+
+                    DownloadStatus.PAUSE -> {
+                        itemBinding.btnDownload.text = "暂停"
+                    }
+
+                    DownloadStatus.COMPLETED -> {
+                        itemBinding.btnDownload.text = "安装"
+                    }
+
+                    DownloadStatus.ERROR, DownloadStatus.CANCEL -> {
+                        // 下载出错。
+                        itemBinding.btnDownload.text = "重新下载"
+                    }
+
+                    DownloadStatus.WAITING_WIFI -> {
+                        // 等待wifi下载
+                        itemBinding.btnDownload.text = "等待wifi"
+                    }
+                }
 
                 itemBinding.btnDownload.fastClick {
                     // 可能未进行下载。点击后添加任务中。
@@ -93,6 +172,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             extra = item.name
                         }
                         .build()
+                        .also { item.task = it }
                         .pushTask()
                 }
             }
