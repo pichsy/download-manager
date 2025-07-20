@@ -4,6 +4,7 @@ import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.pichs.download.breakpoint.DownloadBreakPointManger.TABLE_NAME_BREAK_POINT
+import com.pichs.download.entity.DownloadStatus
 import kotlinx.parcelize.Parcelize
 
 
@@ -15,34 +16,36 @@ import kotlinx.parcelize.Parcelize
 data class DownloadBreakPointData(
     @PrimaryKey
     var taskId: String = "",
-    var tag: String? = null,
-    var url: String? = null,
+    var tag: String = "",
+    var url: String = "",
     // 是否分片,<=1:不分片，n：分片数量
     var chunkCount: Int = 1,
     var filePath: String? = null,
     var fileName: String? = null,
-    var currentLength: Long? = 0,
-    var totalLength: Long? = 0,
+    var currentLength: Long = 0,
+    var totalLength: Long = 0,
     var fileMD5: String? = null,
-    var progress: Int? = 0,
+    var progress: Int = 0,
     // 0：等待下载，1：下载中，2：暂停，3：完成，4：失败, 5:等待wifi
     var status: Int = -1,
     var createTime: Long = 0L,
     var updateTime: Long = 0L
 ) : Parcelable {
 
-    fun isWait() = status == 0
+    fun isNotStart() = status == DownloadStatus.DEFAULT
 
-    fun isDownloading() = status == 1
+    fun isWait() = status == DownloadStatus.WAITING
 
-    fun isPause() = status == 2
+    fun isDownloading() = status == DownloadStatus.DOWNLOADING
 
-    fun isComplete() = status == 3
+    fun isPause() = status == DownloadStatus.PAUSE
 
-    fun isFail() = status == 4
+    fun isComplete() = status == DownloadStatus.COMPLETED
 
-    fun isWaitWifi() = status == 5
+    fun isFail() = status == DownloadStatus.ERROR || status == DownloadStatus.CANCEL
 
-    fun isSuccess() = status == 3
+    fun isWaitWifi() = status == DownloadStatus.WAITING_WIFI
+
+    fun isSuccess() = status == DownloadStatus.COMPLETED
 
 }

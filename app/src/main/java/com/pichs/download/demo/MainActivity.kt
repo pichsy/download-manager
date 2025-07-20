@@ -2,6 +2,7 @@ package com.pichs.download.demo
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Environment
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -38,10 +39,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
         XXPermissions.with(this)
             .unchecked()
-            .permission(Permission.WRITE_EXTERNAL_STORAGE)
-            .permission(Permission.READ_EXTERNAL_STORAGE)
+            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
             .request { permissions, allGranted ->
-
             }
 
         initListener()
@@ -85,7 +84,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
                 itemBinding.btnDownload.fastClick {
                     // 可能未进行下载。点击后添加任务中。
-                    Downloader.Builder()
+                    item.task = Downloader.Builder()
                         .setListener(OnDownloadListener())
                         .setDownloadTaskInfo {
                             url = item.url
@@ -93,7 +92,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             fileName = item.name + ".apk"
                         }
                         .build()
-                        .also { item.task = it }
                         .pushTask()
                 }
             }
@@ -129,6 +127,21 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
         override fun onError(task: DownloadTask?, e: Throwable?) {
             LogUtils.e("download666", "下载进度 app:${task?.downloadInfo?.fileName}: 下载失败: ${e?.message}", e)
+        }
+    }
+
+
+    @SuppressLint("NotifyDataSetChanged")
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // 如果是横屏，就grid(6)
+        // 如果是是竖屏，就grid(4)
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            binding.recyclerView.post {
+                binding.recyclerView.grid(7).adapter?.notifyDataSetChanged()
+            }
+        } else {
+            binding.recyclerView.grid(4).adapter?.notifyDataSetChanged()
         }
     }
 }

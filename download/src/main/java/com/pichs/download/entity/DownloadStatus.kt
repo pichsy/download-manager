@@ -24,5 +24,7 @@ object DownloadStatus {
     const val ERROR = 4
 
     // 已取消
-    const val CANCEL = 4
+    const val CANCEL = 5
+
+    const val WAITING_WIFI = 6
 }

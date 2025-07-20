@@ -50,6 +50,7 @@ class Downloader {
                     filePath = info.filePath
                     totalLength = info.totalLength
                     progress = info.progress
+                    tag = info.tag
                     this.info = info
                     this.currentLength = info.currentLength
                 }

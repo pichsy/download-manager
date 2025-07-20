@@ -75,15 +75,16 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
         DownloadLog.d { "download666 DownloadCall download: ${task.downloadInfo?.url}" }
         job = launch(Dispatchers.IO) {
             try {
-                val url = task.downloadInfo?.url ?: throw IOException("Url is null")
-                val filePath = task.downloadInfo?.filePath ?: throw IOException("File path is null")
+                val url = task.downloadInfo.url
+                if (url.isEmpty()) throw IOException("DownloadTask: url is  empty, can't download.")
+                val filePath = task.downloadInfo.filePath
                 val headerData = OkHttpHelper.getFileTotalLengthFromUrl(url)
                 val totalLength = headerData.contentLength
                 if (totalLength <= 0L) throw IOException("Content length is zero or negative")
                 val contentType = headerData.contentType
                 val fileName = FileUtils.generateFilename(task.downloadInfo?.fileName, url, contentType)
 
-                task.downloadInfo?.apply {
+                task.downloadInfo.apply {
                     this.fileName = fileName
                     this.filePath = filePath
                 }
@@ -234,7 +235,7 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
     }
 
     private suspend fun getOrCreateBreakpointData(task: DownloadTask, totalLength: Long, fileName: String): DownloadBreakPointData {
-        val taskId = task.downloadInfo?.taskId ?: ""
+        val taskId = task.downloadInfo.taskId ?: ""
         val existingInfo = DownloadBreakPointManger.queryByTaskId(taskId)
         return if (existingInfo != null) {
             existingInfo

@@ -6,7 +6,7 @@ package com.pichs.download.utils
 object TaskIdUtils {
 
     /**
-     * 生成任务id，规则：md5(url+filePath+fileName+当前时间戳)
+     * 生成任务id，规则：md5(url+filePath+fileName+tag)
      */
     fun generateTaskId(url: String?, filePath: String?, fileName: String?, tag: String): String {
         // 搞个md5

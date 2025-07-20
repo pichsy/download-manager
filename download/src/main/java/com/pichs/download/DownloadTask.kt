@@ -1,6 +1,7 @@
 package com.pichs.download
 
 import com.pichs.download.callback.IDownloadListener
+import com.pichs.download.entity.DownloadStatus
 import com.pichs.download.entity.DownloadTaskInfo
 import com.pichs.download.utils.TaskIdUtils
 import java.io.File
@@ -11,7 +12,7 @@ class DownloadTask(val downloadInfo: DownloadTaskInfo) {
         fun create(block: DownloadTaskInfo.() -> Unit): DownloadTask {
             val info = DownloadTaskInfo()
             info.block()
-            if (info.taskId.isNullOrEmpty()) {
+            if (info.taskId.isEmpty()) {
                 info.taskId = TaskIdUtils.generateTaskId(
                     info.url,
                     info.fileName,
@@ -73,26 +74,37 @@ class DownloadTask(val downloadInfo: DownloadTaskInfo) {
     }
 
     fun getStatus(): Int {
-        return downloadInfo?.status ?: 0
+        return downloadInfo.status
     }
 
-    fun isWait() = getStatus() == 0
+    fun isNotStart() = getStatus() == DownloadStatus.DEFAULT
 
-    fun isDownloading() = getStatus() == 1
+    fun isWait() = getStatus() == DownloadStatus.WAITING
 
-    fun isPause() = getStatus() == 2
+    fun isDownloading() = getStatus() == DownloadStatus.DOWNLOADING
 
-    fun isComplete() = getStatus() == 3
+    fun isPause() = getStatus() == DownloadStatus.PAUSE
 
-    fun isFail() = getStatus() == 4
+    fun isComplete() = getStatus() == DownloadStatus.COMPLETED
 
-    fun isWaitWifi() = getStatus() == 5
+    fun isFail() = getStatus() == DownloadStatus.ERROR || getStatus() == DownloadStatus.CANCEL
 
-    fun isSuccess() = getStatus() == 3
+    fun isWaitWifi() = getStatus() == DownloadStatus.WAITING_WIFI
+
+    fun isSuccess() = getStatus() == DownloadStatus.COMPLETED
 
     override fun toString(): String {
         return downloadInfo?.toString() ?: ""
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        return getTaskId() == (other as? DownloadTask)?.getTaskId()
+    }
+
+    override fun hashCode(): Int {
+        return downloadInfo.hashCode()
+    }
 
 }

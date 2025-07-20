@@ -34,6 +34,147 @@
       "name": "壁纸多多",
       "size": 87654321,
       "icon": "https://android-artworks.25pp.com/fs08/2025/07/16/9/110_fc5b4af4b487e0de0f7adfe11d9793db_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/16/6/125_f5330e0e83f87816ad1cf17449dd8874.apk?nrd=0&fname=%E5%BE%AE%E4%BF%A1&productid=2011&packageid=603950344&pkg=com.tencent.mm&vcode=2880&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=596157&apprd=596157&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F16%2F7%2F125_78a219e37eda798e4c6c11b05621e3c1_con.png&did=44f30776d7ee8b16d6e0a8a6507d835b&md5=92cd1388833c993d49b8533fd05515ab",
+      "packageName": "com.tencent.mm",
+      "name": "微信",
+      "size": 87654321,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/16/7/125_78a219e37eda798e4c6c11b05621e3c1_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/18/9/120_09f2a4bbde3820d79be8e0b7070dfd56.apk?nrd=0&fname=%E5%BF%AB%E6%89%8B&productid=2011&packageid=603958406&pkg=com.smile.gifmaker&vcode=43042&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=280621&apprd=280621&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F18%2F5%2F110_99b0a38b67979165c4681fe717938aaf_con.png&did=f91ea94f0756bfffa26d15c97f17a579&md5=13393f11b22661c0f15a49fe171cd736",
+      "packageName": "com.smile.gifmaker",
+      "name": "快手",
+      "size": 132233445,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/18/5/110_99b0a38b67979165c4681fe717938aaf_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/03/16/4/125_0f18f32c35a54a95a5536f487965df62.apk?nrd=0&fname=%E6%A2%A8%E8%A7%86%E9%A2%91&productid=2011&packageid=603437280&pkg=com.mobile.videonews.li.video&vcode=771&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=7460285&apprd=7460285&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F03%2F16%2F2%2F125_66f86582cc34bccf08ce5cdfb7257535_con.png&did=4a5d9753b4047f4af1e54ba47b6393eb&md5=e2ba002f6d60509970fae46d9a6249fa",
+      "packageName": "com.pearvideo",
+      "name": "梨视频",
+      "size": 65432100,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/03/16/2/125_66f86582cc34bccf08ce5cdfb7257535_con_130x130.png"
+    },
+    // 再加10条
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/14/7/106_b3039ffc7811519a5420c54b313d9260.apk?nrd=0&fname=%E7%9A%AE%E7%9A%AE%E8%99%BE&productid=2011&packageid=205447846&pkg=com.sup.android.superb&vcode=560&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=7826209&apprd=7826209&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F14%2F6%2F106_15a4ad04e32acb2d6bf7dd02226369cb_con.png&did=c409623269d31401bc146a37af3604ee&md5=b8a2133b6abaeb26c4c7ab573f4d075e",
+      "packageName": "com.ss.android.ugc.picasso",
+      "name": "皮皮虾",
+      "size": 76543210,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/14/6/106_15a4ad04e32acb2d6bf7dd02226369cb_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/16/1/106_287548ef013ae3883d86e7c774133808.apk?nrd=0&fname=%E8%A5%BF%E7%93%9C%E8%A7%86%E9%A2%91&productid=2011&packageid=402064624&pkg=com.ss.android.article.video&vcode=966&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=7063907&apprd=7063907&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F16%2F10%2F106_bc4c18048269bdadeceebb5f70f1717e_con.png&did=9f736a6fd7e496402aa6c16b2ea2658c&md5=771128bd85aebbb72651fdc90549fe8b",
+      "packageName": "com.ss.android.article.video",
+      "name": "西瓜视频",
+      "size": 102345678,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/16/10/106_bc4c18048269bdadeceebb5f70f1717e_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/03/01/10/106_1366c63945241f42878621eb3f6e32c9.apk?nrd=0&fname=%E7%A7%92%E6%8B%8D&productid=2011&packageid=603370974&pkg=com.yixia.videoeditor&vcode=6792500&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=85365&apprd=85365&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F03%2F01%2F2%2F106_5e76a359e285e9e7ff4029e2671906f7_con.png&did=94239a20d36e3414444f877ca5d58e4e&md5=f51931bc1485d12aa04320fbeae8f692",
+      "packageName": "com.yixia.videoeditor",
+      "name": "秒拍",
+      "size": 63452100,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/03/01/2/106_5e76a359e285e9e7ff4029e2671906f7_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/14/3/106_8a471b4c33a1cb0e2841747f0054dae4.apk?nrd=0&fname=%E8%85%BE%E8%AE%AF%E5%BE%AE%E8%A7%86&productid=2011&packageid=801622770&pkg=com.tencent.weishi&vcode=1049&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=2139575&apprd=2139575&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F11%2F10%2F110_e9b8a7c3544af664e568ca958a26f0b9_con.png&did=c612617c75406793567e9a1bbadee1de&md5=ff2d9de8bd3407498f83cbae6d6b6b78",
+      "packageName": "com.tencent.weishi",
+      "name": "腾讯微视",
+      "size": 83452100,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/11/10/110_e9b8a7c3544af664e568ca958a26f0b9_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/10/11/110_7e4bca8ecb09004390f3abe0f5eec14f.apk?nrd=0&fname=%E4%BC%98%E9%85%B7%E8%A7%86%E9%A2%91&productid=2011&packageid=801620795&pkg=com.youku.phone&vcode=827&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=2398055&apprd=2398055&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F14%2F9%2F106_05e6b89848e66d87bd680fc2898577c3_con.png&did=9f952bcc2c20c2d963f7ea65f2d75a5c&md5=dbb1c6bf9b994efc6f71e01c55baea4f",
+      "packageName": "com.youku.phone",
+      "name": "优酷视频",
+      "size": 123400000,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/14/9/106_05e6b89848e66d87bd680fc2898577c3_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/15/1/106_bda8d44647fd6f334cc0bafb87f0437c.apk?nrd=0&fname=%E7%88%B1%E5%A5%87%E8%89%BA&productid=2011&packageid=801623343&pkg=com.qiyi.video&vcode=800160750&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=28855&apprd=28855&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F15%2F7%2F110_d0abb52123cbbb4b4ab546a7f1d3ddea_con.png&did=0590cbb2222dd78a3c9594f30ab7d441&md5=fa906a1f1b25bf2bb883f250d0196df0",
+      "packageName": "com.qiyi.video",
+      "name": "爱奇艺",
+      "size": 145678900,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/15/7/110_d0abb52123cbbb4b4ab546a7f1d3ddea_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/18/8/106_b2e178440363ebe3465fe6c4cfdb7607.apk?nrd=0&fname=%E8%85%BE%E8%AE%AF%E8%A7%86%E9%A2%91&productid=2011&packageid=603958476&pkg=com.tencent.qqlive&vcode=30262&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=280237&apprd=280237&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F18%2F9%2F110_19d4bd4c40936908f53f6fd89b522830_con.png&did=ac1eaf81befd4da40484fb3eabebff4e&md5=7b243bfd7e9a4ff7877aa998d171d69f",
+      "packageName": "com.tencent.qqlive",
+      "name": "腾讯视频",
+      "size": 134567890,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/18/9/110_19d4bd4c40936908f53f6fd89b522830_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/06/12/7/110_1f6d24cedeeecfa5e70ff226ed1b562e.apk?nrd=0&fname=%E8%85%BE%E8%AE%AF%E5%8A%A8%E6%BC%AB&productid=2011&packageid=402025085&pkg=com.qq.ac.android&vcode=235&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=283763&apprd=283763&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F06%2F12%2F11%2F110_e63018525264ddaa1c6453a3755f5fa3_con.png&did=fbe4b4a4aa5a2f60927023c740caf290&md5=7077d76130f8ecdf7903d843d556cdaf",
+      "packageName": "com.qq.ac.android",
+      "name": "腾讯动漫",
+      "size": 58000000,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/06/12/11/110_e63018525264ddaa1c6453a3755f5fa3_con_130x130.png"
+    },
+    {
+      "url": "https://downali.wandoujia.com/s1/0/6/202507030914123_com.tencent.tmgp.speedmobile.apk?nrd=0&fname=QQ%E9%A3%9E%E8%BD%A6&productid=2011&packageid=701490520&pkg=com.tencent.tmgp.speedmobile&vcode=1510011002&yingid=wdj_web&minSDK=21&size=2156771062&pos=wdj_web%2Fdetail_normal_dl%2F0&shortMd5=a1b26950de7961237a78b3a77b27322c&appid=7688158&apprd=7688158&crc32=83792027&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F03%2F2%2F109_a8040846b4c88aad3c719714e7426d61_con.png&did=585351bf66982d5afe511ba2f5d6bd45&md5=538593400c3b7b45903e3ca014880d66",
+      "packageName": "com.tencent.tmgp.speedmobile",
+      "name": "QQ飞车",
+      "size": 2156771062,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/06/12/11/110_e63018525264ddaa1c6453a3755f5fa3_con_130x130.png"
+    },
+    {
+      "url": "https://downali.wandoujia.com/s1/4/6/2025070309121524_com.tencent.tmgp.sgame.apk?nrd=0&fname=%E7%8E%8B%E8%80%85%E8%8D%A3%E8%80%80&productid=2011&packageid=603894747&pkg=com.tencent.tmgp.sgame&vcode=1004010607&yingid=wdj_web&minSDK=22&size=2070985367&pos=wdj_web%2Fdetail_normal_dl%2F0&shortMd5=391bbcf65835a613ae92a11d72f46882&appid=6648837&apprd=6648837&crc32=632131349&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F03%2F4%2F109_1f8a220af109b1bfaab874957ede4cd6_con.png&did=a41d1648480a2faa22a9cfc016c7e492&md5=65278df5e5c0ab4efbab9e6b9256d589",
+      "packageName": "com.tencent.tmgp.sgame",
+      "name": "王者荣耀",
+      "size": 2070985367,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/03/4/109_1f8a220af109b1bfaab874957ede4cd6_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/16/7/120_ce4a09115b8556a8c721dd69bbd1b3a4.apk?nrd=0&fname=TapTap&productid=2011&packageid=402064269&pkg=com.taptap&vcode=284021001&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=7060083&apprd=7060083&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2021%2F09%2F30%2F10%2F106_6277470a4726c83336916a66e77b068d_con.png&did=f2ca76ee970523c4fbaa52dfc829ef5a&md5=6615fce9c5663be99bec980c8e3c047d",
+      "packageName": "com.taptap",
+      "name": "TapTap",
+      "size": 12345678,
+      "icon": "https://android-artworks.25pp.com/fs08/2021/09/30/10/106_6277470a4726c83336916a66e77b068d_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/16/7/106_1d8c166e71fd34d8aa096606e5bbd190.apk?nrd=0&fname=%E5%B0%8F%E7%BA%A2%E4%B9%A6&productid=2011&packageid=402064616&pkg=com.xingin.xhs&vcode=8920282&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=6233739&apprd=6233739&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F16%2F4%2F106_0bf17588c3eb723cc76391e20f229236_con.png&did=298e5d90d455d9609a8fc4a3d4adab50&md5=7a868d31ac518a6a42e13c7fa7ff2d8e",
+      "packageName": " com.xingin.xhs",
+      "name": "小红书",
+      "size": 12345678,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/16/4/106_0bf17588c3eb723cc76391e20f229236_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/19/6/106_7926c1b7d5612460b1649ba2bdd4b9a4.apk?nrd=0&fname=%E7%BD%91%E6%98%93%E4%BA%91%E9%9F%B3%E4%B9%90&productid=2011&packageid=205480572&pkg=com.netease.cloudmusic&vcode=9003040&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=293217&apprd=293217&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F07%2F19%2F10%2F106_8d6a0fb288873e24bc880fb90bea067f_con.png&did=63cadd5805d0cedfb2b352634809128b&md5=7ca19f171785206a22591e111139a97d",
+      "packageName": "com.netease.cloudmusic",
+      "name": "网易云音乐",
+      "size": 12345678,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/07/19/10/106_8d6a0fb288873e24bc880fb90bea067f_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/06/23/8/110_f77426445d05347cb4b73f0bb8edd87a.apk?nrd=0&fname=%E5%BE%AE%E4%BF%A1%E8%BE%93%E5%85%A5%E6%B3%95&productid=2011&packageid=900504637&pkg=com.tencent.wetype&vcode=45201&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=8344360&apprd=8344360&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F06%2F23%2F9%2F110_66760feb9759afe1a3e083591a70541f_con.png&did=42331ae8497ec4c8ba01b5205ed1d9b7&md5=7a404b38b65f56b12f5fa7145c116af8",
+      "packageName": "com.tencent.wetype",
+      "name": "微信输入法",
+      "size": 12345678,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/06/23/9/110_66760feb9759afe1a3e083591a70541f_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/17/2/120_b70d6143afe8627288b705233cfa407e.apk?nrd=0&fname=%E7%95%AA%E8%8C%84%E7%95%85%E5%90%AC&productid=2011&packageid=900522532&pkg=com.xs.fm&vcode=600&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=8110752&apprd=8110752&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2024%2F10%2F22%2F7%2F125_79e8607bf1056bdc067935ce1acf08b0_con.png&did=02b3af40f9a6fb62a39c1086bc41858b&md5=092c3caeec536e0ecfb098feab0ebec0",
+      "packageName": "com.xs.fm",
+      "name": "番茄畅听",
+      "size":  13545678,
+      "icon": "https://android-artworks.25pp.com/fs08/2024/10/22/7/125_79e8607bf1056bdc067935ce1acf08b0_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/03/01/0/125_47f12e15c295b9df99b4d8fccc2a3a74.apk?nrd=0&fname=%E7%94%BB%E5%B8%88%E4%B9%8B%E5%A2%83&productid=2011&packageid=801551085&pkg=com.imendon.painterspace&vcode=1000401&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=8341951&apprd=8341951&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F03%2F01%2F4%2F125_79e5c2a3fbf36057504ff1c127c6d0dd_con.png&did=9d82a0ae3cd4e6fe29a3f2e6d83f7509&md5=3e23f3a68410edf64072c420a6c525f4",
+      "packageName": "com.imendon.painterspace",
+      "name": "画师之境",
+      "size":   887654321,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/03/01/4/125_79e5c2a3fbf36057504ff1c127c6d0dd_con_130x130.png"
+    },
+    {
+      "url": "https://ucdl.25pp.com/fs08/2025/07/15/0/120_b4e059c0a169b271410f2b35dd2fbfc9.apk?nrd=0&fname=%E8%B1%86%E5%8C%85&productid=2011&packageid=402063793&pkg=com.larus.nova&vcode=9050001&yingid=wdj_web&pos=wdj_web%2Fdetail_normal_dl%2F0&appid=8399467&apprd=8399467&iconUrl=http%3A%2F%2Fandroid-artworks.25pp.com%2Ffs08%2F2025%2F04%2F24%2F4%2F125_916a1c1cdfbfb30d5f5c416573c0f2ea_con.png&did=a238f3ea7e0357849dabfc836e980956&md5=a9f3a90c1fc33cc13ffcd96c4ba65a28",
+      "packageName": "com.larus.nova",
+      "name": "豆包",
+      "size":   72432100,
+      "icon": "https://android-artworks.25pp.com/fs08/2025/04/24/4/125_916a1c1cdfbfb30d5f5c416573c0f2ea_con_130x130.png"
     }
   ]
 }

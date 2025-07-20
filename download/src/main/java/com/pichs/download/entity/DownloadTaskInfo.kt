@@ -9,33 +9,35 @@ import java.io.File
 @Parcelize
 data class DownloadTaskInfo(
     var taskId: String = "",
-    var url: String? = "",
+    var url: String = "",
     var filePath: String? = null,
     var fileName: String? = null,
-    var currentLength: Long? = 0,
-    var totalLength: Long? = 0,
-    var progress: Int? = 0,
+    var currentLength: Long = 0,
+    var totalLength: Long = 0,
+    var progress: Int = 0,
     var fileMD5: String? = null,
     // 下载任务tag。用于生成taskId, 默认fileMD5,可以自行定义，
     var tag: String? = null,
     //-1:未开始， 0：等待下载，1：下载中，2：暂停，3：完成，4：失败, 5:等待wifi
-    var status: Int = -1,
+    var status: Int = DownloadStatus.DEFAULT,
     var info: DownloadBreakPointData? = null
 ) : Parcelable {
 
-    fun isWait() = status == 0
+    fun isNotStart() = status == DownloadStatus.DEFAULT
 
-    fun isDownloading() = status == 1
+    fun isWait() = status == DownloadStatus.WAITING
 
-    fun isPause() = status == 2
+    fun isDownloading() = status == DownloadStatus.DOWNLOADING
 
-    fun isComplete() = status == 3
+    fun isPause() = status == DownloadStatus.PAUSE
 
-    fun isFail() = status == 4
+    fun isComplete() = status == DownloadStatus.COMPLETED
 
-    fun isWaitWifi() = status == 5
+    fun isFail() = status == DownloadStatus.ERROR || status == DownloadStatus.CANCEL
 
-    fun isSuccess() = status == 3
+    fun isWaitWifi() = status == DownloadStatus.WAITING_WIFI
+
+    fun isSuccess() = status == DownloadStatus.COMPLETED
 
     fun getFileAbsolutePath(): String? {
         if (filePath.isNullOrEmpty() || fileName.isNullOrEmpty()) {

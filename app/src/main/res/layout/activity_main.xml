@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/root_background_color">
+    android:background="@color/tool_bar_color">
 
     <com.pichs.xwidget.view.XStatusBarView
         android:id="@+id/status_bar_view"
