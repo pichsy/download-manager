@@ -8,27 +8,18 @@ import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.drake.brv.utils.bindingAdapter
 import com.drake.brv.utils.grid
-import com.drake.brv.utils.linear
 import com.drake.brv.utils.setup
-import com.google.common.collect.Multimaps.index
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
 import com.pichs.download.DownloadTask
 import com.pichs.download.Downloader
-import com.pichs.download.call.DownloadMultiCall
 import com.pichs.download.callback.DownloadListener
-import com.pichs.download.callback.IDownloadListener
-import com.pichs.download.demo.DownloadManagerActivity
 import com.pichs.download.demo.databinding.ActivityMainBinding
-import com.pichs.download.demo.databinding.ItemDonwloadListBinding
 import com.pichs.download.demo.databinding.ItemDownloadTaskBinding
 import com.pichs.download.demo.databinding.ItemGridDownloadBeanBinding
-import com.pichs.download.dispatcher.DispatcherListener
 import com.pichs.download.entity.DownloadStatus
 import com.pichs.download.utils.SpeedUtils
-import com.pichs.download.utils.TaskIdUtils
 import com.pichs.shanhai.base.base.BaseActivity
-import com.pichs.shanhai.base.ext.click
 import com.pichs.shanhai.base.utils.LogUtils
 import com.pichs.shanhai.base.utils.toast.ToastUtils
 import com.pichs.xbase.kotlinext.fastClick
@@ -49,6 +40,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
 
         initListener()
+
 
         val appJsonStr = assets.open("app_list.json").bufferedReader().use { it.readText() }
         val appListBean = GsonUtils.fromJson<AppListBean>(appJsonStr, AppListBean::class.java)
@@ -81,45 +73,49 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             addType<DownloadItem>(R.layout.item_grid_download_bean)
             onPayload { payloads ->
                 val tag = payloads.firstOrNull()?.toString()
-                val item = getModel<DownloadTask>()
-                val itemBinding = getBinding<ItemDownloadTaskBinding>()
-                LogUtils.d("下载管理：onPayload=====item=${item.downloadInfo.status}, tag=$tag")
+                val item = getModel<DownloadItem>()
+                val itemBinding = getBinding<ItemGridDownloadBeanBinding>()
+                LogUtils.d("下载管理：onPayload=====item=${item.task?.downloadInfo?.status}, tag=$tag")
                 if (tag == "status") {
-                    when (item.downloadInfo.status) {
+                    when (item.task?.downloadInfo?.status) {
                         DownloadStatus.DEFAULT -> {
-                            itemBinding.btnDownload.text = "下载"
+                            itemBinding.btnDownload.setText("下载")
                         }
 
                         DownloadStatus.DOWNLOADING -> {
-                            itemBinding.btnDownload.text = "下载中"
+                            itemBinding.btnDownload.setText("0%")
+
                         }
 
                         DownloadStatus.WAITING -> {
-                            itemBinding.btnDownload.text = "等待中"
+                            itemBinding.btnDownload.setText("等待中")
                         }
 
                         DownloadStatus.PAUSE -> {
-                            itemBinding.btnDownload.text = "暂停"
+                            itemBinding.btnDownload.setText("暂停")
                         }
 
                         DownloadStatus.COMPLETED -> {
-                            itemBinding.btnDownload.text = "安装"
+                            itemBinding.btnDownload.setText("安装")
                         }
 
                         DownloadStatus.ERROR, DownloadStatus.CANCEL -> {
                             // 下载出错。
-                            itemBinding.btnDownload.text = "重新下载"
+                            itemBinding.btnDownload.setText("重新下载")
                         }
 
                         DownloadStatus.WAITING_WIFI -> {
                             // 等待wifi下载
-                            itemBinding.btnDownload.text = "等待wifi"
+                            itemBinding.btnDownload.setText("等待wifi")
+                        }
+
+                        else -> {
+                            itemBinding.btnDownload.setText("下载")
                         }
                     }
                 } else if (tag == "progress") {
-                    itemBinding.progressBar.progress = item.downloadInfo.progress ?: 0
-                    itemBinding.tvProgress.text = "${item.downloadInfo.progress ?: 0}%"
-                    itemBinding.tvSpeed.text = SpeedUtils.formatDownloadSpeed(item.downloadInfo.speed)
+                    itemBinding.btnDownload.setProgress(item.task?.downloadInfo?.progress ?: 0)
+                    itemBinding.btnDownload.setText("${item.task?.downloadInfo?.progress ?: 0}%")
                 }
             }
 
@@ -133,50 +129,77 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
                 when (item.task?.downloadInfo?.status) {
                     DownloadStatus.DEFAULT -> {
-                        itemBinding.btnDownload.text = "下载"
+                        itemBinding.btnDownload.setText("下载")
                     }
 
                     DownloadStatus.DOWNLOADING -> {
-                        itemBinding.btnDownload.text = "下载中"
+                        itemBinding.btnDownload.setText("0%")
                     }
 
                     DownloadStatus.WAITING -> {
-                        itemBinding.btnDownload.text = "等待中"
+                        itemBinding.btnDownload.setText("等待中")
                     }
 
                     DownloadStatus.PAUSE -> {
-                        itemBinding.btnDownload.text = "暂停"
+                        itemBinding.btnDownload.setText("暂停")
                     }
 
                     DownloadStatus.COMPLETED -> {
-                        itemBinding.btnDownload.text = "安装"
+                        itemBinding.btnDownload.setText("安装")
                     }
 
                     DownloadStatus.ERROR, DownloadStatus.CANCEL -> {
                         // 下载出错。
-                        itemBinding.btnDownload.text = "重新下载"
+                        itemBinding.btnDownload.setText("重新下载")
                     }
 
                     DownloadStatus.WAITING_WIFI -> {
                         // 等待wifi下载
-                        itemBinding.btnDownload.text = "等待wifi"
+                        itemBinding.btnDownload.setText("等待wifi")
+                    }
+
+                    else -> {
+                        itemBinding.btnDownload.setText("下载")
                     }
                 }
 
                 itemBinding.btnDownload.fastClick {
                     // 可能未进行下载。点击后添加任务中。
-                    item.task = Downloader.Builder()
-                        .setListener(OnDownloadListener())
-                        .setDownloadTaskInfo {
-                            url = item.url
-                            filePath =
-                                externalCacheDir?.absolutePath ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-                            fileName = item.name + ".apk"
-                            extra = item.name
-                        }
-                        .build()
-                        .also { item.task = it }
-                        .pushTask()
+                    if (item.task == null) {
+                        item.task = Downloader.Builder()
+                            .setListener(OnDownloadListener())
+                            .setDownloadTaskInfo {
+                                url = item.url
+                                filePath =
+                                    externalCacheDir?.absolutePath
+                                        ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
+                                fileName = item.name + ".apk"
+                                extra = item.name
+                            }
+                            .build()
+                            .pushTask()
+                        return@fastClick
+                    }
+                    LogUtils.d("下载管理：点击下载按钮，item=${item.task?.downloadInfo?.status}, name=${item.name}")
+                    if (item.task?.downloadInfo?.status == DownloadStatus.COMPLETED) {
+                        // 下载完成，点击安装
+                        ToastUtils.show("开始安装 ${item.name}")
+                    } else if (item.task?.downloadInfo?.status == DownloadStatus.DEFAULT) {
+                        item.task = Downloader.Builder()
+                            .setListener(OnDownloadListener())
+                            .setDownloadTaskInfo {
+                                url = item.url
+                                filePath =
+                                    externalCacheDir?.absolutePath
+                                        ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
+                                fileName = item.name + ".apk"
+                                extra = item.name
+                            }
+                            .build()
+                            .pushTask()
+                    } else if (item.task?.downloadInfo?.status == DownloadStatus.PAUSE) {
+                        Downloader.with().resumeTask(item.task?.getTaskId() ?: "")
+                    }
                 }
             }
         }.models = list

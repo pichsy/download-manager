@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">应用市场</string>
+
+    <declare-styleable name="ProgressButton">
+        <attr name="pb_backgroundColor" format="color"/>
+        <attr name="pb_progressColor" format="color"/>
+        <attr name="xp_radius" format="dimension"/>
+        <attr name="android:text" format="string"/>
+        <attr name="android:textColor" format="color"/>
+        <attr name="android:textSize" format="dimension"/>
+    </declare-styleable>
+
 </resources>
