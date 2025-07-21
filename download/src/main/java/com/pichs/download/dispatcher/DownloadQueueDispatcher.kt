@@ -19,6 +19,8 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentSkipListMap
 import java.util.Comparator
 import java.util.concurrent.ConcurrentHashMap
+import com.pichs.download.breakpoint.DownloadBreakPointData
+import com.pichs.download.breakpoint.DownloadBreakPointManger
 
 /*
  *  // 创建一个下载管理调度器，下载任务使用DownloadMultiCall去下载。
@@ -64,8 +66,28 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
         launch {
             mutexLock.withLock {
                 // 首先应该检测当前任务是否已经存在
+                if (task.downloadInfo.taskId.isEmpty()) {
+                    task.downloadInfo.taskId = task.getTaskId()
+                }
+                // 2. 加入内存队列
+                task.downloadInfo?.status = DownloadStatus.WAITING
                 if (!isTaskExists(task.getTaskId())) {
-                    task.downloadInfo?.status = DownloadStatus.WAITING
+                    // 1. 立即持久化任务信息
+                    val info = DownloadBreakPointData(
+                        taskId = task.getTaskId(),
+                        url = task.getUrl(),
+                        filePath = task.getFilePath(),
+                        fileName = task.getFileName(),
+                        currentLength = 0,
+                        totalLength = 0,
+                        status = DownloadStatus.WAITING,
+                        createTime = System.currentTimeMillis(),
+                        updateTime = System.currentTimeMillis(),
+                        extra = task.downloadInfo.extra,
+                        tag = task.downloadInfo.tag ?: ""
+                    )
+
+                    DownloadBreakPointManger.upsert(info)
                     val call = DownloadMultiCall(task).setListener(mDownloadListenerWrap)
                     allActivatedDownloadCall.add(call)
                     // 当准备时。
@@ -81,6 +103,7 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
                     startNextTaskIfAvailable()
                 } else {
                     // todo 如果已经存在，则不需要再次添加
+                    startNextTaskIfAvailable()
                 }
             }
         }

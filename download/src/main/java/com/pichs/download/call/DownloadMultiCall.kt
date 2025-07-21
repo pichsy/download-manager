@@ -151,6 +151,7 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
                 }
 
                 jobs.awaitAll()
+
                 val isRenameSuccess = FileUtils.rename(tempFile, finalFile)
                 DownloadLog.d { "download666: 文件重命名 isRenameSuccess:$isRenameSuccess" }
                 if (!isRenameSuccess) throw IOException("文件重命名失败！")
@@ -158,13 +159,23 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
                 task.downloadInfo?.apply {
                     this.currentLength = totalLength
                     this.totalLength = totalLength
-                    this.progress = progress
+                    this.progress = 100
                     this.status = DownloadStatus.DOWNLOADING // 下载中
                 }
                 listener?.onProgress(this@DownloadMultiCall, task, totalLength, totalLength, 100, 0)
+
+                breakpointInfo.progress = 100
+                breakpointInfo.currentLength = totalLength
+                breakpointInfo.status = DownloadStatus.COMPLETED // 完成
+                breakpointInfo.updateTime = System.currentTimeMillis()
+
                 updateBreakPointData(breakpointInfo, totalLength)
                 onDownloadComplete(task)
             } catch (e: Exception) {
+                // 获取或者新增：breakpoint Data
+                getBreakpointData(task.getTaskId())?.let {
+                    updateBreakPointData(it, it.currentLength)
+                }
                 onDownloadFailed(task, e)
             }
         }
@@ -204,7 +215,7 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
                                 channel.write(buffer)
                                 val currentBytes = progressTracker.addProgress(bytesRead.toLong())
                                 chunk.downloadedBytes += bytesRead
-                                onPartProgress(chunk, currentBytes)
+                                onPartProgress.invoke(this, chunk, currentBytes)
                             }
                         }
                         // old 代码。
@@ -254,6 +265,10 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
         }
     }
 
+    private suspend fun getBreakpointData(taskId: String): DownloadBreakPointData? {
+        return DownloadBreakPointManger.queryByTaskId(taskId)
+    }
+
     private suspend fun getOrCreateChunk(
         chunks: MutableList<DownloadChunk>?,
         taskId: String,
@@ -291,8 +306,8 @@ class DownloadMultiCall(val task: DownloadTask) : CoroutineScope by MainScope() 
     private suspend fun onDownloadComplete(task: DownloadTask) {
         task.downloadInfo?.status = DownloadStatus.COMPLETED // 完成
         listener?.onComplete(this@DownloadMultiCall, task)
-        DownloadBreakPointManger.deleteByTaskId(task.downloadInfo?.taskId ?: "")
-        DownloadChunkManager.deleteChunkByTaskId(task.downloadInfo?.taskId ?: "")
+//        DownloadBreakPointManger.deleteByTaskId(task.downloadInfo?.taskId ?: "")
+//        DownloadChunkManager.deleteChunkByTaskId(task.downloadInfo?.taskId ?: "")
     }
 
     private suspend fun onDownloadFailed(task: DownloadTask?, error: Exception) {

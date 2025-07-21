@@ -1,0 +1,6 @@
+{
+    "env": {
+        "ANTHROPIC_AUTH_TOKEN": "sk-3VmRM0LICZcxVPtENeLAaPOxVq0qjmApRZTwY8vHlfny78pd",
+        "ANTHROPIC_BASE_URL": "https://api.moonshot.cn/anthropic/"
+    }
+}

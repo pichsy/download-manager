@@ -41,6 +41,14 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
         initListener()
 
+//        binding.bezerView.setRect(100f, 100f, 300f, 300f)
+//
+//        binding.bezerView.setBezierByCubic(
+//            leftCubic = floatArrayOf(0.25f, 0.75f, 0.25f, 0.75f),
+//            rightCubic =floatArrayOf(0.75f, 0.25f, 0.75f, 0.25f),
+//            offsetX = 120f
+//        )
+
 
         val appJsonStr = assets.open("app_list.json").bufferedReader().use { it.readText() }
         val appListBean = GsonUtils.fromJson<AppListBean>(appJsonStr, AppListBean::class.java)
