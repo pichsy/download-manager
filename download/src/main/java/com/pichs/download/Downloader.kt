@@ -4,6 +4,7 @@ import android.content.Context
 import com.pichs.download.breakpoint.DownloadBreakPointManger
 import com.pichs.download.callback.IDownloadListener
 import com.pichs.download.dispatcher.DownloadQueueDispatcher
+import com.pichs.download.entity.DownloadStatus
 import com.pichs.download.entity.DownloadTaskInfo
 import com.pichs.download.utils.TaskIdUtils
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,9 @@ class Downloader {
 
     fun init(context: Context) {
         mContext = context.applicationContext
+
+        // 此处应该 将数据库中的下载任务加载到下载队列中，除去已完成的。
+        downloadQueueDispatcher.init(context)
     }
 
     fun getContext(): Context {
@@ -45,9 +49,34 @@ class Downloader {
     /**
      * 查询断点信息，调出历史下载数据。
      */
-    suspend fun queryAllTasksFromCache(): MutableList<DownloadTask> {
+    suspend fun queryAllTasksIgnoreCompleted(): MutableList<DownloadTask> {
         return withContext(Dispatchers.IO) {
-            val breakPointList = DownloadBreakPointManger.queryAll()
+            val breakPointList = DownloadBreakPointManger.queryAllTasksIgnoreStatus(DownloadStatus.COMPLETED)
+            val taskList = mutableListOf<DownloadTask>()
+            breakPointList?.forEach { info ->
+                val task = DownloadTask.create {
+                    taskId = info.taskId
+                    url = info.url
+                    progress = info.progress
+                    status = info.status
+                    fileName = info.fileName
+                    filePath = info.filePath
+                    totalLength = info.totalLength
+                    progress = info.progress
+                    tag = info.tag
+                    this.info = info
+                    this.currentLength = info.currentLength
+                    extra = info.extra
+                }
+                taskList.add(task)
+            }
+            return@withContext taskList
+        }
+    }
+
+    suspend fun queryAllCompleteTasks(): MutableList<DownloadTask> {
+        return withContext(Dispatchers.IO) {
+            val breakPointList = DownloadBreakPointManger.queryAllTasksByStatus(DownloadStatus.COMPLETED)
             val taskList = mutableListOf<DownloadTask>()
             breakPointList?.forEach { info ->
                 val task = DownloadTask.create {
@@ -73,7 +102,7 @@ class Downloader {
     /**
      * 获取所有活跃任务，包含running task
      */
-    fun getTaskAllActivatedList(): MutableList<DownloadTask> {
+    fun getAllActivatedTaskList(): MutableList<DownloadTask> {
         return downloadQueueDispatcher.getAllActivatedTasks()
     }
 
@@ -114,6 +143,10 @@ class Downloader {
 
     fun cancelTask(taskId: String) {
         downloadQueueDispatcher.cancelTask(taskId)
+    }
+
+    fun deleteTask(taskId: String) {
+        cancelTask(taskId)
     }
 
     fun cancelAllTask() {

@@ -60,4 +60,28 @@ object DownloadBreakPointManger {
             DownloadLog.e(e) { "Exception deleteAll:" }
         }
     }
+
+
+
+    suspend fun queryAllTasksByStatus(status: Int): MutableList<DownloadBreakPointData>? {
+        return withContext(Dispatchers.IO) {
+            try {
+                getDao().queryAll().orEmpty().filter { it.status == status }.toMutableList()
+            } catch (e: Exception) {
+                DownloadLog.e(e) { "Exception queryAllTasksByStatus:" }
+                mutableListOf()
+            }
+        }
+    }
+
+    suspend fun queryAllTasksIgnoreStatus(status: Int): MutableList<DownloadBreakPointData>? {
+        return withContext(Dispatchers.IO) {
+            try {
+                getDao().queryAllTaskIgnoreStatus(status)
+            } catch (e: Exception) {
+                DownloadLog.e(e) { "Exception queryAllTasksIgnoreStatus:" }
+                mutableListOf()
+            }
+        }
+    }
 }

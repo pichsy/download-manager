@@ -1,5 +1,6 @@
 package com.pichs.download.dispatcher
 
+import android.content.Context
 import android.util.Log
 import com.pichs.download.DownloadTask
 import com.pichs.download.call.DownloadMultiCall
@@ -60,6 +61,53 @@ class DownloadQueueDispatcher : CoroutineScope by MainScope() {
     private val mutexLock = Mutex()
 
     private var mDownloadListenerWrap = DownloadTaskWrapper()
+
+
+    /**
+     * 初始化所有的任务
+     * 放到对应的列表中
+     */
+    fun init(context: Context) {
+        launch {
+            val bpList = DownloadBreakPointManger.queryAll()
+            bpList?.forEach { info ->
+                val task = DownloadTask.create {
+                    taskId = info.taskId
+                    url = info.url
+                    filePath = info.filePath
+                    fileName = info.fileName
+                    currentLength = info.currentLength
+                    totalLength = info.totalLength
+                    progress = info.progress
+                    status = info.status
+                    extra = info.extra
+                    tag = info.tag.ifEmpty { null }
+                }
+                // 将任务添加到下载队列中。
+                if (task.downloadInfo.status == DownloadStatus.COMPLETED) {
+                    // 如果是已完成的任务，则添加到已完成任务列表中。
+                    completedTasks[info.updateTime] = task
+                } else if (task.downloadInfo.status == DownloadStatus.DOWNLOADING) {
+                    // 否则添加到等待队列中。
+                    val call = DownloadMultiCall(task).setListener(mDownloadListenerWrap)
+                    allActivatedDownloadCall.add(call)
+                    // 如果是正在下载的任务，则添加到正在下载的任务列表中。
+                    runningTaskDownloadCall.add(call)
+                    // 还要继续下载的任务。
+                    DownloadLog.d { "DownloadQueueDispatcher init: add task ${task.getTaskId()} to runningTaskDownloadCall" }
+                    // 调用开始下载
+                    startTask(call)
+                } else {
+                    // 否则添加到等待队列中。
+                    val call = DownloadMultiCall(task).setListener(mDownloadListenerWrap)
+                    allActivatedDownloadCall.add(call)
+                    DownloadLog.d { "DownloadQueueDispatcher init: add task ${task.getTaskId()} to allActivatedDownloadCall" }
+                }
+            }
+            DownloadLog.d { "DownloadQueueDispatcher init completedTasks size: ${completedTasks.size}" }
+        }
+    }
+
 
     // 添加下载任务
     fun pushTask(task: DownloadTask) {

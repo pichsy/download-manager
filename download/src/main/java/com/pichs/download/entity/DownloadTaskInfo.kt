@@ -5,7 +5,6 @@ import com.pichs.download.breakpoint.DownloadBreakPointData
 import kotlinx.parcelize.Parcelize
 import java.io.File
 
-
 @Parcelize
 data class DownloadTaskInfo(
     var taskId: String = "",

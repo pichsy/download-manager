@@ -11,7 +11,6 @@ import com.pichs.download.callback.IDownloadListener
 import com.pichs.download.demo.databinding.ActivityDownloadManagerBinding
 import com.pichs.download.demo.databinding.ItemDownloadTaskBinding
 import com.pichs.download.entity.DownloadStatus
-import com.pichs.download.utils.FileUtils
 import com.pichs.download.utils.SpeedUtils
 import com.pichs.download.utils.addApkExtensionIfMissing
 import com.pichs.shanhai.base.base.BaseActivity
@@ -19,8 +18,6 @@ import com.pichs.shanhai.base.utils.LogUtils
 import com.pichs.shanhai.base.utils.toast.ToastUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.internal.format
-import java.math.RoundingMode
 
 
 class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), IDownloadListener {
@@ -32,18 +29,59 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), 
         lifecycleScope.launch {
             initRecyclerView()
 
+            initCompletedRecyclerView()
             // 初始化下载器l
             loadTaskList()
-
+            loadCompletedTasks()
             Downloader.with().addGlobalListener(this@DownloadManagerActivity)
         }
     }
 
     private suspend fun loadTaskList() {
-        val list = Downloader.with().queryAllTasksFromCache()
+        val list = Downloader.with().queryAllTasksIgnoreCompleted()
         downloadTasks.clear()
         downloadTasks.addAll(list)
         binding.recyclerView.bindingAdapter.models = downloadTasks
+    }
+
+    private suspend fun loadCompletedTasks() {
+        val list = Downloader.with().queryAllCompleteTasks()
+        if (list.isNotEmpty()) {
+            LogUtils.d("下载管理：加载已完成任务：${list.size}个")
+            downloadTasks.addAll(list)
+            binding.recyclerViewDownloaded.bindingAdapter.models = downloadTasks
+        } else {
+            LogUtils.d("下载管理：没有已完成的任务")
+        }
+    }
+
+
+    private fun initCompletedRecyclerView() {
+        binding.recyclerViewDownloaded.linear().setup {
+            addType<DownloadTask>(R.layout.item_download_task)
+            onBind {
+                val item = getModel<DownloadTask>()
+                LogUtils.d("下载管理：已完成任务onBind=====item=${item.downloadInfo.fileName}")
+                val itemBinding = getBinding<ItemDownloadTaskBinding>()
+                itemBinding.btnDownload.text = "删除"
+                itemBinding.tvTitle.text = item.downloadInfo.fileName
+                itemBinding.progressBar.progress = 100
+                itemBinding.tvProgress.text = "100%"
+                itemBinding.tvSpeed.text = SpeedUtils.formatDownloadSpeed(item.downloadInfo.speed)
+            }
+
+            onClick(R.id.btn_download) {
+                val item = getModel<DownloadTask>()
+                LogUtils.d("下载管理：已完成任务点击事件=====item=${item.downloadInfo.fileName}")
+                // 删除已完成的任务
+                Downloader.with().deleteTask(item.getTaskId())
+                // 从列表中移除
+                downloadTasks.remove(item)
+                binding.recyclerViewDownloaded.bindingAdapter.notifyDataSetChanged()
+                ToastUtils.toast("已删除任务：${item.downloadInfo.fileName}")
+            }
+        }
+
     }
 
     private fun initRecyclerView() {
@@ -105,6 +143,7 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), 
                     DownloadStatus.DEFAULT -> {
                         itemBinding.btnDownload.text = "下载"
                     }
+
                     DownloadStatus.DOWNLOADING -> {
                         itemBinding.btnDownload.text = "下载中"
                     }

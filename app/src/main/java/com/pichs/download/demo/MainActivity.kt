@@ -15,10 +15,8 @@ import com.pichs.download.DownloadTask
 import com.pichs.download.Downloader
 import com.pichs.download.callback.DownloadListener
 import com.pichs.download.demo.databinding.ActivityMainBinding
-import com.pichs.download.demo.databinding.ItemDownloadTaskBinding
 import com.pichs.download.demo.databinding.ItemGridDownloadBeanBinding
 import com.pichs.download.entity.DownloadStatus
-import com.pichs.download.utils.SpeedUtils
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.utils.LogUtils
 import com.pichs.shanhai.base.utils.toast.ToastUtils
@@ -56,7 +54,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
 
         lifecycleScope.launch {
-            Downloader.with().queryAllTasksFromCache().forEach {
+            Downloader.with().queryAllTasksIgnoreCompleted().forEach {
                 LogUtils.d("download666", "查询到的下载任务:$it")
             }
         }

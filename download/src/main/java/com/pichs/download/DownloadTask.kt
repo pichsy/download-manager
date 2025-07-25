@@ -17,10 +17,14 @@ class DownloadTask(val downloadInfo: DownloadTaskInfo) {
                     info.url,
                     info.fileName,
                     info.filePath,
-                    info.tag ?: info.fileMD5 ?: ""
+                    info.tag ?: ""
                 )
             }
             return DownloadTask(info)
+        }
+
+        fun create(downloadInfo: DownloadTaskInfo): DownloadTask {
+            return DownloadTask(downloadInfo)
         }
     }
 
