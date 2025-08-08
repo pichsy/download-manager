@@ -36,7 +36,6 @@ object FileUtils {
                 return true
             }
         } catch (e: Exception) {
-            DownloadLog.e(e) { "checkAndCreateFileSafe: 创建文件失败:${file.absolutePath}" }
             return false
         }
     }
@@ -108,7 +107,6 @@ object FileUtils {
                     }
                 }
             } catch (e: Exception) {
-                DownloadLog.e(e) { "checkAndCreateFileSafe: 创建文件失败:${file.absolutePath}" }
                 false
             }
         }
@@ -135,7 +133,6 @@ object FileUtils {
                     return@withContext true
                 }
             } catch (e: Exception) {
-                DownloadLog.e(e) { "createFile: 创建文件失败:${file.absolutePath}" }
             }
             return@withContext false
         }
@@ -222,19 +219,15 @@ object FileUtils {
             if (!tempFile.exists()) return false
             if (finalFile.exists()) {
                 finalFile.delete()
-                DownloadLog.d { "download666: 文件重命名:${tempFile.absolutePath} finalFile.delete()" }
             }
             if (tempFile.renameTo(finalFile)) {
                 tempFile.delete()
-                DownloadLog.d { "download666: 文件重命名:${tempFile.absolutePath} renameTo" }
                 return true
             }
             Files.copy(tempFile.toPath(), finalFile.toPath())
             tempFile.delete()
-            DownloadLog.d { "download666: 文件重命名:${tempFile.absolutePath} Files.copy" }
             return true
         } catch (e: Exception) {
-            DownloadLog.e(e) { "download666: 文件重命名:${tempFile.absolutePath} Exception" }
             return false
         }
     }
@@ -255,14 +248,13 @@ object FileUtils {
                 }
                 val isDelete = Files.deleteIfExists(file.toPath())
                 if (isDelete) {
-                    DownloadLog.d { "删除文件:(${tf})成功" }
+                    DownloadLog.d("TAG", "删除文件:(${tf})成功")
                 } else {
-                    DownloadLog.d { "删除文件:($tf)失败" }
+                    DownloadLog.d("TAG", "删除文件:(${tf})失败")
                 }
                 return isDelete
             }
         } catch (e: IOException) {
-            DownloadLog.e(e) { "删除文件异常:" }
             return false
         }
     }
@@ -270,5 +262,5 @@ object FileUtils {
 }
 
 fun String.addApkExtensionIfMissing(): String {
-    return FileUtils.addExtensionIfMissing(this, ".apk")
+    return FileUtils.addExtensionIfMissing(this, "apk")
 }

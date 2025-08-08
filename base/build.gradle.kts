@@ -72,6 +72,7 @@ dependencies {
     api(libs.androidx.media3.ui)
 
     api(libs.xbase)
+    api(libs.androidx.swiperefreshlayout)
 
     // liveEventBus
     api(libs.liveEventBus)

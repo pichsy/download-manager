@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    android:background="#4600F6"
+    android:background="@color/content_background_color"
     android:orientation="vertical"
     android:padding="16dp"
     app:xp_radius="12dp">
@@ -13,7 +13,7 @@
         android:id="@+id/iv_cover"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:src="#88f"
+        android:src="#DFDFFB"
         app:xp_radius="13dp" />
 
     <com.pichs.xwidget.view.XTextView
@@ -21,7 +21,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:textColor="#fff"
+        android:textColor="@color/content_text_color"
         app:layout_constraintStart_toEndOf="@+id/iv_cover"
         app:layout_constraintTop_toTopOf="@+id/iv_cover" />
 
@@ -44,7 +44,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="0%"
-        android:textColor="#fff"
+        android:textColor="@color/content_text_color"
         app:layout_constraintStart_toStartOf="@+id/tv_title"
         app:layout_constraintTop_toBottomOf="@+id/progressBar" />
 
@@ -54,7 +54,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="0KB/s"
-        android:textColor="#fff"
+        android:textColor="@color/content_text_color"
         app:layout_constraintEnd_toEndOf="@id/progressBar"
         app:layout_constraintTop_toBottomOf="@+id/progressBar" />
 

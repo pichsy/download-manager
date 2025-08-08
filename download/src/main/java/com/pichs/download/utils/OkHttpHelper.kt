@@ -1,6 +1,6 @@
 package com.pichs.download.utils
 
-import com.pichs.download.entity.HeaderData
+import com.pichs.download.internal.HeaderData
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -27,7 +27,7 @@ object OkHttpHelper {
 
 
     /**
-     * 获取文件总长度
+     * 获取文件总长度及相关头
      */
     fun getFileTotalLengthFromUrl(url: String): HeaderData {
         val request = Request.Builder()
@@ -38,13 +38,15 @@ object OkHttpHelper {
         if (!response.isSuccessful) throw IOException("Unexpected code $response")
         val contentLength = response.header("Content-Length")?.toLongOrNull() ?: -1L
         val contentType = response.header("Content-Type")
+        val eTag = response.header("ETag")
+        val acceptRanges = response.header("Accept-Ranges")
 
-        val headerData = HeaderData().apply {
-            this.contentLength = contentLength
-            this.contentType = contentType
-        }
-
-        return headerData
+        return HeaderData(
+            contentLength = contentLength,
+            contentType = contentType,
+            eTag = eTag,
+            acceptRanges = acceptRanges,
+        )
     }
 
 }

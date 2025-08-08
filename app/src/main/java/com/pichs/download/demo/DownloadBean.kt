@@ -1,6 +1,6 @@
 package com.pichs.download.demo
 
-import com.pichs.download.DownloadTask
+import com.pichs.download.model.DownloadTask
 
 data class AppListBean(
     var appList: MutableList<DownloadItem>? = null,

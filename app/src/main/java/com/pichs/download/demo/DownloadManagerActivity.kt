@@ -1,304 +1,136 @@
 package com.pichs.download.demo
 
-import android.os.Environment
-import androidx.lifecycle.lifecycleScope
-import com.drake.brv.utils.bindingAdapter
-import com.drake.brv.utils.linear
-import com.drake.brv.utils.setup
-import com.pichs.download.DownloadTask
-import com.pichs.download.Downloader
-import com.pichs.download.callback.IDownloadListener
+import android.os.Bundle
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.ActivityDownloadManagerBinding
-import com.pichs.download.demo.databinding.ItemDownloadTaskBinding
-import com.pichs.download.entity.DownloadStatus
-import com.pichs.download.utils.SpeedUtils
-import com.pichs.download.utils.addApkExtensionIfMissing
+import com.pichs.download.model.DownloadStatus
+import com.pichs.download.model.DownloadTask
 import com.pichs.shanhai.base.base.BaseActivity
-import com.pichs.shanhai.base.utils.LogUtils
-import com.pichs.shanhai.base.utils.toast.ToastUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
+class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
 
-class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>(), IDownloadListener {
-
-    private val downloadTasks = mutableListOf<DownloadTask>()
-
+    private val downloading = mutableListOf<DownloadTask>()
+    private val completed = mutableListOf<DownloadTask>()
+    private lateinit var downloadingAdapter: SimpleTaskAdapter
+    private lateinit var completedAdapter: SimpleTaskAdapter
 
     override fun afterOnCreate() {
-        lifecycleScope.launch {
-            initRecyclerView()
-
-            initCompletedRecyclerView()
-            // 初始化下载器l
-            loadTaskList()
-            loadCompletedTasks()
-            Downloader.with().addGlobalListener(this@DownloadManagerActivity)
-        }
+        setupRecycler()
+        loadTasks()
+        bindListeners()
     }
 
-    private suspend fun loadTaskList() {
-        val list = Downloader.with().queryAllTasksIgnoreCompleted()
-        downloadTasks.clear()
-        downloadTasks.addAll(list)
-        binding.recyclerView.bindingAdapter.models = downloadTasks
-    }
-
-    private suspend fun loadCompletedTasks() {
-        val list = Downloader.with().queryAllCompleteTasks()
-        if (list.isNotEmpty()) {
-            LogUtils.d("下载管理：加载已完成任务：${list.size}个")
-            downloadTasks.addAll(list)
-            binding.recyclerViewDownloaded.bindingAdapter.models = downloadTasks
-        } else {
-            LogUtils.d("下载管理：没有已完成的任务")
-        }
-    }
-
-
-    private fun initCompletedRecyclerView() {
-        binding.recyclerViewDownloaded.linear().setup {
-            addType<DownloadTask>(R.layout.item_download_task)
-            onBind {
-                val item = getModel<DownloadTask>()
-                LogUtils.d("下载管理：已完成任务onBind=====item=${item.downloadInfo.fileName}")
-                val itemBinding = getBinding<ItemDownloadTaskBinding>()
-                itemBinding.btnDownload.text = "删除"
-                itemBinding.tvTitle.text = item.downloadInfo.fileName
-                itemBinding.progressBar.progress = 100
-                itemBinding.tvProgress.text = "100%"
-                itemBinding.tvSpeed.text = SpeedUtils.formatDownloadSpeed(item.downloadInfo.speed)
+    private fun setupRecycler() {
+        downloadingAdapter = SimpleTaskAdapter(onAction = { task ->
+            when (task.status) {
+                DownloadStatus.DOWNLOADING -> DownloadManager.pause(task.id)
+                DownloadStatus.PAUSED -> DownloadManager.resume(task.id)
+                else -> {}
             }
+        })
+        binding.recyclerView.layoutManager = LinearLayoutManager(this)
+        binding.recyclerView.adapter = downloadingAdapter
 
-            onClick(R.id.btn_download) {
-                val item = getModel<DownloadTask>()
-                LogUtils.d("下载管理：已完成任务点击事件=====item=${item.downloadInfo.fileName}")
-                // 删除已完成的任务
-                Downloader.with().deleteTask(item.getTaskId())
-                // 从列表中移除
-                downloadTasks.remove(item)
-                binding.recyclerViewDownloaded.bindingAdapter.notifyDataSetChanged()
-                ToastUtils.toast("已删除任务：${item.downloadInfo.fileName}")
-            }
-        }
-
+        completedAdapter = SimpleTaskAdapter(onAction = { /*no-op*/ })
+        binding.recyclerViewDownloaded.layoutManager = LinearLayoutManager(this)
+        binding.recyclerViewDownloaded.adapter = completedAdapter
     }
 
-    private fun initRecyclerView() {
-        binding.recyclerView.linear().setup {
-            addType<DownloadTask>(R.layout.item_download_task)
-            onPayload { payloads ->
-                val tag = payloads.firstOrNull()?.toString()
-                val item = getModel<DownloadTask>()
-                val itemBinding = getBinding<ItemDownloadTaskBinding>()
-                LogUtils.d("下载管理：onPayload=====item=${item.downloadInfo.status}, tag=$tag")
-                if (tag == "status") {
-                    when (item.downloadInfo.status) {
-                        DownloadStatus.DEFAULT -> {
-                            itemBinding.btnDownload.text = "下载"
-                        }
+    private fun loadTasks() {
+        val all = DownloadManager.getAllTasks()
+        downloading.clear()
+        completed.clear()
+        all.forEach { if (it.status == DownloadStatus.COMPLETED) completed.add(it) else downloading.add(it) }
+        downloadingAdapter.submit(downloading)
+        completedAdapter.submit(completed)
+    }
 
-                        DownloadStatus.DOWNLOADING -> {
-                            itemBinding.btnDownload.text = "下载中"
-                        }
-
-                        DownloadStatus.WAITING -> {
-                            itemBinding.btnDownload.text = "等待中"
-                        }
-
-                        DownloadStatus.PAUSE -> {
-                            itemBinding.btnDownload.text = "暂停"
-                        }
-
-                        DownloadStatus.COMPLETED -> {
-                            itemBinding.btnDownload.text = "安装"
-                        }
-
-                        DownloadStatus.ERROR, DownloadStatus.CANCEL -> {
-                            // 下载出错。
-                            itemBinding.btnDownload.text = "重新下载"
-                        }
-
-                        DownloadStatus.WAITING_WIFI -> {
-                            // 等待wifi下载
-                            itemBinding.btnDownload.text = "等待wifi"
-                        }
-                    }
-                } else if (tag == "progress") {
-                    itemBinding.progressBar.progress = item.downloadInfo.progress ?: 0
-                    itemBinding.tvProgress.text = "${item.downloadInfo.progress ?: 0}%"
-                    itemBinding.tvSpeed.text = SpeedUtils.formatDownloadSpeed(item.downloadInfo.speed)
+    private fun bindListeners() {
+        DownloadManager.addGlobalListener(object : com.pichs.download.listener.DownloadListener {
+            override fun onTaskProgress(task: DownloadTask, progress: Int, speed: Long) {
+                val idx = downloading.indexOfFirst { it.id == task.id }
+                if (idx >= 0) {
+                    downloading[idx] = task
+                    downloadingAdapter.updateItem(task)
                 }
             }
 
-            onBind {
-                val item = getModel<DownloadTask>()
-                LogUtils.d("下载管理：onBind=====item=${item.downloadInfo.fileName}")
-                val itemBinding = getBinding<ItemDownloadTaskBinding>()
-                itemBinding.tvTitle.text = item.downloadInfo.fileName
-                itemBinding.progressBar.progress = item.downloadInfo.progress ?: 0
-                itemBinding.tvProgress.text = "${item.downloadInfo.progress ?: 0}%"
-                itemBinding.tvSpeed.text = SpeedUtils.formatDownloadSpeed(item.downloadInfo.speed)
-                when (item.downloadInfo.status) {
-                    DownloadStatus.DEFAULT -> {
-                        itemBinding.btnDownload.text = "下载"
-                    }
+            override fun onTaskComplete(task: DownloadTask, file: java.io.File) {
+                val idx = downloading.indexOfFirst { it.id == task.id }
+                if (idx >= 0) downloading.removeAt(idx)
+                completed.add(0, task)
+                downloadingAdapter.submit(downloading)
+                completedAdapter.submit(completed)
+            }
 
-                    DownloadStatus.DOWNLOADING -> {
-                        itemBinding.btnDownload.text = "下载中"
-                    }
-
-                    DownloadStatus.WAITING -> {
-                        itemBinding.btnDownload.text = "等待中"
-                    }
-
-                    DownloadStatus.PAUSE -> {
-                        itemBinding.btnDownload.text = "暂停"
-                    }
-
-                    DownloadStatus.COMPLETED -> {
-                        itemBinding.btnDownload.text = "安装"
-                    }
-
-                    DownloadStatus.ERROR, DownloadStatus.CANCEL -> {
-                        // 下载出错。
-                        itemBinding.btnDownload.text = "重新下载"
-                    }
-
-                    DownloadStatus.WAITING_WIFI -> {
-                        // 等待wifi下载
-                        itemBinding.btnDownload.text = "等待wifi"
-                    }
+            override fun onTaskError(task: DownloadTask, error: Throwable) {
+                val idx = downloading.indexOfFirst { it.id == task.id }
+                if (idx >= 0) {
+                    downloading[idx] = task
+                    downloadingAdapter.updateItem(task)
                 }
             }
+        })
+    }
+}
 
-            onClick(R.id.btn_download) {
-                val item = getModel<DownloadTask>()
-                when (item.downloadInfo.status) {
-                    DownloadStatus.DEFAULT -> {
-                        Downloader.Builder()
-                            .setDownloadTaskInfo {
-                                url = item.downloadInfo.url
-                                filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-                                fileName = item.downloadInfo.fileName.addApkExtensionIfMissing()
-                            }
-                            .build()
-                            .pushTask()
-                    }
+// 简单任务适配器
+private class SimpleTaskAdapter(
+    val onAction: (DownloadTask) -> Unit
+) : androidx.recyclerview.widget.RecyclerView.Adapter<SimpleTaskVH>() {
 
-                    DownloadStatus.WAITING -> {
-                        // 可能未进行下载。点击后添加任务中。
-                        Downloader.Builder()
-                            .setDownloadTaskInfo {
-                                url = item.downloadInfo.url
-                                filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).absolutePath
-                                fileName = item.downloadInfo.fileName.addApkExtensionIfMissing()
-                            }
-                            .build()
-                            .pushTask()
-                    }
+    private val data = mutableListOf<DownloadTask>()
 
-                    DownloadStatus.DOWNLOADING -> {
-                        // 暂停下载
-                        Downloader.with().pauseTask(item.getTaskId())
-                    }
+    fun submit(list: List<DownloadTask>) {
+        data.clear()
+        data.addAll(list)
+        notifyDataSetChanged()
+    }
 
-                    DownloadStatus.PAUSE -> {
-
-                    }
-
-                    DownloadStatus.COMPLETED -> {
-//                        startInstall(item)
-                    }
-
-                    DownloadStatus.ERROR -> {
-
-                    }
-
-                    DownloadStatus.CANCEL -> {
-                        ToastUtils.toast("任务已移除!")
-                    }
-
-                    DownloadStatus.WAITING_WIFI -> {
-                        ToastUtils.toast("等待wifi下载")
-                    }
-                }
-            }
+    fun updateItem(task: DownloadTask) {
+        val idx = data.indexOfFirst { it.id == task.id }
+        if (idx >= 0) {
+            data[idx] = task
+            notifyItemChanged(idx)
         }
     }
 
+    override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): SimpleTaskVH {
+        val v = android.view.LayoutInflater.from(parent.context).inflate(R.layout.item_download_task, parent, false)
+        return SimpleTaskVH(v, onAction)
+    }
 
-    private fun updateTaskStatus(task: DownloadTask, status: Int) {
-        lifecycleScope.launch(Dispatchers.Main) {
-            val index = downloadTasks.indexOfFirst { it == task }
-            if (index != -1) {
-                downloadTasks[index].downloadInfo.status = status
-                binding.recyclerView.bindingAdapter.notifyItemChanged(index, "status")
-            }
+    override fun getItemCount(): Int = data.size
+
+    override fun onBindViewHolder(holder: SimpleTaskVH, position: Int) {
+        holder.bind(data[position])
+    }
+}
+
+private class SimpleTaskVH(
+    itemView: android.view.View,
+    val onAction: (DownloadTask) -> Unit
+) : androidx.recyclerview.widget.RecyclerView.ViewHolder(itemView) {
+
+    private val title: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tv_title)
+    private val progressBar: android.widget.ProgressBar = itemView.findViewById(R.id.progressBar)
+    private val tvProgress: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tvProgress)
+    private val tvSpeed: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tvSpeed)
+    private val btn: com.pichs.xwidget.cardview.XCardButton = itemView.findViewById(R.id.btn_download)
+
+    fun bind(task: DownloadTask) {
+        title.text = task.fileName
+        progressBar.progress = task.progress
+        tvProgress.text = "${task.progress}%"
+        tvSpeed.text = com.pichs.download.utils.SpeedUtils.formatDownloadSpeed(task.speed)
+        btn.text = when (task.status) {
+            DownloadStatus.DOWNLOADING -> "暂停"
+            DownloadStatus.PAUSED -> "继续"
+            DownloadStatus.FAILED -> "重试"
+            DownloadStatus.COMPLETED -> "打开"
+            else -> "下载"
         }
-    }
-
-    private fun updateTaskProgress(task: DownloadTask, progress: Int, currentLength: Long, totalLength: Long, speed: Long) {
-        lifecycleScope.launch(Dispatchers.Main) {
-            val index = downloadTasks.indexOfFirst { it.getTaskId() == task.getTaskId() }
-            if (index != -1) {
-                downloadTasks[index].downloadInfo.progress = progress
-                downloadTasks[index].downloadInfo.currentLength = currentLength
-                downloadTasks[index].downloadInfo.totalLength = totalLength
-                downloadTasks[index].downloadInfo.speed = speed
-                binding.recyclerView.bindingAdapter.notifyItemChanged(index, "progress")
-            }
-        }
-    }
-
-
-    override fun onDestroy() {
-        Downloader.with().removeGlobalListener(this@DownloadManagerActivity)
-        super.onDestroy()
-    }
-
-    // 回调========================================================================
-
-    override fun onPrepare(task: DownloadTask?) {
-        if (task == null) return
-        LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 准备下载：${task.downloadInfo.filePath}, ${task.downloadInfo.url}, name:${task.downloadInfo.fileName}")
-        updateTaskStatus(task, DownloadStatus.WAITING)
-    }
-
-
-    override fun onStart(task: DownloadTask?, totalLength: Long) {
-        if (task == null) return
-        LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 开始下载：${task.downloadInfo.filePath}, ${task.downloadInfo.url}, name:${task.downloadInfo.fileName}")
-        updateTaskStatus(task, DownloadStatus.DOWNLOADING)
-    }
-
-    override fun onPause(task: DownloadTask?) {
-        if (task == null) return
-        LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 下载暂停：${task.downloadInfo.filePath}, ${task.downloadInfo.url}, name:${task.downloadInfo.fileName}")
-        updateTaskStatus(task, DownloadStatus.PAUSE)
-    }
-
-    override fun onProgress(task: DownloadTask?, currentLength: Long, totalLength: Long, progress: Int, speed: Long) {
-        LogUtils.d("Manager:下载进度888 app:${task?.downloadInfo?.fileName}: $progress%, speed: $speed, currentLength: $currentLength, totalLength: $totalLength")
-        if (task == null) return
-        updateTaskProgress(task, progress, currentLength, totalLength, speed)
-    }
-
-    override fun onComplete(task: DownloadTask?) {
-        if (task == null) return
-        LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 下载完毕：${task.downloadInfo.filePath}")
-        updateTaskStatus(task, DownloadStatus.COMPLETED)
-    }
-
-    override fun onError(task: DownloadTask?, e: Throwable?) {
-        if (task == null) return
-        LogUtils.e("", "Manager:下载进度888 app:${task.downloadInfo.fileName}: 下载失败: ${e?.message}", e)
-        updateTaskStatus(task, DownloadStatus.ERROR)
-    }
-
-    override fun onCancel(task: DownloadTask?) {
-        if (task == null) return
-        LogUtils.d("Manager:下载进度888 app:${task.downloadInfo.fileName}: 下载取消")
-        updateTaskStatus(task, DownloadStatus.CANCEL)
+        btn.setOnClickListener { onAction(task) }
     }
 }

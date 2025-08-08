@@ -71,16 +71,4 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/toolBar" />
 
-
-    <com.pichs.download.demo.widget.CurvedShapeView
-        android:id="@+id/curved_shape_view"
-        android:layout_width="160dp"
-        android:layout_height="70dp"
-        app:arcDepth="40dp"
-        android:background="#99f"
-        android:layout_marginBottom="20dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>
