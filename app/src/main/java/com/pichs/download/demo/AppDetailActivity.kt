@@ -1,0 +1,183 @@
+package com.pichs.download.demo
+
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
+import com.bumptech.glide.Glide
+import com.pichs.download.core.DownloadManager
+import com.pichs.download.model.DownloadStatus
+import com.pichs.download.model.DownloadTask
+import com.pichs.download.demo.databinding.ActivityAppDetailBinding
+import java.io.File
+
+class AppDetailActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityAppDetailBinding
+
+    private var url: String = ""
+    private var name: String = ""
+    private var packageNameStr: String = ""
+    private var size: Long = 0L
+    private var icon: String? = null
+
+    private var task: DownloadTask? = null
+    private var globalListener: com.pichs.download.listener.DownloadListener? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityAppDetailBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        url = intent.getStringExtra("url") ?: ""
+        name = intent.getStringExtra("name") ?: ""
+        packageNameStr = intent.getStringExtra("packageName") ?: ""
+        size = intent.getLongExtra("size", 0L)
+        icon = intent.getStringExtra("icon")
+
+        initUI()
+        initDownloadState()
+        bindListeners()
+    }
+
+    private fun initUI() {
+        binding.tvTitle.text = name
+        binding.tvPackage.text = packageNameStr
+        binding.tvSize.text = formatSize(size)
+        if (!icon.isNullOrEmpty()) Glide.with(binding.ivIcon).load(icon).into(binding.ivIcon)
+        binding.btnBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        binding.btnDownload.setOnClickListener { onClickDownload() }
+    }
+
+    private fun initDownloadState() {
+        // 尝试找到现有任务
+        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
+        task = DownloadManager.getAllTasks().firstOrNull {
+            it.url == url && it.filePath == dir && normalizeName(it.fileName) == normalizeName(name)
+        }
+        bindButtonUI(task)
+    }
+
+    private fun onClickDownload() {
+        val t = task
+        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
+        if (t == null) {
+            // 新建下载
+            task = DownloadManager.download(url)
+                .to(dir, name)
+                .onProgress { progress, _ ->
+                    binding.btnDownload.setProgress(progress)
+                    binding.btnDownload.setText("${progress}%")
+                }
+                .onComplete { file ->
+                    binding.btnDownload.setProgress(100)
+                    binding.btnDownload.setText("安装")
+                    openApkFile(file)
+                }
+                .onError {
+                    binding.btnDownload.setText("重试")
+                }
+                .start()
+            bindButtonUI(task)
+            return
+        }
+        when (t.status) {
+            DownloadStatus.DOWNLOADING -> DownloadManager.pause(t.id)
+            DownloadStatus.PAUSED, DownloadStatus.PENDING -> DownloadManager.resume(t.id)
+            DownloadStatus.COMPLETED -> openApk(t)
+            DownloadStatus.FAILED -> {
+                // 失败重试
+                DownloadManager.resume(t.id)
+            }
+            else -> {}
+        }
+    }
+
+    private fun bindButtonUI(task: DownloadTask?) {
+        when (task?.status) {
+            DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED -> {
+                binding.btnDownload.setText("${task.progress}%")
+                binding.btnDownload.setProgress(task.progress)
+                binding.btnDownload.isEnabled = true
+            }
+            DownloadStatus.PENDING -> {
+                binding.btnDownload.setText("准备中")
+                binding.btnDownload.isEnabled = false
+            }
+            DownloadStatus.COMPLETED -> {
+                binding.btnDownload.setText("安装")
+                binding.btnDownload.setProgress(100)
+                binding.btnDownload.isEnabled = true
+            }
+            DownloadStatus.FAILED -> {
+                binding.btnDownload.setText("重试")
+                binding.btnDownload.isEnabled = true
+            }
+            else -> {
+                binding.btnDownload.setText("下载")
+                binding.btnDownload.setProgress(0)
+                binding.btnDownload.isEnabled = true
+            }
+        }
+    }
+
+    private fun bindListeners() {
+        val listener = object : com.pichs.download.listener.DownloadListener {
+            override fun onTaskProgress(task: DownloadTask, progress: Int, speed: Long) {
+                if (task.id == this@AppDetailActivity.task?.id) {
+                    runOnUiThread { bindButtonUI(task) }
+                }
+            }
+            override fun onTaskComplete(task: DownloadTask, file: File) {
+                if (task.id == this@AppDetailActivity.task?.id) {
+                    runOnUiThread { bindButtonUI(task) }
+                }
+            }
+            override fun onTaskError(task: DownloadTask, error: Throwable) {
+                if (task.id == this@AppDetailActivity.task?.id) {
+                    runOnUiThread { bindButtonUI(task) }
+                }
+            }
+        }
+        globalListener = listener
+        DownloadManager.addGlobalListener(listener)
+    }
+
+    private fun openApk(task: DownloadTask) {
+        val file = File(task.filePath, task.fileName)
+        openApkFile(file)
+    }
+
+    private fun openApkFile(file: File) {
+        if (!file.exists()) return
+        val uri: Uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            setDataAndType(uri, "application/vnd.android.package-archive")
+        }
+        startActivity(intent)
+    }
+
+    private fun normalizeName(n: String): String = n.substringBeforeLast('.').lowercase()
+
+    private fun formatSize(size: Long): String {
+        if (size <= 0) return "--"
+        val kb = 1024.0
+        val mb = kb * 1024
+        val gb = mb * 1024
+        return when {
+            size >= gb -> String.format("%.2f GB", size / gb)
+            size >= mb -> String.format("%.2f MB", size / mb)
+            size >= kb -> String.format("%.2f KB", size / kb)
+            else -> "${size} B"
+        }
+    }
+
+    override fun onDestroy() {
+        globalListener?.let { DownloadManager.removeGlobalListener(it) }
+        globalListener = null
+        super.onDestroy()
+    }
+}

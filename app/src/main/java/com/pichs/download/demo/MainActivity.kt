@@ -23,6 +23,10 @@ import java.io.File
 class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     private val list = arrayListOf<DownloadItem>()
+    private var globalListener: com.pichs.download.listener.DownloadListener? = null
+
+    // 统一的名称归一化工具
+    private fun normalizeName(n: String): String = n.substringBeforeLast('.').lowercase()
 
     override fun afterOnCreate() {
         XXPermissions.with(this)
@@ -36,8 +40,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         val appJsonStr = assets.open("app_list.json").bufferedReader().use { it.readText() }
         val appListBean = GsonUtils.fromJson<AppListBean>(appJsonStr, AppListBean::class.java)
         appListBean.appList?.let { list.addAll(it) }
-
+        
         initRecyclerView()
+        // 绑定全局监听
+        bindGlobalListener()
     }
 
     private fun initListener() {
@@ -64,18 +70,41 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 vb.tvAppName.text = item.name
                 bindButtonUI(vb, item.task)
                 vb.btnDownload.setOnClickListener { handleClick(item, vb) }
+                // 新增：点击封面跳转详情页
+                vb.ivCover.setOnClickListener { openDetail(item) }
             }
         }.models = list
     }
 
     private fun handleClick(item: DownloadItem, vb: ItemGridDownloadBeanBinding) {
-        val task = item.task
+        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
+        val name = item.name
+        val existing = DownloadManager.getAllTasks().firstOrNull {
+            it.url == item.url && it.filePath == dir && normalizeName(it.fileName) == normalizeName(name)
+        }
+        val task = item.task ?: existing
         when (task?.status) {
-            DownloadStatus.DOWNLOADING -> DownloadManager.pause(task.id)
-            DownloadStatus.PAUSED -> DownloadManager.resume(task.id)
-            DownloadStatus.COMPLETED -> openApk(task)
-            DownloadStatus.FAILED -> startDownload(item, vb)
-            else -> startDownload(item, vb)
+            com.pichs.download.model.DownloadStatus.DOWNLOADING -> {
+                DownloadManager.pause(task.id)
+                // 文案显示当前进度
+                vb.btnDownload.setText("${task.progress}%")
+                vb.btnDownload.isEnabled = true
+            }
+            com.pichs.download.model.DownloadStatus.PAUSED -> {
+                DownloadManager.resume(task.id)
+                // 文案显示当前进度
+                vb.btnDownload.setText("${task.progress}%")
+                vb.btnDownload.isEnabled = true
+            }
+            com.pichs.download.model.DownloadStatus.PENDING -> {
+                vb.btnDownload.setText("准备中")
+                vb.btnDownload.isEnabled = false
+            }
+            com.pichs.download.model.DownloadStatus.COMPLETED -> openApk(task)
+            com.pichs.download.model.DownloadStatus.FAILED -> startDownload(item, vb)
+            else -> if (existing == null) startDownload(item, vb) else {
+                bindButtonUI(vb, existing)
+            }
         }
     }
 
@@ -85,7 +114,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             .to(dir, item.name)
             .onProgress { progress, _ ->
                 vb.btnDownload.setProgress(progress)
-                vb.btnDownload.setText("$progress%")
+                vb.btnDownload.setText("${progress}%")
             }
             .onComplete { file ->
                 vb.btnDownload.setProgress(100)
@@ -119,23 +148,85 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private fun bindButtonUI(vb: ItemGridDownloadBeanBinding, task: DownloadTask?) {
         when (task?.status) {
             DownloadStatus.DOWNLOADING -> {
-                vb.btnDownload.setText("暂停")
+                vb.btnDownload.setText("${task.progress}%")
                 vb.btnDownload.setProgress(task.progress)
+                vb.btnDownload.isEnabled = true
             }
             DownloadStatus.PAUSED -> {
-                vb.btnDownload.setText("继续")
+                vb.btnDownload.setText("${task.progress}%")
                 vb.btnDownload.setProgress(task.progress)
+                vb.btnDownload.isEnabled = true
+            }
+            DownloadStatus.PENDING -> {
+                vb.btnDownload.setText("准备中")
+                vb.btnDownload.isEnabled = false
             }
             DownloadStatus.COMPLETED -> {
                 vb.btnDownload.setText("安装")
                 vb.btnDownload.setProgress(100)
+                vb.btnDownload.isEnabled = true
             }
-            DownloadStatus.FAILED -> vb.btnDownload.setText("重试")
+            DownloadStatus.FAILED -> {
+                vb.btnDownload.setText("重试")
+                vb.btnDownload.isEnabled = true
+            }
             else -> {
                 vb.btnDownload.setText("下载")
                 vb.btnDownload.setProgress(0)
+                vb.btnDownload.isEnabled = true
             }
         }
+    }
+
+    // 新增：绑定全局监听，保持列表项与任务状态同步
+    private fun bindGlobalListener() {
+        val listener = object : com.pichs.download.listener.DownloadListener {
+            override fun onTaskProgress(task: DownloadTask, progress: Int, speed: Long) {
+                runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
+                    updateItemTask(task)
+                }
+            }
+
+            override fun onTaskComplete(task: DownloadTask, file: File) {
+                runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
+                    updateItemTask(task)
+                }
+            }
+
+            override fun onTaskError(task: DownloadTask, error: Throwable) {
+                runOnUiThread {
+                    if (isDestroyed) return@runOnUiThread
+                    updateItemTask(task)
+                }
+            }
+        }
+        globalListener = listener
+        DownloadManager.addGlobalListener(listener)
+    }
+
+    // 根据任务匹配列表项并刷新
+    private fun updateItemTask(task: DownloadTask) {
+        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
+        val idx = list.indexOfFirst {
+            it.url == task.url && dir == task.filePath && normalizeName(it.name) == normalizeName(task.fileName)
+        }
+        if (idx >= 0) {
+            list[idx].task = task
+            binding.recyclerView.adapter?.notifyItemChanged(idx)
+        }
+    }
+
+    private fun openDetail(item: DownloadItem) {
+        val i = Intent(this, AppDetailActivity::class.java).apply {
+            putExtra("url", item.url)
+            putExtra("name", item.name)
+            putExtra("packageName", item.packageName)
+            putExtra("size", item.size)
+            putExtra("icon", item.icon)
+        }
+        startActivity(i)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -145,5 +236,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         } else {
             binding.recyclerView.grid(4).adapter?.notifyDataSetChanged()
         }
+    }
+
+    override fun onDestroy() {
+        globalListener?.let { DownloadManager.removeGlobalListener(it) }
+        globalListener = null
+        super.onDestroy()
     }
 }

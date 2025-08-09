@@ -2,13 +2,10 @@ package com.pichs.download.core
 
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
-import com.pichs.download.utils.DownloadLog
 import com.pichs.download.utils.FileUtils
 import com.pichs.download.utils.OkHttpHelper
 import kotlinx.coroutines.*
 import okhttp3.Request
-import okio.buffer
-import okio.sink
 import java.io.File
 import java.io.RandomAccessFile
 import java.util.concurrent.ConcurrentHashMap
@@ -25,6 +22,7 @@ internal class SimpleDownloadEngine : DownloadEngine {
         var total: Long = -1L,
         var eTag: String? = null,
         var acceptRanges: String? = null,
+        var lastModified: String? = null,
         var tempFile: File? = null,
         var finalFile: File? = null,
     )
@@ -74,7 +72,6 @@ internal class SimpleDownloadEngine : DownloadEngine {
             val task = DownloadManager.getTask(taskId) ?: return
             val cancelled = task.copy(status = DownloadStatus.CANCELLED, updateTime = System.currentTimeMillis())
             DownloadManager.updateTaskInternal(cancelled)
-            // 派发取消作为状态变化，这里不单独提供回调，后续可拓展
         }
     }
 
@@ -87,8 +84,9 @@ internal class SimpleDownloadEngine : DownloadEngine {
         ctl.total = header.contentLength
         ctl.eTag = header.eTag
         ctl.acceptRanges = header.acceptRanges
+        ctl.lastModified = header.lastModified
 
-        val finalName = FileUtils.generateFilename(task.fileName, task.url, header.contentType)
+        val finalName = com.pichs.download.utils.FileUtils.generateFilename(task.fileName, task.url, header.contentType)
         val finalFile = File(dir, finalName)
         val tempFile = File(dir, "$finalName.part")
         ctl.finalFile = finalFile
@@ -119,31 +117,38 @@ internal class SimpleDownloadEngine : DownloadEngine {
 
         // 准备请求
         val reqBuilder = Request.Builder().url(task.url)
-        if (downloaded > 0) reqBuilder.header("Range", "bytes=$downloaded-")
+            .header("Accept-Encoding", "identity")
+        if (downloaded > 0) {
+            reqBuilder.header("Range", "bytes=$downloaded-")
+            // If-Range: 优先 ETag，其次 Last-Modified
+            ctl.eTag?.let { reqBuilder.header("If-Range", it) }
+                ?: ctl.lastModified?.let { reqBuilder.header("If-Range", it) }
+        }
         val request = reqBuilder.get().build()
 
-        val startTime = System.currentTimeMillis()
-        var lastUpdateTime = startTime
+        var lastUpdateTime = System.currentTimeMillis()
         var lastBytes = downloaded
 
-        // 确保临时文件存在
-        withContext(Dispatchers.IO) { FileUtils.checkAndCreateFileSafe(tempFile) }
+        withContext(Dispatchers.IO) { com.pichs.download.utils.FileUtils.checkAndCreateFileSafe(tempFile) }
 
         OkHttpHelper.execute(request).use { resp ->
-            if (!(resp.isSuccessful || resp.code == 206 || resp.code == 200)) {
-                throw IllegalStateException("HTTP ${resp.code}")
-            }
+            val code = resp.code
             val body = resp.body ?: throw IllegalStateException("Empty body")
 
-            // 如果服务器不支持 Range 且返回 200，则重下
-            if (resp.code == 200 && downloaded > 0L) {
-                withContext(Dispatchers.IO) { FileUtils.deleteFile(tempFile.absolutePath) }
+            // 处理 416: 请求区间无效，通常是文件大小变化或断点越界 -> 重下
+            if (code == 416) {
+                withContext(Dispatchers.IO) { com.pichs.download.utils.FileUtils.deleteFile(tempFile.absolutePath) }
+                downloaded = 0L
+            }
+
+            // 若返回 200 且有断点，说明 If-Range 校验不通过或不支持 Range -> 全量重下
+            if (code == 200 && downloaded > 0L) {
+                withContext(Dispatchers.IO) { com.pichs.download.utils.FileUtils.deleteFile(tempFile.absolutePath) }
                 downloaded = 0L
             }
 
             val total = if (header.contentLength > 0) header.contentLength else (downloaded + body.contentLength())
 
-            // 写文件（追加）
             RandomAccessFile(tempFile, "rw").use { raf ->
                 raf.seek(downloaded)
                 val source = body.source()
@@ -179,11 +184,9 @@ internal class SimpleDownloadEngine : DownloadEngine {
             }
         }
 
-        if (ctl.cancelled) return
-        if (ctl.paused) return
+        if (ctl.cancelled || ctl.paused) return
 
-        // 完成：重命名
-        val success = withContext(Dispatchers.IO) { FileUtils.rename(tempFile, finalFile) }
+        val success = withContext(Dispatchers.IO) { com.pichs.download.utils.FileUtils.rename(tempFile, finalFile) }
         val now = System.currentTimeMillis()
         if (success) {
             val completed = task.copy(

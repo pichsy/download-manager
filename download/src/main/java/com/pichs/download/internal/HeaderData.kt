@@ -5,4 +5,7 @@ data class HeaderData(
     var contentType: String? = null,
     var eTag: String? = null,
     var acceptRanges: String? = null,
-)
+    var lastModified: String? = null,
+) {
+    fun supportsRange(): Boolean = (acceptRanges?.contains("bytes", ignoreCase = true) == true)
+}

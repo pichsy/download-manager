@@ -8,6 +8,7 @@ import com.pichs.download.listener.StatusListener
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.store.InMemoryTaskStore
+import com.pichs.download.utils.OkHttpHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,13 +36,28 @@ object DownloadManager {
     fun getAllTasks(): List<DownloadTask> = InMemoryTaskStore.getAll().sortedBy { it.createTime }
     fun getRunningTasks(): List<DownloadTask> = InMemoryTaskStore.getAll().filter { it.status == DownloadStatus.DOWNLOADING }
 
+    private fun normalizeName(name: String): String = name.substringBeforeLast('.').lowercase()
+
+    // 新增：按资源键查找现存任务（去重）
+    fun findExistingTask(url: String, path: String, fileName: String): DownloadTask? {
+        val norm = normalizeName(fileName)
+        return InMemoryTaskStore.getAll().firstOrNull {
+            it.url == url && it.filePath == path && normalizeName(it.fileName) == norm
+        }
+    }
+
     // 批量操作（占位）
     fun pauseAll(): DownloadManager = this
     fun resumeAll(): DownloadManager = this
     fun cancelAll(): DownloadManager = this
 
     // 配置
-    fun config(block: DownloadConfig.() -> Unit) { block(config) }
+    fun config(block: DownloadConfig.() -> Unit) {
+        block(config)
+        OkHttpHelper.rebuildClient(config)
+    }
+
+    internal fun currentConfig(): DownloadConfig = config
 
     // 监听 API 透传
     fun addGlobalListener(listener: DownloadListener) = listenerManager.addGlobalListener(listener)

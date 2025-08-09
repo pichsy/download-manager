@@ -161,6 +161,12 @@
             android:exported="true"
             android:launchMode="standard" />
 
+        <activity
+            android:name="com.pichs.download.demo.AppDetailActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|fontScale|density|colorMode|navigation|layoutDirection|uiMode|screenLayout|smallestScreenSize"
+            android:exported="true"
+            android:launchMode="standard" />
+
     </application>
 
 </manifest>

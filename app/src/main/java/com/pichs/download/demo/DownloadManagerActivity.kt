@@ -1,6 +1,5 @@
 package com.pichs.download.demo
 
-import android.os.Bundle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.ActivityDownloadManagerBinding
@@ -15,9 +14,11 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
     private lateinit var downloadingAdapter: SimpleTaskAdapter
     private lateinit var completedAdapter: SimpleTaskAdapter
 
+    private var globalListener: com.pichs.download.listener.DownloadListener? = null
+
     override fun afterOnCreate() {
         setupRecycler()
-        loadTasks()
+        refreshLists()
         bindListeners()
     }
 
@@ -25,57 +26,105 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
         downloadingAdapter = SimpleTaskAdapter(onAction = { task ->
             when (task.status) {
                 DownloadStatus.DOWNLOADING -> DownloadManager.pause(task.id)
-                DownloadStatus.PAUSED -> DownloadManager.resume(task.id)
+                DownloadStatus.PAUSED, DownloadStatus.PENDING -> DownloadManager.resume(task.id)
+                DownloadStatus.FAILED -> {
+                    DownloadManager.resume(task.id)
+                }
+
                 else -> {}
             }
         })
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = downloadingAdapter
 
-        completedAdapter = SimpleTaskAdapter(onAction = { /*no-op*/ })
+        completedAdapter = SimpleTaskAdapter(onAction = { task -> openApk(task) })
         binding.recyclerViewDownloaded.layoutManager = LinearLayoutManager(this)
         binding.recyclerViewDownloaded.adapter = completedAdapter
     }
 
-    private fun loadTasks() {
+    private fun refreshLists() {
         val all = DownloadManager.getAllTasks()
+            .sortedByDescending { it.updateTime }
+            .distinctBy { it.id }
+
         downloading.clear()
         completed.clear()
-        all.forEach { if (it.status == DownloadStatus.COMPLETED) completed.add(it) else downloading.add(it) }
+
+        all.forEach { task ->
+            when (task.status) {
+                DownloadStatus.COMPLETED -> completed.add(task)
+                DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.PENDING -> downloading.add(task)
+                else -> {}
+            }
+        }
+
         downloadingAdapter.submit(downloading)
         completedAdapter.submit(completed)
     }
 
+    private fun updateSingle(task: DownloadTask) {
+        val inDownloading = downloading.any { it.id == task.id }
+        val inCompleted = completed.any { it.id == task.id }
+        val shouldBeInDownloading = task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PAUSED || task.status == DownloadStatus.PENDING
+        val shouldBeInCompleted = task.status == DownloadStatus.COMPLETED
+        val crossGroup = (inDownloading && shouldBeInCompleted) || (inCompleted && shouldBeInDownloading)
+        if (crossGroup || (!inDownloading && !inCompleted)) {
+            refreshLists()
+            return
+        }
+
+        if (inDownloading) {
+            val idx = downloading.indexOfFirst { it.id == task.id }
+            if (idx >= 0) {
+                downloading[idx] = task
+                downloadingAdapter.updateItem(task)
+            }
+        } else if (inCompleted) {
+            val idx = completed.indexOfFirst { it.id == task.id }
+            if (idx >= 0) {
+                completed[idx] = task
+                completedAdapter.updateItem(task)
+            }
+        }
+    }
+
     private fun bindListeners() {
-        DownloadManager.addGlobalListener(object : com.pichs.download.listener.DownloadListener {
+        val listener = object : com.pichs.download.listener.DownloadListener {
             override fun onTaskProgress(task: DownloadTask, progress: Int, speed: Long) {
-                val idx = downloading.indexOfFirst { it.id == task.id }
-                if (idx >= 0) {
-                    downloading[idx] = task
-                    downloadingAdapter.updateItem(task)
-                }
+                runOnUiThread { if (!isDestroyed) updateSingle(task) }
             }
 
             override fun onTaskComplete(task: DownloadTask, file: java.io.File) {
-                val idx = downloading.indexOfFirst { it.id == task.id }
-                if (idx >= 0) downloading.removeAt(idx)
-                completed.add(0, task)
-                downloadingAdapter.submit(downloading)
-                completedAdapter.submit(completed)
+                runOnUiThread { if (!isDestroyed) refreshLists() }
             }
 
             override fun onTaskError(task: DownloadTask, error: Throwable) {
-                val idx = downloading.indexOfFirst { it.id == task.id }
-                if (idx >= 0) {
-                    downloading[idx] = task
-                    downloadingAdapter.updateItem(task)
-                }
+                runOnUiThread { if (!isDestroyed) updateSingle(task) }
             }
-        })
+        }
+        globalListener = listener
+        DownloadManager.addGlobalListener(listener)
+    }
+
+    override fun onDestroy() {
+        globalListener?.let { DownloadManager.removeGlobalListener(it) }
+        globalListener = null
+        super.onDestroy()
+    }
+
+    private fun openApk(task: DownloadTask) {
+        val file = java.io.File(task.filePath, task.fileName)
+        if (!file.exists()) return
+        val uri: android.net.Uri = androidx.core.content.FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            setDataAndType(uri, "application/vnd.android.package-archive")
+        }
+        startActivity(intent)
     }
 }
 
-// 简单任务适配器
 private class SimpleTaskAdapter(
     val onAction: (DownloadTask) -> Unit
 ) : androidx.recyclerview.widget.RecyclerView.Adapter<SimpleTaskVH>() {
@@ -121,16 +170,40 @@ private class SimpleTaskVH(
 
     fun bind(task: DownloadTask) {
         title.text = task.fileName
-        progressBar.progress = task.progress
-        tvProgress.text = "${task.progress}%"
-        tvSpeed.text = com.pichs.download.utils.SpeedUtils.formatDownloadSpeed(task.speed)
-        btn.text = when (task.status) {
-            DownloadStatus.DOWNLOADING -> "暂停"
-            DownloadStatus.PAUSED -> "继续"
-            DownloadStatus.FAILED -> "重试"
-            DownloadStatus.COMPLETED -> "打开"
-            else -> "下载"
+        val indeterminate = (task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PENDING) && task.totalSize <= 0
+        progressBar.isIndeterminate = indeterminate
+        if (!indeterminate) {
+            progressBar.progress = task.progress
+            tvProgress.text = "${task.progress}%"
+        } else {
+            tvProgress.text = "处理中…"
         }
-        btn.setOnClickListener { onAction(task) }
+        tvSpeed.text = com.pichs.download.utils.SpeedUtils.formatDownloadSpeed(task.speed)
+        when (task.status) {
+            DownloadStatus.DOWNLOADING -> {
+                btn.text = "暂停"; btn.isEnabled = true
+            }
+
+            DownloadStatus.PAUSED -> {
+                btn.text = "继续"; btn.isEnabled = true
+            }
+
+            DownloadStatus.PENDING -> {
+                btn.text = "准备中"; btn.isEnabled = false
+            }
+
+            DownloadStatus.FAILED -> {
+                btn.text = "重试"; btn.isEnabled = true
+            }
+
+            DownloadStatus.COMPLETED -> {
+                btn.text = "安装"; btn.isEnabled = true; progressBar.isIndeterminate = false; progressBar.progress = 100; tvProgress.text = "100%"
+            }
+
+            else -> {
+                btn.text = "下载"; btn.isEnabled = true
+            }
+        }
+        btn.setOnClickListener { if (btn.isEnabled) onAction(task) }
     }
 }

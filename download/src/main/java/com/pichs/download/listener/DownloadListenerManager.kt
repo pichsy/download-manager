@@ -13,7 +13,9 @@ class DownloadListenerManager {
 
     @Synchronized
     fun addGlobalListener(listener: DownloadListener) {
-        globalListeners.add(listener)
+        if (!globalListeners.contains(listener)) {
+            globalListeners.add(listener)
+        }
     }
 
     @Synchronized
@@ -22,7 +24,9 @@ class DownloadListenerManager {
     }
 
     fun addTaskListener(taskId: String, listener: DownloadListener) {
-        taskListeners.getOrPut(taskId) { mutableListOf() }.add(listener)
+        taskListeners.getOrPut(taskId) { mutableListOf() }.apply {
+            if (!contains(listener)) add(listener)
+        }
     }
 
     fun removeTaskListener(taskId: String, listener: DownloadListener) {
@@ -30,7 +34,9 @@ class DownloadListenerManager {
     }
 
     fun addProgressListener(taskId: String, listener: ProgressListener) {
-        progressListeners.getOrPut(taskId) { mutableListOf() }.add(listener)
+        progressListeners.getOrPut(taskId) { mutableListOf() }.apply {
+            if (!contains(listener)) add(listener)
+        }
     }
 
     fun removeProgressListener(taskId: String, listener: ProgressListener) {
@@ -38,7 +44,9 @@ class DownloadListenerManager {
     }
 
     fun addStatusListener(taskId: String, listener: StatusListener) {
-        statusListeners.getOrPut(taskId) { mutableListOf() }.add(listener)
+        statusListeners.getOrPut(taskId) { mutableListOf() }.apply {
+            if (!contains(listener)) add(listener)
+        }
     }
 
     fun removeStatusListener(taskId: String, listener: StatusListener) {
