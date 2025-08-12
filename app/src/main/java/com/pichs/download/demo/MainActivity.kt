@@ -39,7 +39,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
         val appJsonStr = assets.open("app_list.json").bufferedReader().use { it.readText() }
         val appListBean = GsonUtils.fromJson<AppListBean>(appJsonStr, AppListBean::class.java)
-        appListBean.appList?.let { list.addAll(it) }
+    appListBean.appList?.let { list.addAll(it) }
+    // 将首页的数据注册到进程内注册表，供其他页面优先读取
+    AppMetaRegistry.registerAll(list)
         
         initRecyclerView()
         // 绑定全局监听
@@ -68,12 +70,71 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     vb.ivCover.setImageResource(R.color.purple_200)
                 }
                 vb.tvAppName.text = item.name
-                bindButtonUI(vb, item.task)
-                vb.btnDownload.setOnClickListener { handleClick(item, vb) }
+                // 冷启动映射历史任务到列表项
+                runCatching {
+                    val dirBind = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
+                    val existingTask = DownloadManager.getAllTasks().firstOrNull {
+                        it.url == item.url && it.filePath == dirBind && normalizeName(it.fileName) == normalizeName(item.name)
+                    }
+                    if (existingTask != null) item.task = existingTask
+                }
+                bindButtonUIWithInstalledAndFile(vb, item)
+                vb.btnDownload.setOnClickListener { handleClickWithInstalled(item, vb) }
                 // 新增：点击封面跳转详情页
                 vb.ivCover.setOnClickListener { openDetail(item) }
             }
         }.models = list
+    }
+
+    private fun bindButtonUIWithInstalledAndFile(vb: ItemGridDownloadBeanBinding, item: DownloadItem) {
+        val task = item.task
+    // 直接使用 item 自带的包名+版本信息
+    val pkg = item.packageName.orEmpty()
+    val storeVC = item.versionCode
+    val canOpen = pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(this, pkg, storeVC)
+        if (canOpen) {
+            vb.btnDownload.setText("打开")
+            vb.btnDownload.isEnabled = true
+            return
+        }
+        // 回退到原绑定逻辑，但在 COMPLETED 时考虑文件健康
+        when (task?.status) {
+            DownloadStatus.COMPLETED -> {
+                val health = task.let { AppUtils.checkFileHealth(it) }
+                if (health == AppUtils.FileHealth.OK) {
+                    vb.btnDownload.setText("安装")
+                    vb.btnDownload.setProgress(100)
+                    vb.btnDownload.isEnabled = true
+                } else {
+                    vb.btnDownload.setText("下载")
+                    vb.btnDownload.setProgress(0)
+                    vb.btnDownload.isEnabled = true
+                }
+            }
+            DownloadStatus.DOWNLOADING -> {
+                vb.btnDownload.setText("${task.progress}%"); vb.btnDownload.setProgress(task.progress); vb.btnDownload.isEnabled = true
+            }
+            DownloadStatus.PAUSED -> {
+                vb.btnDownload.setText("${task.progress}%"); vb.btnDownload.setProgress(task.progress); vb.btnDownload.isEnabled = true
+            }
+            DownloadStatus.PENDING -> { vb.btnDownload.setText("准备中"); vb.btnDownload.isEnabled = false }
+            DownloadStatus.FAILED -> { vb.btnDownload.setText("重试"); vb.btnDownload.isEnabled = true }
+            else -> { vb.btnDownload.setText("下载"); vb.btnDownload.setProgress(0); vb.btnDownload.isEnabled = true }
+        }
+    }
+
+    private fun handleClickWithInstalled(item: DownloadItem, vb: ItemGridDownloadBeanBinding) {
+    // 直接使用 item 自带的包名+版本信息
+    val pkg = item.packageName.orEmpty()
+    val storeVC = item.versionCode
+    val canOpen = pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(this, pkg, storeVC)
+        if (canOpen) {
+            if (!AppUtils.openApp(this, pkg)) {
+                ToastUtils.show("无法打开应用")
+            }
+            return
+        }
+        handleClick(item, vb)
     }
 
     private fun handleClick(item: DownloadItem, vb: ItemGridDownloadBeanBinding) {
@@ -112,6 +173,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
         val task = DownloadManager.download(item.url)
             .to(dir, item.name)
+            .meta(item.packageName, item.versionCode)
+            .extras(null)
             .onProgress { progress, _ ->
                 vb.btnDownload.setProgress(progress)
                 vb.btnDownload.setText("${progress}%")
@@ -126,7 +189,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
             .start()
         item.task = task
-        bindButtonUI(vb, task)
+    bindButtonUIWithInstalledAndFile(vb, item)
     }
 
     private fun openApk(task: DownloadTask) {
@@ -162,9 +225,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 vb.btnDownload.isEnabled = false
             }
             DownloadStatus.COMPLETED -> {
-                vb.btnDownload.setText("安装")
-                vb.btnDownload.setProgress(100)
-                vb.btnDownload.isEnabled = true
+                val health = task.let { AppUtils.checkFileHealth(it) }
+                if (health == AppUtils.FileHealth.OK) {
+                    vb.btnDownload.setText("安装")
+                    vb.btnDownload.setProgress(100)
+                    vb.btnDownload.isEnabled = true
+                } else {
+                    // 文件缺失/损坏：回落为下载态
+                    vb.btnDownload.setText("下载")
+                    vb.btnDownload.setProgress(0)
+                    vb.btnDownload.isEnabled = true
+                }
             }
             DownloadStatus.FAILED -> {
                 vb.btnDownload.setText("重试")

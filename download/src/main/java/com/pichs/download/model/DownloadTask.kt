@@ -17,4 +17,7 @@ data class DownloadTask(
     val priority: Int,
     val createTime: Long,
     val updateTime: Long,
+    val packageName: String? = null,
+    val storeVersionCode: Long? = null,
+    val extras: String? = null,
 ) : Parcelable

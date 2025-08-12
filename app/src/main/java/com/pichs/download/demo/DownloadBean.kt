@@ -12,5 +12,7 @@ data class DownloadItem(
     var name: String = "",
     var size: Long = 0L,
     var icon: String? = null,
+    var versionCode: Long? = null,
+    var versionName: String? = null,
     var task: DownloadTask? = null
 )

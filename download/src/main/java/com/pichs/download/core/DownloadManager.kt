@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 object DownloadManager {
 
@@ -24,8 +25,32 @@ object DownloadManager {
 
     // 下载引擎（简单实现）
     private val engine: DownloadEngine = SimpleDownloadEngine()
+    @Volatile private var repository: com.pichs.download.store.TaskRepository? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // 初始化：App 启动时调用，用于恢复历史任务
+    fun init(context: android.content.Context) {
+        if (repository != null) return
+        repository = com.pichs.download.store.TaskRepository(context.applicationContext)
+        // 同步恢复历史任务到内存；在 IO 线程阻塞一次，确保 App 冷启动可见
+        runBlocking(Dispatchers.IO) {
+            runCatching {
+                val history = repository!!.getAll()
+                val now = System.currentTimeMillis()
+                history.forEach { t ->
+                    val fixed = if (t.status == DownloadStatus.DOWNLOADING || t.status == DownloadStatus.PENDING) {
+                        t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = now)
+                    } else t
+                    if (fixed !== t) {
+                        // 异步持久化修正，避免阻塞 forEach
+                        scope.launch { repository?.save(fixed) }
+                    }
+                    InMemoryTaskStore.put(fixed)
+                }
+            }
+        }
+    }
 
     // API 入口
     fun download(url: String): DownloadRequestBuilder = DownloadRequestBuilder().url(url)
@@ -77,13 +102,17 @@ object DownloadManager {
 
     // 内部事件：创建任务时注册并派发开始事件，并启动下载
     fun onTaskCreated(task: DownloadTask) {
-        InMemoryTaskStore.put(task)
+    InMemoryTaskStore.put(task)
+    repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(task) } }
         listenerManager.notifyTaskStart(task)
         scope.launch { engine.start(task) }
     }
 
     // 供引擎使用的内部方法
-    internal fun updateTaskInternal(task: DownloadTask) { InMemoryTaskStore.put(task) }
+    internal fun updateTaskInternal(task: DownloadTask) {
+    InMemoryTaskStore.put(task)
+    repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(task) } }
+    }
 
     internal fun listeners(): DownloadListenerManager = listenerManager
 

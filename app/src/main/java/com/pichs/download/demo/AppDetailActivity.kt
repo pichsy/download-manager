@@ -36,6 +36,14 @@ class AppDetailActivity : AppCompatActivity() {
         size = intent.getLongExtra("size", 0L)
         icon = intent.getStringExtra("icon")
 
+        // 若首页已注册完整数据，则以注册表为准，避免不一致
+        AppMetaRegistry.getByName(name)?.let { it ->
+            if (url.isBlank()) url = it.url
+            if (packageNameStr.isBlank()) packageNameStr = it.packageName.orEmpty()
+            if (size <= 0) size = it.size ?: 0L
+            if (icon.isNullOrBlank()) icon = it.icon
+        }
+
         initUI()
         initDownloadState()
         bindListeners()

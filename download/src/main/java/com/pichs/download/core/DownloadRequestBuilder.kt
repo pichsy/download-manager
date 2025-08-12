@@ -16,6 +16,9 @@ class DownloadRequestBuilder {
     private var tag: String? = null
     private var priority: Int = 0
     private var headers: Map<String, String> = emptyMap()
+    private var packageName: String? = null
+    private var storeVersionCode: Long? = null
+    private var extras: String? = null
 
     private var onProgressCb: ((Int, Long) -> Unit)? = null
     private var onCompleteCb: ((File) -> Unit)? = null
@@ -28,6 +31,8 @@ class DownloadRequestBuilder {
     fun tag(tag: String) = apply { this.tag = tag }
     fun priority(priority: Int) = apply { this.priority = priority }
     fun headers(headers: Map<String, String>) = apply { this.headers = headers }
+    fun meta(packageName: String?, storeVersionCode: Long?) = apply { this.packageName = packageName; this.storeVersionCode = storeVersionCode }
+    fun extras(extras: String?) = apply { this.extras = extras }
 
     fun onProgress(callback: (Int, Long) -> Unit) = apply { this.onProgressCb = callback }
     fun onComplete(callback: (File) -> Unit) = apply { this.onCompleteCb = callback }
@@ -95,7 +100,10 @@ class DownloadRequestBuilder {
             speed = 0,
             priority = priority,
             createTime = System.currentTimeMillis(),
-            updateTime = System.currentTimeMillis()
+            updateTime = System.currentTimeMillis(),
+            packageName = packageName,
+            storeVersionCode = storeVersionCode,
+            extras = extras
         )
         DownloadManager.onTaskCreated(task)
 

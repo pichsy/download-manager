@@ -14,5 +14,6 @@ class App : Application() {
         BaseMMKVHelper.init(this)
         LogUtils.setLogEnable(true)
         ToastUtils.init(this)
+    com.pichs.download.core.DownloadManager.init(this)
     }
 }

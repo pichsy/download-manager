@@ -58,6 +58,18 @@
         app:layout_constraintEnd_toEndOf="@id/progressBar"
         app:layout_constraintTop_toBottomOf="@+id/progressBar" />
 
+    <com.pichs.xwidget.view.XTextView
+        android:id="@+id/tvHint"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#FF3B30"
+        android:textSize="12sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="@id/progressBar"
+        app:layout_constraintStart_toStartOf="@+id/tv_title"
+        app:layout_constraintTop_toBottomOf="@+id/tvSpeed" />
+
     <com.pichs.xwidget.cardview.XCardButton
         android:id="@+id/btn_download"
         android:layout_width="wrap_content"

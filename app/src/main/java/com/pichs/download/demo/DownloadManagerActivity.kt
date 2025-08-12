@@ -37,7 +37,25 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = downloadingAdapter
 
-        completedAdapter = SimpleTaskAdapter(onAction = { task -> openApk(task) })
+        completedAdapter = SimpleTaskAdapter(onAction = { task ->
+            // 优先用任务上的显式元数据；退化到 catalog
+            val pkg = task.packageName
+                ?: AppUtils.getPackageNameForTask(this, task)
+                ?: ""
+            val storeVC = task.storeVersionCode ?: AppUtils.getStoreVersionCode(this, pkg)
+            if (pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(this, pkg, storeVC)) {
+                if (!AppUtils.openApp(this, pkg)) {
+                    android.widget.Toast.makeText(this, "无法打开应用", android.widget.Toast.LENGTH_SHORT).show()
+                }
+                return@SimpleTaskAdapter
+            }
+            val health = AppUtils.checkFileHealth(task)
+            if (health == AppUtils.FileHealth.OK) {
+                openApk(task)
+            } else {
+                // 不显示安装按钮，仅展示红字提示并保留 X（由 ViewHolder 负责）
+            }
+        })
         binding.recyclerViewDownloaded.layoutManager = LinearLayoutManager(this)
         binding.recyclerViewDownloaded.adapter = completedAdapter
     }
@@ -166,6 +184,7 @@ private class SimpleTaskVH(
     private val progressBar: android.widget.ProgressBar = itemView.findViewById(R.id.progressBar)
     private val tvProgress: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tvProgress)
     private val tvSpeed: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tvSpeed)
+    private val tvHint: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tvHint)
     private val btn: com.pichs.xwidget.cardview.XCardButton = itemView.findViewById(R.id.btn_download)
 
     fun bind(task: DownloadTask) {
@@ -179,6 +198,21 @@ private class SimpleTaskVH(
             tvProgress.text = "处理中…"
         }
         tvSpeed.text = com.pichs.download.utils.SpeedUtils.formatDownloadSpeed(task.speed)
+    // 优先判断是否“已安装且版本>=商店” → 显示打开
+        val pkg = task.packageName
+            ?: AppUtils.getPackageNameForTask(itemView.context, task)
+            ?: ""
+        val storeVC = task.storeVersionCode ?: AppUtils.getStoreVersionCode(itemView.context, pkg)
+    val showOpen = pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(itemView.context, pkg, storeVC)
+
+        // 文件健康检查
+        val health = AppUtils.checkFileHealth(task)
+        tvHint.visibility = android.view.View.GONE
+        if (task.status == DownloadStatus.COMPLETED && health != AppUtils.FileHealth.OK) {
+            tvHint.text = if (health == AppUtils.FileHealth.MISSING) "文件缺失" else "文件损坏"
+            tvHint.visibility = android.view.View.VISIBLE
+        }
+
         when (task.status) {
             DownloadStatus.DOWNLOADING -> {
                 btn.text = "暂停"; btn.isEnabled = true
@@ -197,7 +231,17 @@ private class SimpleTaskVH(
             }
 
             DownloadStatus.COMPLETED -> {
-                btn.text = "安装"; btn.isEnabled = true; progressBar.isIndeterminate = false; progressBar.progress = 100; tvProgress.text = "100%"
+                progressBar.isIndeterminate = false; progressBar.progress = 100; tvProgress.text = "100%"
+                if (showOpen) {
+                    btn.text = "打开"; btn.isEnabled = true
+                } else {
+                    if (health == AppUtils.FileHealth.OK) {
+                        btn.text = "安装"; btn.isEnabled = true
+                    } else {
+                        // 不显示安装按钮：禁用并清空文案，交互交给右侧 X
+                        btn.text = ""; btn.isEnabled = false
+                    }
+                }
             }
 
             else -> {
