@@ -59,9 +59,11 @@ internal class SimpleDownloadEngine : DownloadEngine {
     }
 
     override fun resume(taskId: String) {
-        val task = DownloadManager.getTask(taskId) ?: return
-        controllers[taskId]?.paused = false
-        scope.launch { start(task.copy(status = DownloadStatus.PENDING)) }
+    val task = DownloadManager.getTask(taskId) ?: return
+    controllers[taskId]?.paused = false
+    // 将任务置为 PENDING 并交由调度器补位
+    val pending = task.copy(status = DownloadStatus.PENDING)
+    DownloadManager.updateTaskInternal(pending)
     }
 
     override fun cancel(taskId: String) {

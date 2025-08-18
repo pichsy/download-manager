@@ -17,6 +17,7 @@ import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemGridDownloadBeanBinding
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.utils.toast.ToastUtils
+import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 import com.pichs.xbase.utils.GsonUtils
 import java.io.File
 
@@ -58,6 +59,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     @SuppressLint("SetTextI18n")
     private fun initRecyclerView() {
+        binding.recyclerView.setItemAnimatorDisable()
         binding.recyclerView.grid(4).setup {
             addType<DownloadItem>(R.layout.item_grid_download_bean)
 
@@ -115,9 +117,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 vb.btnDownload.setText("${task.progress}%"); vb.btnDownload.setProgress(task.progress); vb.btnDownload.isEnabled = true
             }
             DownloadStatus.PAUSED -> {
-                vb.btnDownload.setText("${task.progress}%"); vb.btnDownload.setProgress(task.progress); vb.btnDownload.isEnabled = true
+                // 暂停时显示“继续”，进度条保留进度
+                vb.btnDownload.setText("继续"); vb.btnDownload.setProgress(task.progress); vb.btnDownload.isEnabled = true
             }
-            DownloadStatus.PENDING -> { vb.btnDownload.setText("准备中"); vb.btnDownload.isEnabled = false }
+            DownloadStatus.PENDING -> { vb.btnDownload.setText("等待中"); vb.btnDownload.isEnabled = false }
             DownloadStatus.FAILED -> { vb.btnDownload.setText("重试"); vb.btnDownload.isEnabled = true }
             else -> { vb.btnDownload.setText("下载"); vb.btnDownload.setProgress(0); vb.btnDownload.isEnabled = true }
         }
@@ -147,18 +150,19 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         when (task?.status) {
             com.pichs.download.model.DownloadStatus.DOWNLOADING -> {
                 DownloadManager.pause(task.id)
-                // 文案显示当前进度
-                vb.btnDownload.setText("${task.progress}%")
+                // 暂停后应显示“继续”，进度条保持当前进度
+                vb.btnDownload.setText("继续")
+                vb.btnDownload.setProgress(task.progress)
                 vb.btnDownload.isEnabled = true
             }
             com.pichs.download.model.DownloadStatus.PAUSED -> {
                 DownloadManager.resume(task.id)
-                // 文案显示当前进度
-                vb.btnDownload.setText("${task.progress}%")
-                vb.btnDownload.isEnabled = true
+                // 点击继续：若无并发位，将进入等待队列 → 显示“等待中”，由全局监听更新为进度
+                vb.btnDownload.setText("等待中")
+                vb.btnDownload.isEnabled = false
             }
             com.pichs.download.model.DownloadStatus.PENDING -> {
-                vb.btnDownload.setText("准备中")
+                vb.btnDownload.setText("等待中")
                 vb.btnDownload.isEnabled = false
             }
             com.pichs.download.model.DownloadStatus.COMPLETED -> openApk(task)
@@ -171,10 +175,19 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     private fun startDownload(item: DownloadItem, vb: ItemGridDownloadBeanBinding) {
         val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
+        // 将图标/名称/包名/版本写入 extras(JSON)
+        val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
+            mapOf(
+                "name" to (item.name ?: ""),
+                "packageName" to (item.packageName ?: ""),
+                "versionCode" to (item.versionCode ?: 0L),
+                "icon" to (item.icon ?: "")
+            )
+        )
         val task = DownloadManager.download(item.url)
             .to(dir, item.name)
             .meta(item.packageName, item.versionCode)
-            .extras(null)
+            .extras(extrasJson)
             .onProgress { progress, _ ->
                 vb.btnDownload.setProgress(progress)
                 vb.btnDownload.setText("${progress}%")
@@ -216,12 +229,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 vb.btnDownload.isEnabled = true
             }
             DownloadStatus.PAUSED -> {
-                vb.btnDownload.setText("${task.progress}%")
+                vb.btnDownload.setText("继续")
                 vb.btnDownload.setProgress(task.progress)
                 vb.btnDownload.isEnabled = true
             }
             DownloadStatus.PENDING -> {
-                vb.btnDownload.setText("准备中")
+                vb.btnDownload.setText("等待中")
                 vb.btnDownload.isEnabled = false
             }
             DownloadStatus.COMPLETED -> {

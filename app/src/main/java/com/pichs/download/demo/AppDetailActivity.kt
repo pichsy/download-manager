@@ -72,8 +72,20 @@ class AppDetailActivity : AppCompatActivity() {
         val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
         if (t == null) {
             // 新建下载
+            val storeVC = CatalogRepository.getStoreVersionCode(this, packageNameStr) ?: 0L
+            val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
+                mapOf(
+                    "name" to (name),
+                    "packageName" to (packageNameStr),
+                    "versionCode" to (storeVC),
+                    "icon" to (icon ?: ""),
+                    "size" to (size)
+                )
+            )
             task = DownloadManager.download(url)
                 .to(dir, name)
+                .meta(packageNameStr, storeVC)
+                .extras(extrasJson)
                 .onProgress { progress, _ ->
                     binding.btnDownload.setProgress(progress)
                     binding.btnDownload.setText("${progress}%")

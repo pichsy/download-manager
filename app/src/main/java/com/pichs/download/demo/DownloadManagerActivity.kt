@@ -1,11 +1,13 @@
 package com.pichs.download.demo
 
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.ActivityDownloadManagerBinding
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.shanhai.base.base.BaseActivity
+import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 
 class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
 
@@ -34,6 +36,8 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
                 else -> {}
             }
         })
+        binding.recyclerView.setItemAnimatorDisable()
+
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = downloadingAdapter
 
@@ -56,6 +60,7 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
                 // 不显示安装按钮，仅展示红字提示并保留 X（由 ViewHolder 负责）
             }
         })
+        binding.recyclerViewDownloaded.setItemAnimatorDisable()
         binding.recyclerViewDownloaded.layoutManager = LinearLayoutManager(this)
         binding.recyclerViewDownloaded.adapter = completedAdapter
     }
@@ -180,6 +185,7 @@ private class SimpleTaskVH(
     val onAction: (DownloadTask) -> Unit
 ) : androidx.recyclerview.widget.RecyclerView.ViewHolder(itemView) {
 
+    private val ivCover: com.pichs.xwidget.cardview.XCardImageView = itemView.findViewById(R.id.iv_cover)
     private val title: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tv_title)
     private val progressBar: android.widget.ProgressBar = itemView.findViewById(R.id.progressBar)
     private val tvProgress: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tvProgress)
@@ -188,7 +194,38 @@ private class SimpleTaskVH(
     private val btn: com.pichs.xwidget.cardview.XCardButton = itemView.findViewById(R.id.btn_download)
 
     fun bind(task: DownloadTask) {
-        title.text = task.fileName
+        // 绑定图标：优先从 extras(JSON) 读取缓存；其次从首页注册表；再尝试本地已安装应用图标；最后占位色
+        data class ExtraMeta(
+            val name: String? = null,
+            val packageName: String? = null,
+            val versionCode: Long? = null,
+            val icon: String? = null
+        )
+        val extraMeta: ExtraMeta? = runCatching {
+            val raw = task.extras
+            if (!raw.isNullOrBlank()) com.pichs.xbase.utils.GsonUtils.fromJson(raw, ExtraMeta::class.java) else null
+        }.getOrNull()
+        val meta = extraMeta ?: AppMetaRegistry.getByName(task.fileName)?.let {
+            ExtraMeta(name = it.name, packageName = it.packageName, versionCode = it.versionCode, icon = it.icon)
+        }
+        val ctx = itemView.context
+        val iconUrl = meta?.icon
+        if (!iconUrl.isNullOrBlank()) {
+            Glide.with(ivCover).load(iconUrl).into(ivCover)
+        } else {
+            val pkg = task.packageName
+                ?: AppUtils.getPackageNameForTask(ctx, task)
+                ?: ""
+            if (pkg.isNotBlank()) {
+                runCatching { ctx.packageManager.getApplicationIcon(pkg) }
+                    .onSuccess { ivCover.setImageDrawable(it) }
+                    .onFailure { ivCover.setImageResource(R.color.purple_200) }
+            } else {
+                ivCover.setImageResource(R.color.purple_200)
+            }
+        }
+
+        title.text = meta?.name ?: task.fileName
         val indeterminate = (task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PENDING) && task.totalSize <= 0
         progressBar.isIndeterminate = indeterminate
         if (!indeterminate) {
@@ -223,7 +260,7 @@ private class SimpleTaskVH(
             }
 
             DownloadStatus.PENDING -> {
-                btn.text = "准备中"; btn.isEnabled = false
+                btn.text = "等待中"; btn.isEnabled = false
             }
 
             DownloadStatus.FAILED -> {
