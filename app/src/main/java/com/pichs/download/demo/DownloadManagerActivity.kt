@@ -28,11 +28,14 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
         downloadingAdapter = SimpleTaskAdapter(onAction = { task ->
             when (task.status) {
                 DownloadStatus.DOWNLOADING -> DownloadManager.pause(task.id)
-                DownloadStatus.PAUSED, DownloadStatus.PENDING -> DownloadManager.resume(task.id)
-                DownloadStatus.FAILED -> {
-                    DownloadManager.resume(task.id)
+                DownloadStatus.PAUSED -> DownloadManager.resume(task.id)
+                DownloadStatus.PENDING, DownloadStatus.WAITING -> {
+                    DownloadManager.pause(task.id)
+                    // 同步本地一份，立刻显示“继续”
+                    val paused = task.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
+                    updateSingle(paused)
                 }
-
+                DownloadStatus.FAILED -> DownloadManager.resume(task.id)
                 else -> {}
             }
         })
@@ -76,7 +79,7 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
         all.forEach { task ->
             when (task.status) {
                 DownloadStatus.COMPLETED -> completed.add(task)
-                DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.PENDING -> downloading.add(task)
+                DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.PENDING, DownloadStatus.WAITING -> downloading.add(task)
                 else -> {}
             }
         }
@@ -88,7 +91,7 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
     private fun updateSingle(task: DownloadTask) {
         val inDownloading = downloading.any { it.id == task.id }
         val inCompleted = completed.any { it.id == task.id }
-        val shouldBeInDownloading = task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PAUSED || task.status == DownloadStatus.PENDING
+    val shouldBeInDownloading = task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PAUSED || task.status == DownloadStatus.PENDING || task.status == DownloadStatus.WAITING
         val shouldBeInCompleted = task.status == DownloadStatus.COMPLETED
         val crossGroup = (inDownloading && shouldBeInCompleted) || (inCompleted && shouldBeInDownloading)
         if (crossGroup || (!inDownloading && !inCompleted)) {
@@ -226,7 +229,7 @@ private class SimpleTaskVH(
         }
 
         title.text = meta?.name ?: task.fileName
-        val indeterminate = (task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PENDING) && task.totalSize <= 0
+    val indeterminate = (task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PENDING || task.status == DownloadStatus.WAITING) && task.totalSize <= 0
         progressBar.isIndeterminate = indeterminate
         if (!indeterminate) {
             progressBar.progress = task.progress
@@ -259,8 +262,8 @@ private class SimpleTaskVH(
                 btn.text = "继续"; btn.isEnabled = true
             }
 
-            DownloadStatus.PENDING -> {
-                btn.text = "等待中"; btn.isEnabled = false
+            DownloadStatus.WAITING, DownloadStatus.PENDING -> {
+                btn.text = "等待中"; btn.isEnabled = true
             }
 
             DownloadStatus.FAILED -> {

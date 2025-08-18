@@ -120,7 +120,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 // 暂停时显示“继续”，进度条保留进度
                 vb.btnDownload.setText("继续"); vb.btnDownload.setProgress(task.progress); vb.btnDownload.isEnabled = true
             }
-            DownloadStatus.PENDING -> { vb.btnDownload.setText("等待中"); vb.btnDownload.isEnabled = false }
+            DownloadStatus.WAITING, DownloadStatus.PENDING -> { vb.btnDownload.setText("等待中"); vb.btnDownload.isEnabled = true }
             DownloadStatus.FAILED -> { vb.btnDownload.setText("重试"); vb.btnDownload.isEnabled = true }
             else -> { vb.btnDownload.setText("下载"); vb.btnDownload.setProgress(0); vb.btnDownload.isEnabled = true }
         }
@@ -157,13 +157,15 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
             com.pichs.download.model.DownloadStatus.PAUSED -> {
                 DownloadManager.resume(task.id)
-                // 点击继续：若无并发位，将进入等待队列 → 显示“等待中”，由全局监听更新为进度
-                vb.btnDownload.setText("等待中")
-                vb.btnDownload.isEnabled = false
+                // 不强制设置文案，等待调度后通过监听刷新
             }
-            com.pichs.download.model.DownloadStatus.PENDING -> {
-                vb.btnDownload.setText("等待中")
-                vb.btnDownload.isEnabled = false
+            com.pichs.download.model.DownloadStatus.WAITING, com.pichs.download.model.DownloadStatus.PENDING -> {
+                // 等待中也可暂停：从队列移出，切换为“继续”
+                DownloadManager.pause(task.id)
+                vb.btnDownload.setText("继续")
+                vb.btnDownload.isEnabled = true
+                // 立刻更新本地模型，避免下一次点击仍按 WAITING 分支
+                item.task = task.copy(status = com.pichs.download.model.DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
             }
             com.pichs.download.model.DownloadStatus.COMPLETED -> openApk(task)
             com.pichs.download.model.DownloadStatus.FAILED -> startDownload(item, vb)
@@ -233,10 +235,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 vb.btnDownload.setProgress(task.progress)
                 vb.btnDownload.isEnabled = true
             }
-            DownloadStatus.PENDING -> {
-                vb.btnDownload.setText("等待中")
-                vb.btnDownload.isEnabled = false
-            }
+            DownloadStatus.WAITING, DownloadStatus.PENDING -> { vb.btnDownload.setText("等待中"); vb.btnDownload.isEnabled = true }
             DownloadStatus.COMPLETED -> {
                 val health = task.let { AppUtils.checkFileHealth(it) }
                 if (health == AppUtils.FileHealth.OK) {
