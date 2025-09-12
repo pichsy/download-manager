@@ -8,6 +8,7 @@ import com.pichs.download.listener.StatusListener
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.store.InMemoryTaskStore
+import com.pichs.download.store.TaskRepository
 import com.pichs.download.utils.OkHttpHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,14 +27,14 @@ object DownloadManager {
     // 下载引擎（简单实现）
     private val engine: DownloadEngine = SimpleDownloadEngine()
     private val dispatcher = DownloadQueueDispatcher()
-    @Volatile private var repository: com.pichs.download.store.TaskRepository? = null
+    @Volatile private var repository: TaskRepository? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // 初始化：App 启动时调用，用于恢复历史任务
     fun init(context: android.content.Context) {
         if (repository != null) return
-        repository = com.pichs.download.store.TaskRepository(context.applicationContext)
+        repository = TaskRepository(context.applicationContext)
         // 同步恢复历史任务到内存；在 IO 线程阻塞一次，确保 App 冷启动可见
         runBlocking(Dispatchers.IO) {
             runCatching {
@@ -112,7 +113,7 @@ object DownloadManager {
         // 入队并尝试调度
     dispatcher.enqueue(task)
     // 初始进入队列时标记为 WAITING，便于 UI 直观展示
-    updateTaskInternal(task.copy(status = com.pichs.download.model.DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
+    updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
         scheduleNext()
     }
 
@@ -122,7 +123,7 @@ object DownloadManager {
         while (true) {
             val next = dispatcher.dequeue() ?: break
             // 直接标记为 DOWNLOADING，让 UI 立即切到进度态
-            val running = next.copy(status = com.pichs.download.model.DownloadStatus.DOWNLOADING, speed = 0L, updateTime = System.currentTimeMillis())
+            val running = next.copy(status = DownloadStatus.DOWNLOADING, speed = 0L, updateTime = System.currentTimeMillis())
             updateTaskInternal(running)
             // 触发一次进度通知，推动 UI 立刻刷新（即使暂时为 0%）
             listenerManager.notifyTaskProgress(running, running.progress, running.speed)
@@ -137,10 +138,10 @@ object DownloadManager {
         InMemoryTaskStore.put(task)
         repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(task) } }
         // 当任务结束或被取消/暂停时，从运行集中移除并尝试补位
-        if (task.status == com.pichs.download.model.DownloadStatus.COMPLETED ||
-            task.status == com.pichs.download.model.DownloadStatus.FAILED ||
-            task.status == com.pichs.download.model.DownloadStatus.CANCELLED ||
-            task.status == com.pichs.download.model.DownloadStatus.PAUSED) {
+        if (task.status == DownloadStatus.COMPLETED ||
+            task.status == DownloadStatus.FAILED ||
+            task.status == DownloadStatus.CANCELLED ||
+            task.status == DownloadStatus.PAUSED) {
             dispatcher.remove(task.id)
             scheduleNext()
         }
@@ -153,8 +154,8 @@ object DownloadManager {
         // 移出等待队列
         dispatcher.remove(taskId)
         val t = InMemoryTaskStore.get(taskId)
-    if (t != null && (t.status == com.pichs.download.model.DownloadStatus.WAITING || t.status == com.pichs.download.model.DownloadStatus.PENDING)) {
-            val paused = t.copy(status = com.pichs.download.model.DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
+    if (t != null && (t.status == DownloadStatus.WAITING || t.status == DownloadStatus.PENDING)) {
+            val paused = t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
             updateTaskInternal(paused)
             // 主动通知一次，驱动 UI 立即刷新为“继续”
             listenerManager.notifyTaskProgress(paused, paused.progress, paused.speed)
@@ -168,7 +169,7 @@ object DownloadManager {
     fun resume(taskId: String) {
         val t = InMemoryTaskStore.get(taskId) ?: return
         // 标记为待执行并入队
-    val pending = t.copy(status = com.pichs.download.model.DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis())
+    val pending = t.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis())
         InMemoryTaskStore.put(pending)
         repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
         dispatcher.enqueue(pending)
@@ -180,8 +181,8 @@ object DownloadManager {
     fun cancel(taskId: String) {
         dispatcher.remove(taskId)
         val t = InMemoryTaskStore.get(taskId)
-    if (t != null && (t.status == com.pichs.download.model.DownloadStatus.WAITING || t.status == com.pichs.download.model.DownloadStatus.PENDING || t.status == com.pichs.download.model.DownloadStatus.PAUSED)) {
-            val cancelled = t.copy(status = com.pichs.download.model.DownloadStatus.CANCELLED, speed = 0L, updateTime = System.currentTimeMillis())
+    if (t != null && (t.status == DownloadStatus.WAITING || t.status == DownloadStatus.PENDING || t.status == DownloadStatus.PAUSED)) {
+            val cancelled = t.copy(status = DownloadStatus.CANCELLED, speed = 0L, updateTime = System.currentTimeMillis())
             updateTaskInternal(cancelled)
         } else {
             engine.cancel(taskId)

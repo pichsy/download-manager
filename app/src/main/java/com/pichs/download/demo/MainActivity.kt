@@ -148,27 +148,27 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         }
         val task = item.task ?: existing
         when (task?.status) {
-            com.pichs.download.model.DownloadStatus.DOWNLOADING -> {
+            DownloadStatus.DOWNLOADING -> {
                 DownloadManager.pause(task.id)
                 // 暂停后应显示“继续”，进度条保持当前进度
                 vb.btnDownload.setText("继续")
                 vb.btnDownload.setProgress(task.progress)
                 vb.btnDownload.isEnabled = true
             }
-            com.pichs.download.model.DownloadStatus.PAUSED -> {
+            DownloadStatus.PAUSED -> {
                 DownloadManager.resume(task.id)
                 // 不强制设置文案，等待调度后通过监听刷新
             }
-            com.pichs.download.model.DownloadStatus.WAITING, com.pichs.download.model.DownloadStatus.PENDING -> {
+            DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                 // 等待中也可暂停：从队列移出，切换为“继续”
                 DownloadManager.pause(task.id)
                 vb.btnDownload.setText("继续")
                 vb.btnDownload.isEnabled = true
                 // 立刻更新本地模型，避免下一次点击仍按 WAITING 分支
-                item.task = task.copy(status = com.pichs.download.model.DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
+                item.task = task.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
             }
-            com.pichs.download.model.DownloadStatus.COMPLETED -> openApk(task)
-            com.pichs.download.model.DownloadStatus.FAILED -> startDownload(item, vb)
+            DownloadStatus.COMPLETED -> openApk(task)
+            DownloadStatus.FAILED -> startDownload(item, vb)
             else -> if (existing == null) startDownload(item, vb) else {
                 bindButtonUI(vb, existing)
             }

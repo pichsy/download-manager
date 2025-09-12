@@ -55,12 +55,14 @@ class DownloadRequestBuilder {
                             else mainHandler.post { cb(progress, speed) }
                         }
                     }
+
                     override fun onTaskComplete(task: DownloadTask, file: File) {
                         onCompleteCb?.let { cb ->
                             if (Looper.myLooper() == Looper.getMainLooper()) cb(file)
                             else mainHandler.post { cb(file) }
                         }
                     }
+
                     override fun onTaskError(task: DownloadTask, error: Throwable) {
                         onErrorCb?.let { cb ->
                             if (Looper.myLooper() == Looper.getMainLooper()) cb(error)
@@ -78,9 +80,14 @@ class DownloadRequestBuilder {
             if (byNormalized != null) {
                 if (onProgressCb != null || onCompleteCb != null || onErrorCb != null) {
                     DownloadManager.addTaskListener(byNormalized.id, object : DownloadListener {
-                        override fun onTaskProgress(task: DownloadTask, progress: Int, speed: Long) { /* bridge */ }
-                        override fun onTaskComplete(task: DownloadTask, file: File) { /* bridge */ }
-                        override fun onTaskError(task: DownloadTask, error: Throwable) { /* bridge */ }
+                        override fun onTaskProgress(task: DownloadTask, progress: Int, speed: Long) { /* bridge */
+                        }
+
+                        override fun onTaskComplete(task: DownloadTask, file: File) { /* bridge */
+                        }
+
+                        override fun onTaskError(task: DownloadTask, error: Throwable) { /* bridge */
+                        }
                     })
                 }
                 return byNormalized
@@ -115,12 +122,14 @@ class DownloadRequestBuilder {
                         else mainHandler.post { cb(progress, speed) }
                     }
                 }
+
                 override fun onTaskComplete(task: DownloadTask, file: File) {
                     onCompleteCb?.let { cb ->
                         if (Looper.myLooper() == Looper.getMainLooper()) cb(file)
                         else mainHandler.post { cb(file) }
                     }
                 }
+
                 override fun onTaskError(task: DownloadTask, error: Throwable) {
                     onErrorCb?.let { cb ->
                         if (Looper.myLooper() == Looper.getMainLooper()) cb(error)
