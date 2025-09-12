@@ -11,4 +11,13 @@ internal class TaskRepository(context: Context) {
     suspend fun save(task: DownloadTask) = dao.upsert(DownloadEntity.fromModel(task))
 
     suspend fun getAll(): List<DownloadTask> = dao.getAll().map { it.toModel() }
+
+    suspend fun delete(id: String) = dao.delete(id)
+
+    suspend fun deleteByUrl(url: String) = dao.deleteByUrl(url)
+
+    suspend fun getById(id: String): DownloadTask? = dao.getById(id)?.toModel()
+
+    suspend fun clear() = dao.clear()
+
 }

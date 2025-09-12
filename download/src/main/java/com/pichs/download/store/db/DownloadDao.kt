@@ -23,6 +23,9 @@ internal interface DownloadDao {
     @Query("DELETE FROM downloads WHERE id = :id")
     suspend fun delete(id: String)
 
+    @Query("DELETE FROM downloads WHERE url = :url")
+    suspend fun deleteByUrl(url: String)
+
     @Query("DELETE FROM downloads")
     suspend fun clear()
 }
