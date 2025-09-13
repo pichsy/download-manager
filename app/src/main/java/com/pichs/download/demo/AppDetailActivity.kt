@@ -7,8 +7,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import com.pichs.download.core.DownloadManager
+import com.pichs.download.core.FlowDownloadListener
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 import com.pichs.download.demo.databinding.ActivityAppDetailBinding
 import java.io.File
 
@@ -29,7 +32,7 @@ class AppDetailActivity : AppCompatActivity() {
     }
 
     private var task: DownloadTask? = null
-    private var globalListener: com.pichs.download.listener.DownloadListener? = null
+    private val flowListener = DownloadManager.flowListener
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,10 +70,12 @@ class AppDetailActivity : AppCompatActivity() {
     private fun initDownloadState() {
         // 尝试找到现有任务
         val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-        task = DownloadManager.getAllTasks().firstOrNull {
-            it.url == url && it.filePath == dir && normalizeName(it.fileName) == normalizeName(name)
+        lifecycleScope.launch {
+            task = DownloadManager.getAllTasks().firstOrNull {
+                it.url == url && it.filePath == dir && normalizeName(it.fileName) == normalizeName(name)
+            }
+            bindButtonUI(task)
         }
-        bindButtonUI(task)
     }
 
     private fun onClickDownload() {
@@ -89,22 +94,8 @@ class AppDetailActivity : AppCompatActivity() {
                 )
             )
             task = DownloadManager.download(url)
-                .to(dir, name)
-                .meta(packageNameStr, storeVC)
-                .extras(extrasJson)
-                .onProgress { progress, _ ->
-                    // 对齐首页：下载中按钮显示百分比
-                    binding.btnDownload.setProgress(progress)
-                    binding.btnDownload.setText("${progress}%")
-                }
-                .onComplete { file ->
-                    binding.btnDownload.setProgress(100)
-                    binding.btnDownload.setText("安装")
-                    openApkFile(file)
-                }
-                .onError {
-                    binding.btnDownload.setText("重试")
-                }
+                .path(dir)
+                .fileName(name)
                 .start()
             bindButtonUI(task)
             return
@@ -159,21 +150,8 @@ class AppDetailActivity : AppCompatActivity() {
             )
         )
         task = DownloadManager.download(url)
-            .to(dir, name)
-            .meta(packageNameStr, storeVC)
-            .extras(extrasJson)
-            .onProgress { progress, _ ->
-                binding.btnDownload.setProgress(progress)
-                binding.btnDownload.setText("${progress}%")
-            }
-            .onComplete { file ->
-                binding.btnDownload.setProgress(100)
-                binding.btnDownload.setText("安装")
-                openApkFile(file)
-            }
-            .onError {
-                binding.btnDownload.setText("重试")
-            }
+            .path(dir)
+            .fileName(name)
             .start()
         bindButtonUI(task)
     }
@@ -225,35 +203,28 @@ class AppDetailActivity : AppCompatActivity() {
     }
 
     private fun bindListeners() {
-        val listener = object : com.pichs.download.listener.DownloadListener {
-            override fun onTaskProgress(task: DownloadTask, progress: Int, speed: Long) {
+        flowListener.bindToLifecycle(
+            lifecycleOwner = this,
+            onTaskProgress = { task, progress, speed ->
                 if (task.id == this@AppDetailActivity.task?.id) {
-                    runOnUiThread {
-                        // 同步本地引用，确保后续点击使用最新状态
-                        this@AppDetailActivity.task = task
-                        bindButtonUI(task)
-                    }
+                    // 同步本地引用，确保后续点击使用最新状态
+                    this@AppDetailActivity.task = task
+                    bindButtonUI(task)
+                }
+            },
+            onTaskComplete = { task, file ->
+                if (task.id == this@AppDetailActivity.task?.id) {
+                    this@AppDetailActivity.task = task
+                    bindButtonUI(task)
+                }
+            },
+            onTaskError = { task, error ->
+                if (task.id == this@AppDetailActivity.task?.id) {
+                    this@AppDetailActivity.task = task
+                    bindButtonUI(task)
                 }
             }
-            override fun onTaskComplete(task: DownloadTask, file: File) {
-                if (task.id == this@AppDetailActivity.task?.id) {
-                    runOnUiThread {
-                        this@AppDetailActivity.task = task
-                        bindButtonUI(task)
-                    }
-                }
-            }
-            override fun onTaskError(task: DownloadTask, error: Throwable) {
-                if (task.id == this@AppDetailActivity.task?.id) {
-                    runOnUiThread {
-                        this@AppDetailActivity.task = task
-                        bindButtonUI(task)
-                    }
-                }
-            }
-        }
-        globalListener = listener
-        DownloadManager.addGlobalListener(listener)
+        )
     }
 
     private fun openApk(task: DownloadTask) {
@@ -288,8 +259,7 @@ class AppDetailActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        globalListener?.let { DownloadManager.removeGlobalListener(it) }
-        globalListener = null
+        // Flow监听器会自动管理生命周期，无需手动移除
         super.onDestroy()
     }
 }

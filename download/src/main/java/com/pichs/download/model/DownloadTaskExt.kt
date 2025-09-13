@@ -1,29 +1,21 @@
 package com.pichs.download.model
 
 import com.pichs.download.core.DownloadManager
-import com.pichs.download.listener.DownloadListener
+import kotlinx.coroutines.runBlocking
 
-fun DownloadTask.pause(): DownloadTask {
+suspend fun DownloadTask.pause(): DownloadTask {
     DownloadManager.pause(this.id)
     return DownloadManager.getTask(this.id) ?: this
 }
 
-fun DownloadTask.resume(): DownloadTask {
+suspend fun DownloadTask.resume(): DownloadTask {
     DownloadManager.resume(this.id)
     return DownloadManager.getTask(this.id) ?: this
 }
 
-fun DownloadTask.cancel(): DownloadTask {
+suspend fun DownloadTask.cancel(): DownloadTask {
     DownloadManager.cancel(this.id)
     return DownloadManager.getTask(this.id) ?: this
 }
 
-fun DownloadTask.addListener(listener: DownloadListener): DownloadTask {
-    DownloadManager.addTaskListener(this.id, listener)
-    return this
-}
-
-fun DownloadTask.removeListener(listener: DownloadListener): DownloadTask {
-    DownloadManager.removeTaskListener(this.id, listener)
-    return this
-}
+// 旧的监听器API已移除，请使用 DownloadManager.flowListener 进行响应式监听
