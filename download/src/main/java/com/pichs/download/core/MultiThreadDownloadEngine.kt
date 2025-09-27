@@ -180,14 +180,14 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             DownloadManager.emitProgress(completed, 100, 0)
             
             // 清理进度计算器中的数据
-            progressCalculator.clearTaskProgress(task.id)
+            ProgressCalculatorManager.clearCalculator(task.id)
         } else {
             DownloadLog.e("MultiThreadDownloadEngine", "文件合并失败: ${task.id}")
             val failed = task.copy(status = DownloadStatus.FAILED, updateTime = now)
             DownloadManager.updateTaskInternal(failed)
             
             // 清理进度计算器中的数据
-            progressCalculator.clearTaskProgress(task.id)
+            ProgressCalculatorManager.clearCalculator(task.id)
         }
     }
     
@@ -260,10 +260,11 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     localDownloaded += read
                     ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, localDownloaded, ChunkStatus.DOWNLOADING)
                     
-                    // 使用ProgressCalculator计算进度和速度
+                    // 使用ProgressCalculatorManager获取该任务的专用计算器
                     // 实时获取最新分片数据，而不是使用静态的ctl.chunks
                     val latestChunks = ctl.chunkManager?.getChunks(task.id) ?: emptyList()
-                    val (shouldUpdate, updatedTask) = progressCalculator.calculateProgress(
+                    val calculator = ProgressCalculatorManager.getCalculator(task.id)
+                    val (shouldUpdate, updatedTask) = calculator.calculateProgress(
                         task = task,
                         chunks = latestChunks,
                         totalSize = ctl.total,

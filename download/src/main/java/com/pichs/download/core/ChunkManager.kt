@@ -92,9 +92,9 @@ internal class ChunkManager(private val chunkDao: DownloadChunkDao) {
             val totalSize = task.totalSize
             
             if (totalSize > 0 && chunks.isNotEmpty()) {
-                // 使用ProgressCalculator计算进度
-                val progressCalculator = ProgressCalculator()
-                val (shouldUpdate, updatedTask) = progressCalculator.calculateProgress(
+                // 使用ProgressCalculatorManager获取该任务的专用计算器
+                val calculator = ProgressCalculatorManager.getCalculator(taskId)
+                val (shouldUpdate, updatedTask) = calculator.calculateProgress(
                     task = task,
                     chunks = chunks,
                     totalSize = totalSize,
