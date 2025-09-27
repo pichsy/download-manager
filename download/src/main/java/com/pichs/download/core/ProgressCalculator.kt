@@ -2,6 +2,7 @@ package com.pichs.download.core
 
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.model.DownloadStatus
+import com.pichs.download.utils.DownloadLog
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
@@ -87,6 +88,8 @@ class ProgressCalculator {
                 speed = smoothedSpeed,
                 updateTime = now
             )
+            
+            DownloadLog.d("ProgressCalculator", "计算进度: ${task.id} - 进度: $progress%, 速度: ${smoothedSpeed}bytes/s, 已下载: $totalDownloaded/$totalSize")
             
             return Pair(true, updatedTask)
         }

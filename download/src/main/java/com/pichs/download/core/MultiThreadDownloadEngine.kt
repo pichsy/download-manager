@@ -6,6 +6,7 @@ import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.utils.FileUtils
 import com.pichs.download.utils.OkHttpHelper
+import com.pichs.download.utils.DownloadLog
 import kotlinx.coroutines.*
 import okhttp3.Request
 import java.io.File
@@ -40,15 +41,19 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         ctl.cancelled.set(false)
         ctl.chunkManager = DownloadManager.getChunkManager()
         
+        DownloadLog.d("MultiThreadDownloadEngine", "开始下载任务: ${task.id}, URL: ${task.url}")
+        
         ctl.job = scope.launch {
             try {
+                DownloadLog.d("MultiThreadDownloadEngine", "启动下载协程: ${task.id}")
                 downloadWithChunks(task, ctl)
             } catch (e: CancellationException) {
+                DownloadLog.d("MultiThreadDownloadEngine", "下载被取消: ${task.id}")
                 // ignore
             } catch (e: Throwable) {
+                DownloadLog.e("MultiThreadDownloadEngine", "下载失败: ${task.id}", e)
                 val failed = task.copy(status = DownloadStatus.FAILED, updateTime = System.currentTimeMillis())
                 DownloadManager.updateTaskInternal(failed)
-                // 旧监听器已移除，现在通过EventBus和Flow通知
             }
         }
     }
@@ -91,15 +96,20 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
     }
     
     private suspend fun downloadWithChunks(task: DownloadTask, ctl: DownloadController) {
+        DownloadLog.d("MultiThreadDownloadEngine", "开始下载分片: ${task.id}")
+        
         val dir = File(task.filePath)
         withContext(Dispatchers.IO) { if (!dir.exists()) dir.mkdirs() }
         
         // 获取头信息
+        DownloadLog.d("MultiThreadDownloadEngine", "获取文件头信息: ${task.id}")
         val header = withContext(Dispatchers.IO) { OkHttpHelper.getFileTotalLengthFromUrl(task.url) }
         ctl.total = header.contentLength
         ctl.eTag = header.eTag
         ctl.acceptRanges = header.acceptRanges
         ctl.lastModified = header.lastModified
+        
+        DownloadLog.d("MultiThreadDownloadEngine", "文件信息: ${task.id} - 总大小: ${header.contentLength}, ETag: ${header.eTag}, AcceptRanges: ${header.acceptRanges}")
         
         val finalName = FileUtils.generateFilename(task.fileName, task.url, header.contentType)
         val finalFile = File(dir, finalName)
@@ -109,6 +119,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         
         // 已完成直接回调
         if (finalFile.exists() && finalFile.length() == header.contentLength && header.contentLength > 0) {
+            DownloadLog.d("MultiThreadDownloadEngine", "文件已存在，直接完成: ${task.id} - 文件大小: ${finalFile.length()}")
             val completed = task.copy(
                 fileName = finalName,
                 status = DownloadStatus.COMPLETED,
@@ -119,7 +130,6 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 updateTime = System.currentTimeMillis()
             )
             DownloadManager.updateTaskInternal(completed)
-            // 旧监听器已移除，现在通过EventBus和Flow通知
             DownloadManager.emitProgress(completed, 100, 0)
             return
         }
@@ -128,8 +138,10 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         val chunks = ctl.chunkManager?.getChunks(task.id) ?: emptyList()
         ctl.chunks = if (chunks.isEmpty()) {
             val chunkCount = calculateOptimalThreadCount(header.contentLength)
+            DownloadLog.d("MultiThreadDownloadEngine", "创建分片: ${task.id} - 分片数量: $chunkCount")
             ctl.chunkManager?.createChunks(task.id, header.contentLength, chunkCount) ?: emptyList()
         } else {
+            DownloadLog.d("MultiThreadDownloadEngine", "恢复分片: ${task.id} - 分片数量: ${chunks.size}")
             chunks
         }
         
@@ -137,21 +149,27 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         withContext(Dispatchers.IO) { FileUtils.checkAndCreateFileSafe(tempFile) }
         
         // 并发下载分片
+        DownloadLog.d("MultiThreadDownloadEngine", "开始并发下载: ${task.id} - 分片数量: ${ctl.chunks.size}")
         val downloadJobs = ctl.chunks.map { chunk ->
             scope.launch {
+                DownloadLog.d("MultiThreadDownloadEngine", "启动分片下载: ${task.id} - 分片: ${chunk.index}")
                 downloadChunk(task, chunk, ctl)
             }
         }
         
         // 等待所有分片完成
+        DownloadLog.d("MultiThreadDownloadEngine", "等待所有分片完成: ${task.id}")
         downloadJobs.joinAll()
+        DownloadLog.d("MultiThreadDownloadEngine", "所有分片下载完成: ${task.id}")
         
         if (ctl.cancelled.get() || ctl.paused.get()) return
         
         // 合并文件
+        DownloadLog.d("MultiThreadDownloadEngine", "开始合并文件: ${task.id}")
         val success = withContext(Dispatchers.IO) { FileUtils.rename(tempFile, finalFile) }
         val now = System.currentTimeMillis()
         if (success) {
+            DownloadLog.d("MultiThreadDownloadEngine", "文件合并成功: ${task.id}")
             val completed = progressCalculator.getFinalProgress(
                 task = task,
                 chunks = ctl.chunks,
@@ -164,6 +182,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             // 清理进度计算器中的数据
             progressCalculator.clearTaskProgress(task.id)
         } else {
+            DownloadLog.e("MultiThreadDownloadEngine", "文件合并失败: ${task.id}")
             val failed = task.copy(status = DownloadStatus.FAILED, updateTime = now)
             DownloadManager.updateTaskInternal(failed)
             
@@ -173,10 +192,16 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
     }
     
     private suspend fun downloadChunk(task: DownloadTask, chunk: DownloadChunk, ctl: DownloadController) {
-        if (chunk.status == ChunkStatus.COMPLETED) return
-        
-        val startByte = chunk.startByte + chunk.downloaded
-        val endByte = chunk.endByte
+        try {
+            if (chunk.status == ChunkStatus.COMPLETED) {
+                DownloadLog.d("MultiThreadDownloadEngine", "分片已完成，跳过: ${task.id} - 分片: ${chunk.index}")
+                return
+            }
+            
+            DownloadLog.d("MultiThreadDownloadEngine", "开始下载分片: ${task.id} - 分片: ${chunk.index}, 范围: ${chunk.startByte}-${chunk.endByte}")
+            
+            val startByte = chunk.startByte + chunk.downloaded
+            val endByte = chunk.endByte
         
         val reqBuilder = Request.Builder().url(task.url)
             .header("Accept-Encoding", "identity")
@@ -195,11 +220,15 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         
         val request = reqBuilder.get().build()
         
+        DownloadLog.d("MultiThreadDownloadEngine", "发送分片请求: ${task.id} - 分片: ${chunk.index}, Range: bytes=$startByte-$endByte")
+        
         // 进度计算现在由ProgressCalculator处理
         
         OkHttpHelper.execute(request).use { resp ->
             val code = resp.code
             val body = resp.body ?: throw IllegalStateException("Empty body")
+            
+            DownloadLog.d("MultiThreadDownloadEngine", "分片响应: ${task.id} - 分片: ${chunk.index}, 状态码: $code, 内容长度: ${body.contentLength()}")
             
             // 处理 416: 请求区间无效，通常是文件大小变化或断点越界 -> 重下
             if (code == 416) {
@@ -213,6 +242,9 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 return
             }
             
+            // 维护本地累计下载量，避免依赖数据库中的旧值
+            var localDownloaded = chunk.downloaded
+            
             RandomAccessFile(ctl.tempFile, "rw").use { raf ->
                 raf.seek(startByte)
                 val source = body.source()
@@ -224,13 +256,16 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     if (read == -1L) break
                     raf.channel.write(buffer.readByteArray(read).let { java.nio.ByteBuffer.wrap(it) })
                     
-                    val newDownloaded = chunk.downloaded + read
-                    ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, newDownloaded, ChunkStatus.DOWNLOADING)
+                    // 更新本地累计值
+                    localDownloaded += read
+                    ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, localDownloaded, ChunkStatus.DOWNLOADING)
                     
                     // 使用ProgressCalculator计算进度和速度
+                    // 实时获取最新分片数据，而不是使用静态的ctl.chunks
+                    val latestChunks = ctl.chunkManager?.getChunks(task.id) ?: emptyList()
                     val (shouldUpdate, updatedTask) = progressCalculator.calculateProgress(
                         task = task,
-                        chunks = ctl.chunks,
+                        chunks = latestChunks,
                         totalSize = ctl.total,
                         minUpdateInterval = 500L
                     )
@@ -242,16 +277,23 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                         DownloadManager.updateTaskInternal(finalTask)
                         DownloadManager.emitProgress(finalTask, finalTask.progress, finalTask.speed)
                         
-                        // 添加下载日志
-                        DownloadLogger.logTaskEvent(com.pichs.download.core.LogLevel.DEBUG, 
-                            "Progress update: ${finalTask.progress}%, Speed: ${finalTask.speed}bytes/s", finalTask)
+                        // 添加详细的下载日志
+                        DownloadLog.d("MultiThreadDownloadEngine", 
+                            "进度更新: ${task.id} - 进度: ${finalTask.progress}%, 速度: ${finalTask.speed}bytes/s, 已下载: ${finalTask.currentSize}/${finalTask.totalSize}")
                     }
                 }
             }
+            
+            if (!ctl.cancelled.get() && !ctl.paused.get()) {
+                DownloadLog.d("MultiThreadDownloadEngine", "分片下载完成: ${task.id} - 分片: ${chunk.index}, 已下载: $localDownloaded")
+                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, localDownloaded, ChunkStatus.COMPLETED)
+            } else {
+                DownloadLog.d("MultiThreadDownloadEngine", "分片下载被取消或暂停: ${task.id} - 分片: ${chunk.index}")
+            }
         }
-        
-        if (!ctl.cancelled.get() && !ctl.paused.get()) {
-            ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, chunk.endByte - chunk.startByte + 1, ChunkStatus.COMPLETED)
+        } catch (e: Exception) {
+            DownloadLog.e("MultiThreadDownloadEngine", "分片下载异常: ${task.id} - 分片: ${chunk.index}", e)
+            ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, chunk.downloaded, ChunkStatus.FAILED)
         }
     }
     

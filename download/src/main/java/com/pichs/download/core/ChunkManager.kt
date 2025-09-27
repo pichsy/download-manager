@@ -4,7 +4,9 @@ import com.pichs.download.model.ChunkStatus
 import com.pichs.download.model.DownloadChunk
 import com.pichs.download.store.db.DownloadChunkDao
 import com.pichs.download.store.db.DownloadChunkEntity
+import com.pichs.download.utils.DownloadLog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 internal class ChunkManager(private val chunkDao: DownloadChunkDao) {
@@ -73,6 +75,42 @@ internal class ChunkManager(private val chunkDao: DownloadChunkDao) {
                 updateTime = System.currentTimeMillis()
             )
             chunkDao.update(updatedChunk)
+            
+            // 分片状态更新后，触发进度计算和事件发送
+            if (status == ChunkStatus.COMPLETED || status == ChunkStatus.DOWNLOADING) {
+                triggerProgressUpdate(taskId)
+            }
+        }
+    }
+    
+    // 触发进度更新
+    private suspend fun triggerProgressUpdate(taskId: String) {
+        try {
+            // 获取任务信息
+            val task = runBlocking { DownloadManager.getTask(taskId) } ?: return
+            val chunks = getChunks(taskId)
+            val totalSize = task.totalSize
+            
+            if (totalSize > 0 && chunks.isNotEmpty()) {
+                // 使用ProgressCalculator计算进度
+                val progressCalculator = ProgressCalculator()
+                val (shouldUpdate, updatedTask) = progressCalculator.calculateProgress(
+                    task = task,
+                    chunks = chunks,
+                    totalSize = totalSize,
+                    minUpdateInterval = 200L // 分片完成时立即更新
+                )
+                
+                if (shouldUpdate) {
+                    DownloadManager.updateTaskInternal(updatedTask)
+                    DownloadManager.emitProgress(updatedTask, updatedTask.progress, updatedTask.speed)
+                    
+                    DownloadLog.d("ChunkManager", 
+                        "分片进度更新: ${taskId} - 进度: ${updatedTask.progress}%, 速度: ${updatedTask.speed}bytes/s, 已下载: ${updatedTask.currentSize}/${updatedTask.totalSize}")
+                }
+            }
+        } catch (e: Exception) {
+            DownloadLog.e("ChunkManager", "触发进度更新失败: $taskId", e)
         }
     }
     
