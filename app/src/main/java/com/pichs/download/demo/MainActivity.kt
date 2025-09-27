@@ -359,8 +359,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         }
     }
 
-    // 专门处理进度更新的方法
+    // 专门处理进度更新的方法（添加防抖机制）
+    private var lastProgressUpdateTime = 0L
+    private val progressUpdateInterval = 300L // 300ms防抖间隔
+    
     private fun updateItemTaskWithProgress(task: DownloadTask, progress: Int, speed: Long) {
+        val now = System.currentTimeMillis()
+        if (now - lastProgressUpdateTime < progressUpdateInterval) {
+            return // 防抖：跳过过于频繁的更新
+        }
+        lastProgressUpdateTime = now
+        
         val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
         val idx = list.indexOfFirst {
             it.url == task.url && dir == task.filePath && normalizeName(it.name) == normalizeName(task.fileName)
@@ -368,14 +377,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         if (idx >= 0) {
             // 更新任务数据
             list[idx].task = task
-            // 立即更新UI显示进度和速度
-            val item = list[idx]
-            val viewHolder = binding.recyclerView.findViewHolderForAdapterPosition(idx)
-            if (viewHolder != null) {
-                // 直接更新ViewHolder中的进度显示
-                updateProgressInViewHolder(viewHolder, progress, speed, task.status)
-            } else {
-                // 如果ViewHolder不可见，通知适配器刷新
+            // 使用post延迟更新UI，避免阻塞主线程
+            binding.recyclerView.post {
                 binding.recyclerView.adapter?.notifyItemChanged(idx)
             }
         }

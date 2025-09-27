@@ -18,6 +18,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
     
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val controllers = ConcurrentHashMap<String, DownloadController>()
+    private val progressCalculator = ProgressCalculator()
     
     private data class DownloadController(
         var job: Job? = null,
@@ -60,7 +61,8 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 val task = DownloadManager.getTask(taskId) ?: return@runBlocking
                 val paused = task.copy(status = DownloadStatus.PAUSED, updateTime = System.currentTimeMillis())
                 DownloadManager.updateTaskInternal(paused)
-                // 旧监听器已移除，现在通过EventBus和Flow通知
+                // 清理进度计算器中的数据
+                progressCalculator.clearTaskProgress(taskId)
             }
         }
     }
@@ -82,6 +84,8 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 val task = DownloadManager.getTask(taskId) ?: return@runBlocking
                 val cancelled = task.copy(status = DownloadStatus.CANCELLED, updateTime = System.currentTimeMillis())
                 DownloadManager.updateTaskInternal(cancelled)
+                // 清理进度计算器中的数据
+                progressCalculator.clearTaskProgress(taskId)
             }
         }
     }
@@ -148,22 +152,23 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         val success = withContext(Dispatchers.IO) { FileUtils.rename(tempFile, finalFile) }
         val now = System.currentTimeMillis()
         if (success) {
-            val completed = task.copy(
-                status = DownloadStatus.COMPLETED,
-                progress = 100,
-                totalSize = ctl.total,
-                currentSize = ctl.total,
-                speed = 0,
-                fileName = finalName,
-                updateTime = now
-            )
+            val completed = progressCalculator.getFinalProgress(
+                task = task,
+                chunks = ctl.chunks,
+                totalSize = ctl.total
+            ).copy(fileName = finalName)
+            
             DownloadManager.updateTaskInternal(completed)
-            // 旧监听器已移除，现在通过EventBus和Flow通知
             DownloadManager.emitProgress(completed, 100, 0)
+            
+            // 清理进度计算器中的数据
+            progressCalculator.clearTaskProgress(task.id)
         } else {
             val failed = task.copy(status = DownloadStatus.FAILED, updateTime = now)
             DownloadManager.updateTaskInternal(failed)
-            // 旧监听器已移除，现在通过EventBus和Flow通知
+            
+            // 清理进度计算器中的数据
+            progressCalculator.clearTaskProgress(task.id)
         }
     }
     
@@ -190,8 +195,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         
         val request = reqBuilder.get().build()
         
-        var lastUpdateTime = System.currentTimeMillis()
-        var lastBytes = chunk.downloaded
+        // 进度计算现在由ProgressCalculator处理
         
         OkHttpHelper.execute(request).use { resp ->
             val code = resp.code
@@ -223,31 +227,24 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     val newDownloaded = chunk.downloaded + read
                     ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, newDownloaded, ChunkStatus.DOWNLOADING)
                     
-                    val now = System.currentTimeMillis()
-                    val deltaT = now - lastUpdateTime
-                    if (deltaT >= 200) {
-                        val deltaB = newDownloaded - lastBytes
-                        val speed = if (deltaT > 0) (deltaB * 1000 / deltaT) else 0
-                        
-                        // 计算总进度
-                        val totalDownloaded = ctl.chunks.sumOf { it.downloaded }
-                        val progress = if (ctl.total > 0) ((totalDownloaded * 100) / ctl.total).toInt() else 0
-                        
-                        val running = task.copy(
-                            status = DownloadStatus.DOWNLOADING,
-                            progress = progress,
-                            totalSize = ctl.total,
-                            currentSize = totalDownloaded,
-                            speed = speed,
-                            fileName = ctl.finalFile?.name ?: task.fileName,
-                            updateTime = now
+                    // 使用ProgressCalculator计算进度和速度
+                    val (shouldUpdate, updatedTask) = progressCalculator.calculateProgress(
+                        task = task,
+                        chunks = ctl.chunks,
+                        totalSize = ctl.total,
+                        minUpdateInterval = 500L
+                    )
+                    
+                    if (shouldUpdate) {
+                        val finalTask = updatedTask.copy(
+                            fileName = ctl.finalFile?.name ?: task.fileName
                         )
-                        DownloadManager.updateTaskInternal(running)
-                        // 旧监听器已移除，现在通过EventBus和Flow通知
-                        DownloadManager.emitProgress(running, progress, speed)
+                        DownloadManager.updateTaskInternal(finalTask)
+                        DownloadManager.emitProgress(finalTask, finalTask.progress, finalTask.speed)
                         
-                        lastUpdateTime = now
-                        lastBytes = newDownloaded
+                        // 添加下载日志
+                        DownloadLogger.logTaskEvent(com.pichs.download.core.LogLevel.DEBUG, 
+                            "Progress update: ${finalTask.progress}%, Speed: ${finalTask.speed}bytes/s", finalTask)
                     }
                 }
             }

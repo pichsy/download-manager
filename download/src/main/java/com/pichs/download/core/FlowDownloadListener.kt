@@ -108,23 +108,34 @@ class FlowDownloadListener {
             }
         }
         
-        // 单独监听每个任务的进度变化
+        // 单独监听每个任务的进度变化（优化：减少重复监听）
         lifecycleOwner.lifecycleScope.launch {
+            val activeProgressListeners = mutableSetOf<String>()
+            
             observeAllTasks().collect { tasks: List<DownloadTask> ->
-                tasks.forEach { task ->
-                    if (task.status == com.pichs.download.model.DownloadStatus.DOWNLOADING) {
-                        // 为每个下载中的任务启动进度监听
+                val downloadingTasks = tasks.filter { it.status == com.pichs.download.model.DownloadStatus.DOWNLOADING }
+                
+                // 启动新任务的进度监听
+                downloadingTasks.forEach { task ->
+                    if (!activeProgressListeners.contains(task.id)) {
+                        activeProgressListeners.add(task.id)
                         launch {
                             observeTaskProgress(task.id).collect { (progress, speed) ->
                                 // 获取最新的任务状态
                                 val latestTask = DownloadManager.getTask(task.id)
-                                if (latestTask != null) {
+                                if (latestTask != null && latestTask.status == com.pichs.download.model.DownloadStatus.DOWNLOADING) {
                                     onTaskProgress(latestTask, progress, speed)
                                 }
                             }
                         }
                     }
                 }
+                
+                // 清理已完成任务的监听
+                val completedTaskIds = tasks.filter { 
+                    it.status != com.pichs.download.model.DownloadStatus.DOWNLOADING 
+                }.map { it.id }
+                activeProgressListeners.removeAll(completedTaskIds)
             }
         }
     }
