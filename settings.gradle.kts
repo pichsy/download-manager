@@ -11,6 +11,7 @@ pluginManagement {
         mavenCentral()
         maven(url = "https://jitpack.io")
         gradlePluginPortal()
+        maven(url = "https://s01.oss.sonatype.org/content/repositories/releases/")
     }
 }
 dependencyResolutionManagement {
@@ -19,10 +20,11 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven(url = "https://jitpack.io")
+        maven(url = "https://s01.oss.sonatype.org/content/repositories/releases/")
     }
 }
 
 rootProject.name = "download-manager"
 include(":app")
 include(":base")
-include(":download")
+include(":downloader")

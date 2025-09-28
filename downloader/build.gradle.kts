@@ -4,6 +4,7 @@ plugins {
     id("kotlin-parcelize")
     id("com.google.devtools.ksp")
     id("androidx.room")
+    id("maven-publish")
 }
 
 room {
@@ -64,3 +65,35 @@ dependencies {
     api(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
 }
+
+
+
+tasks.register<Javadoc>("javadoc") {
+    options.encoding = "UTF-8"
+    (options as StandardJavadocDocletOptions).charSet = "UTF-8"
+    // 只处理 Java 源码，避免 Kotlin 导致 path 为空
+    val javaSrc = fileTree("src/main/java") { include("**/*.java") }
+    source = javaSrc
+    classpath += files(android.bootClasspath.joinToString(File.pathSeparator))
+    (options as StandardJavadocDocletOptions).links("http://docs.oracle.com/javase/7/docs/api/")
+    (options as StandardJavadocDocletOptions).linksOffline(
+        "http://d.android.com/reference",
+        "${android.sdkDirectory}/docs/reference"
+    )
+    exclude("**/BuildConfig.java")
+    exclude("**/R.java")
+    isFailOnError = false
+}
+
+tasks.withType<Javadoc> {
+    enabled = false
+}
+
+tasks.register<Jar>("androidJavadocsJar") {
+    dependsOn("javadoc")
+    archiveClassifier.set("javadoc")
+    from(tasks.named("javadoc").get().outputs.files)
+}
+
+// 此写法可忽略文件夹层级带来的影响
+apply(from = "${rootProject.rootDir}/maven.gradle")
