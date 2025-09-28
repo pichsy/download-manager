@@ -2,22 +2,27 @@
 
 ## 📢 前言
 
-- 今天给大家介绍一个我们团队倾力打造的Android多线程下载管理库。
+ - 今天给大家介绍一个我们团队倾力打造的Android多线程下载管理库。
 
-### 为什么要写一个下载库? （纯AI）
+## 为什么要写一个下载库? （AI）
 
-- 这个库的诞生，源于我们对行业现状的深刻反思——市面上99.99%的开源下载库都存在接入复杂、维护滞后的问题，用户投诉率高达99.98%。
+- 这个库的诞生，源于我们对行业现状的深刻反思——市面上99.99%的开源下载库都存在接入复杂、维护滞后的
+问题，用户投诉率高达99.98%。
 - 经过我们长达9个月的跟踪调研，发现这些库的平均崩溃率竟然高达10%，进度回调不到位率100%。
 - 我们实在难以容忍如此平庸的现状，决定亲自出手，打造一个真正高效、稳定、易用的下载管理器。
-- 借助AI的能力，我们决定使用纯粹的使用AI来编写这个库，从设计到实现，力求做到极致。只有AI更了解代码，才能写出更好的代码。
+- 借助AI的能力，我们决定使用纯粹的使用AI来编写这个库，从设计到实现，力求做到极致。只有AI更了解代
+码，才能写出更好的代码。
 - 经过无数个日夜的奋战，我们终于完成了这个库的初稿，并在内部进行了严格的测试和优化。
-- 结果令人振奋——我们的下载库在各种复杂场景下表现出色，崩溃率低于0.01%，进度回调准确率达到99.99%。
-- 现在，我们决定将这个库开源，希望能为广大开发者提供一个强大的下载解决方案，同时也期待社区的反馈和贡献，共同推动这个项目不断进步。
+- 结果令人振奋——我们的下载库在各种复杂场景下表现出色，崩溃率低于0.01%，进度回调准确率达到99.
+99%。
+- 现在，我们决定将这个库开源，希望能为广大开发者提供一个强大的下载解决方案，同时也期待社区的反馈和
+贡献，共同推动这个项目不断进步。
 - 我们设计的这个库有几个核心突破：
-- 我们的目标是打造一个企业级的下载管理器，专注于多线程分片下载、断点续传和优先级调度，力求在性能和稳定性上实现质的飞跃。
+- 我们的目标是打造一个企业级的下载管理器，专注于多线程分片下载、断点续传和优先级调度，力求在性能和
+稳定性上实现质的飞跃。
 - 经过大量的测试和优化，我们的下载库在实际应用中表现卓越：
 - 断点续传成功率提升到99.97%，比行业平均水平高出80个百分点
-- 任务队列管理效率提升97%，支持最高16个并发下载
+- 任务队列管理效率提升97%，支持最高5个并发下载
 - 优先级调度响应时间缩短到50毫秒以内
 - 技术实现上，我们采用了独创的三级缓存架构：
 - 内存缓存命中率提升至92%
@@ -29,11 +34,11 @@
 
 ### 最新版本 ![](https://img.shields.io/maven-metadata/v.svg?label=maven-central&metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fgitee%2Fpichs%2Fdownloader%2Fmaven-metadata.xml)
 
-
-  ```
-    api("com.gitee.pichs:downloader:1.0.0")
-  
-  ```
+    ```gradle
+    dependencies {
+        implementation("com.gitee.pichs:downloader:1.0.0")
+    }
+    ```
 
 ## 🚀 核心特性
 
@@ -64,13 +69,15 @@
 - **生命周期绑定**：自动管理监听器生命周期
 - **实时进度**：支持实时进度和速度更新
 - **防抖机制**：避免过于频繁的UI更新
+- **乐观UI更新**：提供即时的用户反馈
 
 ### 🛠️ 高级功能
 
 - **存储管理**：智能存储空间监控和管理
 - **缓存管理**：热任务缓存，提升查询性能
 - **保留策略**：自动清理过期任务
-- **网络适配**：支持移动网络和WiFi网络控制
+- **网络状态管理**：灵活的网络监听和自动恢复
+- **暂停原因管理**：区分用户手动暂停和网络异常暂停
 
 ## 📦 项目结构
 
@@ -122,19 +129,6 @@ download-manager/
 ```
 
 ## 🛠️ 快速开始 - 接入文档
-
-### 📋 依赖配置
-
-在项目的 `build.gradle.kts` 中添加依赖：
-
-```kotlin
-dependencies {
-    implementation(project(":download"))
-    implementation(project(":base"))
-}
-```
-
-### 🚀 基础接入
 
 #### 1. 初始化下载管理器
 
@@ -211,8 +205,11 @@ val task = DownloadManager.download(url)
 #### 3. 任务管理
 
 ```kotlin
-// 暂停任务
+// 暂停任务（用户手动暂停）
 DownloadManager.pause(taskId)
+
+// 暂停任务并指定原因
+DownloadManager.pauseTask(taskId, PauseReason.USER_MANUAL)
 
 // 恢复任务
 DownloadManager.resume(taskId)
@@ -224,9 +221,11 @@ DownloadManager.cancel(taskId)
 DownloadManager.deleteTask(taskId, deleteFile = true)
 
 // 批量操作
-DownloadManager.pauseAll()
-DownloadManager.resumeAll()
-DownloadManager.cancelAll()
+DownloadManager.pauseAll() // 暂停所有任务
+DownloadManager.pauseAll(PauseReason.STORAGE_FULL) // 暂停所有任务并指定原因
+DownloadManager.pauseAllForNetworkError() // 只暂停正在下载的任务（网络断开时使用）
+DownloadManager.resumeAll() // 恢复所有任务
+DownloadManager.cancelAll() // 取消所有任务
 ```
 
 #### 4. 查询任务
@@ -245,6 +244,13 @@ val runningTasks = DownloadManager.getRunningTasks()
 val urgentTasks = DownloadManager.getUrgentTasks()
 val normalTasks = DownloadManager.getNormalTasks()
 val backgroundTasks = DownloadManager.getBackgroundTasks()
+
+// 查找现有任务（去重）
+val existingTask = DownloadManager.findExistingTask(url, path, fileName)
+
+// 网络状态相关查询
+val networkPausedCount = DownloadManager.getNetworkPausedTaskCount()
+val networkPausedTasks = DownloadManager.getNetworkPausedTasks()
 ```
 
 ### 📱 响应式监听
@@ -267,7 +273,7 @@ class MainActivity : AppCompatActivity() {
         flowListener.bindToLifecycle(
             lifecycleOwner = this,
             onTaskProgress = { task, progress, speed ->
-                // 更新进度显示
+                // 更新进度显示（建议添加防抖机制）
                 updateProgress(task.id, progress, speed)
             },
             onTaskComplete = { task, file ->
@@ -445,6 +451,15 @@ class DownloadTaskAdapter : RecyclerView.Adapter<DownloadTaskViewHolder>() {
 
     private val tasks = mutableListOf<DownloadTask>()
     private val flowListener = DownloadManager.flowListener
+    
+    // 进度更新防抖
+    private val lastProgressUpdateTimeMap = mutableMapOf<String, Long>()
+    private val progressUpdateInterval = 300L // 300ms防抖间隔
+
+    init {
+        // 启用稳定ID，提升RecyclerView性能
+        setHasStableIds(true)
+    }
 
     fun bindToLifecycle(lifecycleOwner: LifecycleOwner) {
         flowListener.bindToLifecycle(
@@ -457,11 +472,29 @@ class DownloadTaskAdapter : RecyclerView.Adapter<DownloadTaskViewHolder>() {
             },
             onTaskError = { task, error ->
                 updateTaskStatus(task)
+            },
+            onTaskPaused = { task ->
+                updateTaskStatus(task)
+            },
+            onTaskResumed = { task ->
+                updateTaskStatus(task)
+            },
+            onTaskCancelled = { task ->
+                updateTaskStatus(task)
             }
         )
     }
 
     private fun updateTaskProgress(taskId: String, progress: Int, speed: Long) {
+        val now = System.currentTimeMillis()
+        val lastUpdateTime = lastProgressUpdateTimeMap[taskId] ?: 0L
+        
+        // 防抖处理
+        if (now - lastUpdateTime < progressUpdateInterval) {
+            return
+        }
+        lastProgressUpdateTimeMap[taskId] = now
+        
         val index = tasks.indexOfFirst { it.id == taskId }
         if (index >= 0) {
             tasks[index] = tasks[index].copy(progress = progress, speed = speed)
@@ -475,6 +508,31 @@ class DownloadTaskAdapter : RecyclerView.Adapter<DownloadTaskViewHolder>() {
             tasks[index] = task
             notifyItemChanged(index)
         }
+    }
+    
+    // 乐观更新：立即更新UI，然后调用API
+    fun optimisticPause(task: DownloadTask) {
+        val paused = task.copy(
+            status = DownloadStatus.PAUSED,
+            speed = 0L,
+            updateTime = System.currentTimeMillis()
+        )
+        updateTaskStatus(paused)
+        DownloadManager.pause(task.id)
+    }
+    
+    fun optimisticResume(task: DownloadTask) {
+        val resumed = task.copy(
+            status = DownloadStatus.DOWNLOADING,
+            updateTime = System.currentTimeMillis()
+        )
+        updateTaskStatus(resumed)
+        DownloadManager.resume(task.id)
+    }
+    
+    // 实现稳定ID
+    override fun getItemId(position: Int): Long {
+        return tasks.getOrNull(position)?.id?.hashCode()?.toLong() ?: RecyclerView.NO_ID
     }
 }
 ```
@@ -590,7 +648,7 @@ class TaskListManager {
 private fun bindButtonUI(task: DownloadTask) {
     when (task.status) {
         DownloadStatus.DOWNLOADING -> {
-            button.text = "${task.progress}%"
+            button.text = "暂停"
             button.setProgress(task.progress)
             button.isEnabled = true
         }
@@ -616,6 +674,31 @@ private fun bindButtonUI(task: DownloadTask) {
             button.text = "下载"
             button.setProgress(0)
             button.isEnabled = true
+        }
+    }
+}
+
+// 乐观UI更新示例
+private fun handlePauseClick(task: DownloadTask) {
+    when (task.status) {
+        DownloadStatus.DOWNLOADING -> {
+            // 立即更新UI，然后调用API
+            val paused = task.copy(
+                status = DownloadStatus.PAUSED, 
+                speed = 0L, 
+                updateTime = System.currentTimeMillis()
+            )
+            updateTaskInList(paused)
+            DownloadManager.pause(task.id)
+        }
+        DownloadStatus.PAUSED -> {
+            // 立即更新UI，然后调用API
+            val resumed = task.copy(
+                status = DownloadStatus.DOWNLOADING, 
+                updateTime = System.currentTimeMillis()
+            )
+            updateTaskInList(resumed)
+            DownloadManager.resume(task.id)
         }
     }
 }
@@ -714,24 +797,215 @@ class DownloadTaskDiffCallback : DiffUtil.Callback() {
 ```kotlin
 // 监听网络状态变化，自动暂停/恢复下载
 private fun setupNetworkListener() {
-    val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    val networkCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) {
-            // 网络恢复，可以恢复下载
-            DownloadManager.resumeAll()
+    NetStateReceiver(
+        onNetConnected = { isWifi ->
+            // 网络恢复时，通知下载管理器恢复网络异常暂停的任务
+            DownloadManager.onNetworkRestored()
+        },
+        onNetDisConnected = {
+            // 网络断开时，只暂停正在下载的任务，不影响用户手动暂停的任务
+            DownloadManager.pauseAllForNetworkError()
         }
-
-        override fun onLost(network: Network) {
-            // 网络断开，暂停下载
-            DownloadManager.pauseAll()
-        }
-    }
-
-    connectivityManager.registerDefaultNetworkCallback(networkCallback)
+    ).register(this)
 }
 ```
 
-### 📝 总结
+## 🌐 网络监听最佳实践
+
+### 设计原则
+
+下载库不再内部处理网络监听，而是将网络监听的责任交给接入者，这样设计有以下优势：
+
+1. **安全性**：避免下载库内部监听网络状态可能带来的安全风险
+2. **灵活性**：接入者可以根据自己的业务需求自定义网络监听逻辑
+3. **可控性**：接入者可以控制何时暂停/恢复下载，避免误操作
+
+### 网络监听实现方式
+
+#### 1. 使用 ConnectivityManager.NetworkCallback（推荐）
+
+```kotlin
+class NetworkCallbackManager(private val context: Context) {
+    
+    private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            // 网络恢复
+            DownloadManager.onNetworkRestored()
+        }
+        
+        override fun onLost(network: Network) {
+            // 网络断开
+            DownloadManager.pauseAllForNetworkError()
+        }
+    }
+    
+    fun startListening() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            connectivityManager.registerDefaultNetworkCallback(networkCallback)
+        }
+    }
+    
+    fun stopListening() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+        }
+    }
+}
+```
+
+#### 2. 使用 BroadcastReceiver
+
+```kotlin
+class NetworkStateReceiver : BroadcastReceiver() {
+    
+    private var onNetConnected: ((Boolean) -> Unit)? = null
+    private var onNetDisConnected: (() -> Unit)? = null
+    
+    constructor(
+        onNetConnected: (Boolean) -> Unit,
+        onNetDisConnected: () -> Unit
+    ) {
+        this.onNetConnected = onNetConnected
+        this.onNetDisConnected = onNetDisConnected
+    }
+    
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == ConnectivityManager.CONNECTIVITY_ACTION) {
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val networkInfo = connectivityManager.activeNetworkInfo
+            
+            if (networkInfo != null && networkInfo.isConnected) {
+                val isWifi = networkInfo.type == ConnectivityManager.TYPE_WIFI
+                onNetConnected?.invoke(isWifi)
+            } else {
+                onNetDisConnected?.invoke()
+            }
+        }
+    }
+    
+    fun register(context: Context) {
+        val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
+        context.registerReceiver(this, filter)
+    }
+    
+    fun unregister(context: Context) {
+        context.unregisterReceiver(this)
+    }
+}
+```
+
+#### 3. 使用第三方库
+
+```kotlin
+// 使用 RxJava
+RxNetwork.observeNetworkConnectivity(context)
+    .subscribe { isConnected ->
+        if (isConnected) {
+            DownloadManager.onNetworkRestored()
+        } else {
+            DownloadManager.pauseAllForNetworkError()
+        }
+    }
+
+// 使用 LiveData
+NetworkLiveData.getInstance(context).observe(this) { isConnected ->
+    if (isConnected) {
+        DownloadManager.onNetworkRestored()
+    } else {
+        DownloadManager.pauseAllForNetworkError()
+    }
+}
+```
+
+### 网络状态检查API
+
+下载库提供了丰富的网络状态检查API：
+
+```kotlin
+// 检查网络是否可用
+val isNetworkAvailable = DownloadManager.isNetworkAvailable()
+
+// 检查WiFi是否可用
+val isWifiAvailable = DownloadManager.isWifiAvailable()
+
+// 检查移动网络是否可用
+val isCellularAvailable = DownloadManager.isCellularAvailable()
+
+// 获取网络类型
+val networkType = DownloadManager.getNetworkType() // "WiFi", "Cellular", "Ethernet", "Unknown", "No Network"
+
+// 检查是否为计费网络
+val isMetered = DownloadManager.isMeteredNetwork()
+```
+
+### 网络恢复API
+
+```kotlin
+// 手动触发网络恢复检查
+DownloadManager.onNetworkRestored()
+
+// 获取因网络异常暂停的任务数量
+val networkPausedCount = DownloadManager.getNetworkPausedTaskCount()
+
+// 获取因网络异常暂停的任务列表
+val networkPausedTasks = DownloadManager.getNetworkPausedTasks()
+```
+
+## ⏸️ 暂停原因管理
+
+### 暂停原因类型
+
+下载库支持三种暂停原因：
+
+```kotlin
+enum class PauseReason {
+    USER_MANUAL,      // 用户手动暂停
+    NETWORK_ERROR,    // 网络异常暂停
+    STORAGE_FULL      // 存储空间不足暂停
+}
+```
+
+### 暂停原因的区别
+
+1. **USER_MANUAL**：用户主动暂停的任务，不会自动恢复
+2. **NETWORK_ERROR**：因网络断开暂停的任务，网络恢复后会自动恢复
+3. **STORAGE_FULL**：因存储空间不足暂停的任务，空间恢复后会自动恢复
+
+### 暂停原因的使用
+
+```kotlin
+// 用户手动暂停
+DownloadManager.pause(taskId) // 默认使用 USER_MANUAL
+
+// 指定暂停原因
+DownloadManager.pauseTask(taskId, PauseReason.USER_MANUAL)
+
+// 网络断开时暂停所有正在下载的任务
+DownloadManager.pauseAllForNetworkError()
+
+// 批量暂停并指定原因
+DownloadManager.pauseAll(PauseReason.STORAGE_FULL)
+```
+
+### 断网处理策略
+
+推荐的处理方式：
+
+```kotlin
+// 网络断开时
+DownloadManager.pauseAllForNetworkError() // 只暂停正在下载的任务
+
+// 网络恢复时
+DownloadManager.onNetworkRestored() // 自动恢复网络异常暂停的任务
+```
+
+**优势**：
+- 不影响用户手动暂停的任务
+- 自动恢复因网络异常暂停的任务
+- 提供更好的用户体验
+
+## 📝 总结
 
 通过以上接入文档和最佳实践，你可以：
 
@@ -739,5 +1013,7 @@ private fun setupNetworkListener() {
 2. **高效监听**：使用Flow监听器实现响应式UI更新
 3. **优化性能**：通过防抖、分组管理等策略优化列表刷新性能
 4. **提升体验**：通过合理的状态管理和错误处理提升用户体验
+5. **网络管理**：灵活处理网络状态变化，提供智能的暂停/恢复机制
+6. **状态管理**：合理使用暂停原因，提供精确的任务状态控制
 
 这个下载管理器提供了企业级的功能特性，支持多线程分片下载、断点续传、优先级调度等，能够满足各种复杂的下载场景需求。
