@@ -35,3 +35,8 @@ google-services.json
 .specstory
 history/
 /history
+.claude/
+.claude_history/
+.codebuddy/
+.vscode/
+*.code-workspace
