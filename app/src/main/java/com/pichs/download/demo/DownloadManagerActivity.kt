@@ -32,12 +32,38 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
     private fun setupRecycler() {
         downloadingAdapter = SimpleTaskAdapter(onAction = { task ->
             when (task.status) {
-                DownloadStatus.DOWNLOADING -> DownloadManager.pause(task.id)
-                DownloadStatus.PAUSED -> DownloadManager.resume(task.id)
+                DownloadStatus.DOWNLOADING -> {
+                    DownloadManager.pause(task.id)
+                    // 借鉴MainActivity：立即更新本地数据，然后通过updateSingle触发UI刷新
+                    val paused = task.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
+                    // 先更新本地列表数据
+                    val idx = downloading.indexOfFirst { it.id == task.id }
+                    if (idx >= 0) {
+                        downloading[idx] = paused
+                    }
+                    // 再触发UI更新
+                    updateSingle(paused)
+                }
+                DownloadStatus.PAUSED -> {
+                    DownloadManager.resume(task.id)
+                    // 乐观更新：立即切换到 DOWNLOADING，避免快速连点时仍按 PAUSED 判断
+                    val idx = downloading.indexOfFirst { it.id == task.id }
+                    if (idx >= 0) {
+                        val resumed = downloading[idx].copy(status = DownloadStatus.DOWNLOADING, updateTime = System.currentTimeMillis())
+                        downloading[idx] = resumed
+                        downloadingAdapter.updateItem(resumed)
+                    }
+                }
                 DownloadStatus.PENDING, DownloadStatus.WAITING -> {
                     DownloadManager.pause(task.id)
-                    // 同步本地一份，立刻显示“继续”
+                    // 同步本地一份，立刻显示"继续"
                     val paused = task.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
+                    // 先更新本地列表数据
+                    val idx = downloading.indexOfFirst { it.id == task.id }
+                    if (idx >= 0) {
+                        downloading[idx] = paused
+                    }
+                    // 再触发UI更新
                     updateSingle(paused)
                 }
                 DownloadStatus.FAILED -> DownloadManager.resume(task.id)
@@ -47,6 +73,7 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
         binding.recyclerView.setItemAnimatorDisable()
 
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
+        downloadingAdapter.setHasStableIds(true)
         binding.recyclerView.adapter = downloadingAdapter
 
         completedAdapter = SimpleTaskAdapter(onAction = { task ->
@@ -70,6 +97,7 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
         })
         binding.recyclerViewDownloaded.setItemAnimatorDisable()
         binding.recyclerViewDownloaded.layoutManager = LinearLayoutManager(this)
+        completedAdapter.setHasStableIds(true)
         binding.recyclerViewDownloaded.adapter = completedAdapter
     }
 
@@ -100,57 +128,21 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
     }
 
     private fun updateSingle(task: DownloadTask) {
-        val inDownloading = downloading.any { it.id == task.id }
-        val inCompleted = completed.any { it.id == task.id }
-    val shouldBeInDownloading = task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PAUSED || task.status == DownloadStatus.PENDING || task.status == DownloadStatus.WAITING
-        val shouldBeInCompleted = task.status == DownloadStatus.COMPLETED
-        val crossGroup = (inDownloading && shouldBeInCompleted) || (inCompleted && shouldBeInDownloading)
-        if (crossGroup || (!inDownloading && !inCompleted)) {
-            refreshLists()
-            return
-        }
-
-        if (inDownloading) {
-            val idx = downloading.indexOfFirst { it.id == task.id }
-            if (idx >= 0) {
-                downloading[idx] = task
-                downloadingAdapter.updateItem(task)
-            }
-        } else if (inCompleted) {
-            val idx = completed.indexOfFirst { it.id == task.id }
-            if (idx >= 0) {
-                completed[idx] = task
-                completedAdapter.updateItem(task)
-            }
+        // 仅维护下载中列表；完成列表统一通过DB刷新
+        val idx = downloading.indexOfFirst { it.id == task.id }
+        if (idx >= 0) {
+            downloading[idx] = task
+            downloadingAdapter.updateItem(task)
         }
     }
 
     // 专门处理进度更新的方法
     private fun updateSingleWithProgress(task: DownloadTask, progress: Int, speed: Long) {
-        val inDownloading = downloading.any { it.id == task.id }
-        val inCompleted = completed.any { it.id == task.id }
-        val shouldBeInDownloading = task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PAUSED || task.status == DownloadStatus.PENDING || task.status == DownloadStatus.WAITING
-        val shouldBeInCompleted = task.status == DownloadStatus.COMPLETED
-        val crossGroup = (inDownloading && shouldBeInCompleted) || (inCompleted && shouldBeInDownloading)
-        
-        if (crossGroup || (!inDownloading && !inCompleted)) {
-            refreshLists()
-            return
-        }
-
-        if (inDownloading) {
-            val idx = downloading.indexOfFirst { it.id == task.id }
-            if (idx >= 0) {
-                downloading[idx] = task
-                // 立即更新进度显示
-                downloadingAdapter.updateItemWithProgress(task, progress, speed)
-            }
-        } else if (inCompleted) {
-            val idx = completed.indexOfFirst { it.id == task.id }
-            if (idx >= 0) {
-                completed[idx] = task
-                completedAdapter.updateItem(task)
-            }
+        val idx = downloading.indexOfFirst { it.id == task.id }
+        if (idx >= 0) {
+            downloading[idx] = task
+            // 立即更新进度显示
+            downloadingAdapter.updateItemWithProgress(task, progress, speed)
         }
     }
 
@@ -164,7 +156,8 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
             },
             onTaskComplete = { task, file ->
                 if (isDestroyed) return@bindToLifecycle
-                refreshLists()
+                removeFromDownloading(task.id)
+                refreshCompletedFromDB()
             },
             onTaskError = { task, error ->
                 if (isDestroyed) return@bindToLifecycle
@@ -180,9 +173,28 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
             },
             onTaskCancelled = { task ->
                 if (isDestroyed) return@bindToLifecycle
-                updateSingle(task)
+                removeFromDownloading(task.id)
             }
         )
+    }
+
+    private fun removeFromDownloading(taskId: String) {
+        val idx = downloading.indexOfFirst { it.id == taskId }
+        if (idx >= 0) {
+            downloading.removeAt(idx)
+            downloadingAdapter.submit(downloading)
+        }
+    }
+
+    private fun refreshCompletedFromDB() {
+        lifecycleScope.launch {
+            val all = DownloadManager.getAllTasks()
+                .filter { it.status == DownloadStatus.COMPLETED }
+                .sortedByDescending { it.updateTime }
+            completed.clear()
+            completed.addAll(all)
+            completedAdapter.submit(completed)
+        }
     }
 
     override fun onDestroy() {
@@ -231,6 +243,10 @@ private class SimpleTaskAdapter(
             // 由于无法直接访问RecyclerView，暂时使用notifyItemChanged
             notifyItemChanged(idx)
         }
+    }
+
+    override fun getItemId(position: Int): Long {
+        return data.getOrNull(position)?.id?.hashCode()?.toLong() ?: androidx.recyclerview.widget.RecyclerView.NO_ID
     }
 
     override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): SimpleTaskVH {

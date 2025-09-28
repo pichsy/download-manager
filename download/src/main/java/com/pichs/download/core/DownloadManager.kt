@@ -7,6 +7,7 @@ import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.store.InMemoryTaskStore
 import com.pichs.download.store.TaskRepository
+import com.pichs.download.utils.NetworkUtils
 import com.pichs.download.utils.DownloadLog
 import com.pichs.download.utils.OkHttpHelper
 import com.pichs.download.store.db.DownloadDatabase
@@ -42,6 +43,7 @@ object DownloadManager {
     @Volatile private var cacheManager: CacheManager? = null
     @Volatile private var retentionManager: RetentionManager? = null
     @Volatile private var networkAutoResumeManager: NetworkAutoResumeManager? = null
+    @Volatile private var appContext: android.content.Context? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val dispatcherIO: CoroutineDispatcher = Dispatchers.IO
@@ -67,19 +69,17 @@ object DownloadManager {
     // 初始化：App 启动时调用，用于恢复历史任务
     fun init(context: android.content.Context) {
         if (repository != null) return
+        appContext = context.applicationContext
         repository = TaskRepository(context.applicationContext)
         chunkManager = ChunkManager(DownloadDatabase.get(context.applicationContext).chunkDao())
         atomicCommitManager = AtomicCommitManager(repository!!)
         storageManager = StorageManager(context.applicationContext, repository!!)
         cacheManager = CacheManager(repository!!)
         retentionManager = RetentionManager(repository!!, storageManager!!)
-        networkAutoResumeManager = NetworkAutoResumeManager(this, context.applicationContext)
+        networkAutoResumeManager = NetworkAutoResumeManager(this)
         
         // 启动存储监控
         storageManager!!.startMonitoring()
-        
-        // 启动网络自动恢复管理器
-        networkAutoResumeManager?.init()
         
         // 启动高级调度器
         val scheduler = DownloadScheduler(context.applicationContext, engine, dispatcher)
@@ -139,7 +139,7 @@ object DownloadManager {
                     when (task.pauseReason) {
                         com.pichs.download.model.PauseReason.NETWORK_ERROR -> {
                             DownloadLog.d("DownloadManager", "发现网络异常暂停的任务: ${task.id} - ${task.fileName}")
-                            val networkAvailable = networkAutoResumeManager?.isNetworkAvailable() ?: true
+                            val networkAvailable = appContext?.let { NetworkUtils.isNetworkAvailable(it) } ?: true
                             if (networkAvailable) {
                                 // 网络已恢复，重新排队等待下载
                                 val waitingTask = task.copy(
@@ -265,11 +265,35 @@ object DownloadManager {
         return DownloadRequestBuilder().url(url).priority(DownloadPriority.LOW.value)
     }
 
-    // 批量操作（占位）
+    // 批量操作
     fun pauseAll(): DownloadManager {
         InMemoryTaskStore.getAll().forEach { pause(it.id) }
         return this
     }
+    
+    /**
+     * 批量暂停任务（支持指定暂停原因）
+     * @param pauseReason 暂停原因
+     */
+    fun pauseAll(pauseReason: com.pichs.download.model.PauseReason): DownloadManager {
+        InMemoryTaskStore.getAll().forEach { 
+            pauseTask(it.id, pauseReason) 
+        }
+        return this
+    }
+    
+    /**
+     * 暂停所有正在下载的任务（网络断开时使用）
+     */
+    fun pauseAllForNetworkError(): DownloadManager {
+        InMemoryTaskStore.getAll()
+            .filter { it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.WAITING || it.status == DownloadStatus.PENDING }
+            .forEach { 
+                pauseTask(it.id, com.pichs.download.model.PauseReason.NETWORK_ERROR) 
+            }
+        return this
+    }
+    
     fun resumeAll(): DownloadManager {
         InMemoryTaskStore.getAll().forEach { resume(it.id) }
         return this
@@ -308,6 +332,40 @@ object DownloadManager {
         scope.launch(dispatcherIO) {
             retentionManager?.executeRetentionPolicy()
         }
+    }
+
+    // 网络状态检查API
+    fun isNetworkAvailable(): Boolean {
+        return appContext?.let { NetworkUtils.isNetworkAvailable(it) } ?: false
+    }
+    
+    fun isWifiAvailable(): Boolean {
+        return appContext?.let { NetworkUtils.isWifiAvailable(it) } ?: false
+    }
+    
+    fun isCellularAvailable(): Boolean {
+        return appContext?.let { NetworkUtils.isCellularAvailable(it) } ?: false
+    }
+    
+    fun getNetworkType(): String {
+        return appContext?.let { NetworkUtils.getNetworkType(it) } ?: "Unknown"
+    }
+    
+    fun isMeteredNetwork(): Boolean {
+        return appContext?.let { NetworkUtils.isMeteredNetwork(it) } ?: true
+    }
+
+    // 网络恢复相关API
+    fun onNetworkRestored() {
+        networkAutoResumeManager?.onNetworkRestored()
+    }
+    
+    suspend fun getNetworkPausedTaskCount(): Int {
+        return networkAutoResumeManager?.getNetworkPausedTaskCount() ?: 0
+    }
+    
+    suspend fun getNetworkPausedTasks(): List<DownloadTask> {
+        return networkAutoResumeManager?.getNetworkPausedTasks() ?: emptyList()
     }
 
     // 配置
@@ -374,6 +432,11 @@ object DownloadManager {
         }
     }
 
+    // 提供给引擎等内部组件的即时任务读取（绕过缓存层）
+    internal fun getTaskImmediate(taskId: String): DownloadTask? {
+        return InMemoryTaskStore.get(taskId)
+    }
+
     // 旧的监听器管理器已移除，请使用 flowListener
 
     // 引擎控制
@@ -399,8 +462,20 @@ object DownloadManager {
             )
             updateTaskInternal(paused)
             DownloadLog.d("DownloadManager", "任务暂停: $taskId, 原因: $pauseReason")
+        } else if (t != null && t.status == DownloadStatus.DOWNLOADING) {
+            // 正在下载的任务，先更新状态和暂停原因，再交由引擎处理
+            val paused = t.copy(
+                status = DownloadStatus.PAUSED, 
+                pauseReason = pauseReason,
+                speed = 0L, 
+                updateTime = System.currentTimeMillis()
+            )
+            updateTaskInternal(paused)
+            DownloadLog.d("DownloadManager", "DOWNLOADING任务暂停: $taskId, 原因: $pauseReason, 状态: ${paused.status}")
+            // 然后通知引擎停止下载
+            engine.pause(taskId)
         } else {
-            // 正在下载则交由引擎处理
+            // 其他状态的任务，直接交由引擎处理
             engine.pause(taskId)
         }
         scheduleNext()

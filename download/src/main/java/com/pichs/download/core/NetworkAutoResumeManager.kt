@@ -1,6 +1,5 @@
 package com.pichs.download.core
 
-import android.content.Context
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.PauseReason
 import com.pichs.download.utils.DownloadLog
@@ -11,51 +10,57 @@ import kotlinx.coroutines.launch
 
 /**
  * 网络自动恢复管理器
- * 监听网络状态变化，自动恢复因网络异常暂停的任务
+ * 提供网络恢复相关的API，由接入者调用
+ * 不再内部监听网络状态，将网络监听责任交给接入者
  */
 class NetworkAutoResumeManager(
-    private val downloadManager: DownloadManager,
-    private val context: Context? = null
+    private val downloadManager: DownloadManager
 ) {
     
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var isNetworkAvailable = true
-    private var networkStateListener: NetworkStateListener? = null
     
     /**
-     * 初始化网络监听
+     * 手动触发网络恢复检查
+     * 由接入者在网络恢复时调用
      */
-    fun init() {
-        DownloadLog.d("NetworkAutoResumeManager", "初始化网络自动恢复管理器")
-        
-        // 初始化网络状态监听器
-        context?.let { ctx ->
-            networkStateListener = NetworkStateListener(ctx, this)
-            networkStateListener?.startListening()
-            
-            // 检查当前网络状态
-            isNetworkAvailable = networkStateListener?.isNetworkAvailable() ?: true
-            DownloadLog.d("NetworkAutoResumeManager", "当前网络状态: $isNetworkAvailable")
+    fun onNetworkRestored() {
+        DownloadLog.d("NetworkAutoResumeManager", "网络恢复，开始检查需要恢复的任务")
+        autoResumeNetworkPausedTasks()
+    }
+    
+    /**
+     * 检查是否有因网络异常暂停的任务
+     * @return 因网络异常暂停的任务数量
+     */
+    suspend fun getNetworkPausedTaskCount(): Int {
+        return try {
+            val allTasks = downloadManager.getAllTasks()
+            allTasks.count { task ->
+                task.status == DownloadStatus.PAUSED && 
+                task.pauseReason == PauseReason.NETWORK_ERROR
+            }
+        } catch (e: Exception) {
+            DownloadLog.e("NetworkAutoResumeManager", "获取网络暂停任务数量失败", e)
+            0
         }
     }
     
     /**
-     * 网络状态变化回调
-     * @param isAvailable 网络是否可用
+     * 获取因网络异常暂停的任务列表
+     * @return 因网络异常暂停的任务列表
      */
-    fun onNetworkStateChanged(isAvailable: Boolean) {
-        val wasAvailable = isNetworkAvailable
-        isNetworkAvailable = isAvailable
-        
-        DownloadLog.d("NetworkAutoResumeManager", "网络状态变化: $wasAvailable -> $isAvailable")
-        
-        // 网络从不可用变为可用时，自动恢复网络异常暂停的任务
-        if (!wasAvailable && isAvailable) {
-            autoResumeNetworkPausedTasks()
+    suspend fun getNetworkPausedTasks(): List<com.pichs.download.model.DownloadTask> {
+        return try {
+            val allTasks = downloadManager.getAllTasks()
+            allTasks.filter { task ->
+                task.status == DownloadStatus.PAUSED && 
+                task.pauseReason == PauseReason.NETWORK_ERROR
+            }
+        } catch (e: Exception) {
+            DownloadLog.e("NetworkAutoResumeManager", "获取网络暂停任务列表失败", e)
+            emptyList()
         }
     }
-
-    internal fun isNetworkAvailable(): Boolean = isNetworkAvailable
     
     /**
      * 自动恢复因网络异常暂停的任务
@@ -64,6 +69,15 @@ class NetworkAutoResumeManager(
         scope.launch {
             try {
                 val allTasks = downloadManager.getAllTasks()
+                DownloadLog.d("NetworkAutoResumeManager", "检查所有任务: ${allTasks.size} 个")
+                
+                val pausedTasks = allTasks.filter { it.status == DownloadStatus.PAUSED }
+                DownloadLog.d("NetworkAutoResumeManager", "暂停的任务: ${pausedTasks.size} 个")
+                
+                pausedTasks.forEach { task ->
+                    DownloadLog.d("NetworkAutoResumeManager", "暂停任务: ${task.id} - ${task.fileName}, 原因: ${task.pauseReason}")
+                }
+                
                 val networkPausedTasks = allTasks.filter { task ->
                     task.status == DownloadStatus.PAUSED && 
                     task.pauseReason == PauseReason.NETWORK_ERROR
@@ -97,9 +111,7 @@ class NetworkAutoResumeManager(
      * 用于测试或特殊情况
      */
     fun triggerAutoResumeCheck() {
-        if (isNetworkAvailable) {
-            autoResumeNetworkPausedTasks()
-        }
+        autoResumeNetworkPausedTasks()
     }
     
     /**
@@ -107,8 +119,6 @@ class NetworkAutoResumeManager(
      */
     fun cleanup() {
         DownloadLog.d("NetworkAutoResumeManager", "清理网络自动恢复管理器")
-        networkStateListener?.stopListening()
-        networkStateListener = null
-        // scope.coroutineContext.cancel() // 注释掉，避免编译错误
+        // 不再需要清理网络监听器
     }
 }

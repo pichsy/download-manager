@@ -63,9 +63,16 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             ctl.paused.set(true)
             ctl.job?.cancel()
             runBlocking {
-                val task = DownloadManager.getTask(taskId) ?: return@runBlocking
-                val paused = task.copy(status = DownloadStatus.PAUSED, updateTime = System.currentTimeMillis())
-                DownloadManager.updateTaskInternal(paused)
+                // 直接从内存读取，避免异步缓存读取导致的旧值
+                val task = DownloadManager.getTaskImmediate(taskId) ?: return@runBlocking
+                // 如果任务已经是 PAUSED 且已有明确的 pauseReason（例如 NETWORK_ERROR/USER_MANUAL），不要覆盖
+                if (task.status != DownloadStatus.PAUSED || task.pauseReason == null) {
+                    val paused = task.copy(status = DownloadStatus.PAUSED, updateTime = System.currentTimeMillis())
+                    DownloadManager.updateTaskInternal(paused)
+                    DownloadLog.d("MultiThreadDownloadEngine", "引擎暂停任务: $taskId, 状态: ${paused.status}")
+                } else {
+                    DownloadLog.d("MultiThreadDownloadEngine", "任务已暂停，跳过状态更新: $taskId, 当前原因: ${task.pauseReason}")
+                }
                 // 清理进度计算器中的数据
                 progressCalculator.clearTaskProgress(taskId)
             }

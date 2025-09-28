@@ -49,7 +49,7 @@ class NetStateReceiver(var onNetConnected: ((Boolean) -> Unit)? = null, var onNe
 
         // 如果相等的话就说明网络状态发生了变化
         if (NetWorkUtils.isOnline()) {
-            onNetConnected?.invoke(true)
+            onNetConnected?.invoke(NetWorkUtils.isWifiConnect())
         } else {
             onNetDisConnected?.invoke()
         }

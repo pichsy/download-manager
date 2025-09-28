@@ -19,7 +19,9 @@ import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemGridDownloadBeanBinding
+import com.pichs.download.utils.DownloadLog
 import com.pichs.shanhai.base.base.BaseActivity
+import com.pichs.shanhai.base.receiver.NetStateReceiver
 import com.pichs.shanhai.base.utils.toast.ToastUtils
 import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 import com.pichs.xbase.utils.GsonUtils
@@ -55,12 +57,31 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         bindFlowListener()
     }
 
+
+    private var isFirstNetRegister = true
+
     private fun initListener() {
         binding.ivDownloadManager.setOnClickListener {
             startActivity(Intent(this, DownloadManagerActivity::class.java))
         }
-
         binding.ivSearch.setOnClickListener { ToastUtils.show("搜索") }
+
+        NetStateReceiver(onNetConnected = {
+            // 网络恢复时，通知下载管理器恢复网络异常暂停的任务
+            if (!isFirstNetRegister) {
+                DownloadLog.d("网络连接成功，isWifi=$it")
+                // 调用下载管理器的网络恢复API
+                DownloadManager.onNetworkRestored()
+            }
+            isFirstNetRegister = false
+        }, onNetDisConnected = {
+            if (!isFirstNetRegister) {
+                DownloadLog.d("网络连接断开")
+                // 网络断开时，只暂停正在下载的任务，不影响用户手动暂停的任务
+                DownloadManager.pauseAllForNetworkError()
+            }
+            isFirstNetRegister = false
+        }).register(this)
     }
 
     @SuppressLint("SetTextI18n")
@@ -362,7 +383,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     // 专门处理进度更新的方法（添加防抖机制）
     private val lastProgressUpdateTimeMap = mutableMapOf<String, Long>()
     private val progressUpdateInterval = 300L // 300ms防抖间隔
-    
+
     private fun updateItemTaskWithProgress(task: DownloadTask, progress: Int, speed: Long) {
         val now = System.currentTimeMillis()
         val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
@@ -370,7 +391,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             return // 防抖：跳过过于频繁的更新
         }
         lastProgressUpdateTimeMap[task.id] = now
-        
+
         val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
         val idx = list.indexOfFirst {
             it.url == task.url && dir == task.filePath && normalizeName(it.name) == normalizeName(task.fileName)

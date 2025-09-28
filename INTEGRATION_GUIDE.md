@@ -668,23 +668,326 @@ class DownloadTaskDiffCallback : DiffUtil.Callback() {
 
 #### 3. 网络状态监听
 
+**重要说明**：下载库不再内部监听网络状态，将网络监听的责任交给接入者，这样更安全、更灵活。
+
 ```kotlin
-// 监听网络状态变化，自动暂停/恢复下载
+// 方式1：使用ConnectivityManager.NetworkCallback（推荐）
 private fun setupNetworkListener() {
     val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
-            // 网络恢复，可以恢复下载
-            DownloadManager.resumeAll()
+            // 网络恢复，通知下载管理器恢复网络异常暂停的任务
+            DownloadManager.onNetworkRestored()
         }
         
         override fun onLost(network: Network) {
-            // 网络断开，暂停下载
-            DownloadManager.pauseAll()
+            // 网络断开，只暂停正在下载的任务，不影响用户手动暂停的任务
+            DownloadManager.pauseAllForNetworkError()
         }
     }
     
     connectivityManager.registerDefaultNetworkCallback(networkCallback)
+}
+
+// 方式2：使用广播接收器
+class NetworkReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context?, intent: Intent?) {
+        if (intent?.action == ConnectivityManager.CONNECTIVITY_ACTION) {
+            val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val network = connectivityManager.activeNetwork
+            val capabilities = connectivityManager.getNetworkCapabilities(network)
+            val isConnected = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+            
+            if (isConnected) {
+                // 网络恢复，通知下载管理器
+                DownloadManager.onNetworkRestored()
+            }
+        }
+    }
+}
+
+// 方式3：使用第三方网络监听库
+NetStateReceiver(
+    onNetConnected = { isWifi ->
+        // 网络恢复
+        DownloadManager.onNetworkRestored()
+    },
+    onNetDisConnected = {
+        // 网络断开，只暂停正在下载的任务，不影响用户手动暂停的任务
+        DownloadManager.pauseAllForNetworkError()
+    }
+).register(this)
+```
+
+**网络状态检查API**：
+
+```kotlin
+// 检查网络是否可用
+val isNetworkAvailable = DownloadManager.isNetworkAvailable()
+
+// 检查是否连接到WiFi
+val isWifiAvailable = DownloadManager.isWifiAvailable()
+
+// 检查是否连接到移动网络
+val isCellularAvailable = DownloadManager.isCellularAvailable()
+
+// 获取当前网络类型
+val networkType = DownloadManager.getNetworkType() // "WiFi", "Cellular", "Ethernet", "Unknown", "No Network"
+
+// 检查是否为计费网络
+val isMetered = DownloadManager.isMeteredNetwork()
+```
+
+**网络恢复API说明**：
+
+```kotlin
+// 检查是否有因网络异常暂停的任务
+val count = DownloadManager.getNetworkPausedTaskCount()
+
+// 获取因网络异常暂停的任务列表
+val pausedTasks = DownloadManager.getNetworkPausedTasks()
+
+// 手动触发网络恢复检查
+DownloadManager.onNetworkRestored()
+```
+
+### ⚠️ 重要：暂停原因的区别
+
+下载管理器支持多种暂停原因，正确区分它们很重要：
+
+```kotlin
+// 1. 用户手动暂停（默认）
+DownloadManager.pause(taskId) // pauseReason = USER_MANUAL
+
+// 2. 网络异常暂停
+DownloadManager.pauseTask(taskId, PauseReason.NETWORK_ERROR)
+
+// 3. 存储空间不足暂停
+DownloadManager.pauseTask(taskId, PauseReason.STORAGE_FULL)
+
+// 4. 批量操作
+DownloadManager.pauseAll() // 所有任务标记为 USER_MANUAL
+DownloadManager.pauseAll(PauseReason.NETWORK_ERROR) // 所有任务标记为 NETWORK_ERROR
+DownloadManager.pauseAllForNetworkError() // 只暂停正在下载的任务，标记为 NETWORK_ERROR
+```
+
+**网络恢复时的行为**：
+- `DownloadManager.onNetworkRestored()` 只会恢复 `PauseReason.NETWORK_ERROR` 的任务
+- 用户手动暂停的任务不会被自动恢复
+- 存储空间不足暂停的任务不会被网络恢复影响
+
+## 🌐 网络监听最佳实践
+
+### 🎯 设计原则
+
+1. **职责分离**：下载库专注于下载功能，网络监听由应用层负责
+2. **安全性**：避免下载库内部注册广播接收器，减少权限需求
+3. **灵活性**：接入者可以根据业务需求自定义网络监听逻辑
+4. **可控性**：接入者完全控制何时恢复网络异常暂停的任务
+
+### 🔧 实现方式对比
+
+| 方式 | 优点 | 缺点 | 适用场景 |
+|------|------|------|----------|
+| NetworkCallback | 实时性好，API现代 | 需要API 21+ | 现代应用推荐 |
+| BroadcastReceiver | 兼容性好 | 性能较差，已废弃 | 兼容老版本 |
+| 第三方库 | 功能丰富 | 增加依赖 | 复杂业务需求 |
+
+### 📱 完整示例
+
+```kotlin
+class DownloadActivity : AppCompatActivity() {
+    
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // 初始化下载管理器
+        DownloadManager.init(this)
+        
+        // 设置网络监听
+        setupNetworkListener()
+        
+        // 绑定下载监听
+        bindDownloadListener()
+    }
+    
+    private fun setupNetworkListener() {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                runOnUiThread {
+                    // 网络恢复，检查并恢复网络异常暂停的任务
+                    lifecycleScope.launch {
+                        val pausedCount = DownloadManager.getNetworkPausedTaskCount()
+                        if (pausedCount > 0) {
+                            DownloadManager.onNetworkRestored()
+                            showToast("网络恢复，已自动恢复 $pausedCount 个下载任务")
+                        }
+                    }
+                }
+            }
+            
+            override fun onLost(network: Network) {
+                runOnUiThread {
+                    // 网络断开，暂停所有下载任务
+                    DownloadManager.pauseAll()
+                    showToast("网络断开，已暂停所有下载任务")
+                }
+            }
+            
+            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                // 网络能力变化，可以根据网络类型调整下载策略
+                val isWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                val isCellular = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                
+                if (isWifi) {
+                    // WiFi网络，可以增加并发数
+                    DownloadManager.config {
+                        maxConcurrentTasks = 5
+                    }
+                } else if (isCellular) {
+                    // 移动网络，减少并发数
+                    DownloadManager.config {
+                        maxConcurrentTasks = 2
+                    }
+                }
+            }
+        }
+        
+        connectivityManager.registerDefaultNetworkCallback(networkCallback!!)
+    }
+    
+    private fun bindDownloadListener() {
+        DownloadManager.flowListener.bindToLifecycle(
+            lifecycleOwner = this,
+            onTaskProgress = { task, progress, speed ->
+                updateTaskProgress(task.id, progress, speed)
+            },
+            onTaskComplete = { task, file ->
+                showToast("下载完成：${task.fileName}")
+            },
+            onTaskError = { task, error ->
+                when (error) {
+                    DownloadError.NetworkError -> {
+                        // 网络错误，任务会自动暂停，等待网络恢复
+                        showToast("网络错误，任务已暂停")
+                    }
+                    else -> {
+                        showToast("下载失败：${task.fileName}")
+                    }
+                }
+            }
+        )
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // 取消网络监听
+        networkCallback?.let { callback ->
+            val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            connectivityManager.unregisterNetworkCallback(callback)
+        }
+    }
+}
+```
+
+### 🚀 高级用法
+
+#### 1. 智能网络恢复
+
+```kotlin
+class SmartNetworkManager {
+    
+    private var lastNetworkLostTime = 0L
+    private var networkLostCount = 0
+    
+    fun onNetworkRestored() {
+        val now = System.currentTimeMillis()
+        val timeSinceLastLost = now - lastNetworkLostTime
+        
+        // 如果网络频繁断开，延迟恢复
+        if (timeSinceLastLost < 5000) {
+            networkLostCount++
+            if (networkLostCount > 3) {
+                // 延迟10秒恢复，避免频繁重试
+                Handler(Looper.getMainLooper()).postDelayed({
+                    DownloadManager.onNetworkRestored()
+                }, 10000)
+                return
+            }
+        } else {
+            networkLostCount = 0
+        }
+        
+        // 立即恢复
+        DownloadManager.onNetworkRestored()
+    }
+    
+    fun onNetworkLost() {
+        lastNetworkLostTime = System.currentTimeMillis()
+        DownloadManager.pauseAll()
+    }
+}
+```
+
+#### 2. 网络类型感知
+
+```kotlin
+private fun handleNetworkCapabilitiesChanged(networkCapabilities: NetworkCapabilities) {
+    val isWifi = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    val isCellular = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+    val isEthernet = networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+    
+    when {
+        isWifi -> {
+            // WiFi网络，最优下载体验
+            DownloadManager.config {
+                maxConcurrentTasks = 5
+                allowMetered = true
+            }
+        }
+        isEthernet -> {
+            // 有线网络，稳定高速
+            DownloadManager.config {
+                maxConcurrentTasks = 8
+                allowMetered = true
+            }
+        }
+        isCellular -> {
+            // 移动网络，保守策略
+            DownloadManager.config {
+                maxConcurrentTasks = 2
+                allowMetered = false // 根据用户设置决定
+            }
+        }
+    }
+}
+
+// 或者使用DownloadManager提供的网络检查API
+private fun adjustDownloadStrategy() {
+    when {
+        DownloadManager.isWifiAvailable() -> {
+            // WiFi网络，最优下载体验
+            DownloadManager.config {
+                maxConcurrentTasks = 5
+                allowMetered = true
+            }
+        }
+        DownloadManager.isCellularAvailable() -> {
+            // 移动网络，保守策略
+            DownloadManager.config {
+                maxConcurrentTasks = 2
+                allowMetered = false
+            }
+        }
+        !DownloadManager.isNetworkAvailable() -> {
+            // 无网络，暂停所有下载
+            DownloadManager.pauseAll()
+        }
+    }
 }
 ```
 
@@ -696,5 +999,6 @@ private fun setupNetworkListener() {
 2. **高效监听**：使用Flow监听器实现响应式UI更新
 3. **优化性能**：通过防抖、分组管理等策略优化列表刷新性能
 4. **提升体验**：通过合理的状态管理和错误处理提升用户体验
+5. **网络优化**：通过自定义网络监听实现智能的网络恢复策略
 
-这个下载管理器提供了企业级的功能特性，支持多线程分片下载、断点续传、优先级调度等，能够满足各种复杂的下载场景需求。
+这个下载管理器提供了企业级的功能特性，支持多线程分片下载、断点续传、优先级调度等，能够满足各种复杂的下载场景需求。同时，通过将网络监听责任交给接入者，确保了更好的安全性和灵活性。

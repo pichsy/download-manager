@@ -101,7 +101,12 @@ class AppDetailActivity : AppCompatActivity() {
             return
         }
         when (t.status) {
-            DownloadStatus.DOWNLOADING -> DownloadManager.pause(t.id)
+            DownloadStatus.DOWNLOADING -> {
+                DownloadManager.pause(t.id)
+                // 立即把本地任务置为 PAUSED，保证下次点击能 resume
+                this.task = t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
+                bindButtonUI(this.task)
+            }
             DownloadStatus.PAUSED -> {
                 DownloadManager.resume(t.id)
             }
@@ -219,6 +224,18 @@ class AppDetailActivity : AppCompatActivity() {
                 }
             },
             onTaskError = { task, error ->
+                if (task.id == this@AppDetailActivity.task?.id) {
+                    this@AppDetailActivity.task = task
+                    bindButtonUI(task)
+                }
+            },
+            onTaskPaused = { task ->
+                if (task.id == this@AppDetailActivity.task?.id) {
+                    this@AppDetailActivity.task = task
+                    bindButtonUI(task)
+                }
+            },
+            onTaskResumed = { task ->
                 if (task.id == this@AppDetailActivity.task?.id) {
                     this@AppDetailActivity.task = task
                     bindButtonUI(task)
