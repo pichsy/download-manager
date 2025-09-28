@@ -360,15 +360,16 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     }
 
     // 专门处理进度更新的方法（添加防抖机制）
-    private var lastProgressUpdateTime = 0L
+    private val lastProgressUpdateTimeMap = mutableMapOf<String, Long>()
     private val progressUpdateInterval = 300L // 300ms防抖间隔
     
     private fun updateItemTaskWithProgress(task: DownloadTask, progress: Int, speed: Long) {
         val now = System.currentTimeMillis()
-        if (now - lastProgressUpdateTime < progressUpdateInterval) {
+        val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
+        if (now - lastUpdateTime < progressUpdateInterval) {
             return // 防抖：跳过过于频繁的更新
         }
-        lastProgressUpdateTime = now
+        lastProgressUpdateTimeMap[task.id] = now
         
         val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
         val idx = list.indexOfFirst {

@@ -162,7 +162,18 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         downloadJobs.joinAll()
         DownloadLog.d("MultiThreadDownloadEngine", "所有分片下载完成: ${task.id}")
         
-        if (ctl.cancelled.get() || ctl.paused.get()) return
+        // 检查任务是否被取消、暂停或网络异常暂停
+        if (ctl.cancelled.get() || ctl.paused.get()) {
+            DownloadLog.d("MultiThreadDownloadEngine", "任务被取消或暂停，跳过文件合并: ${task.id}")
+            return
+        }
+        
+        // 检查任务是否因为网络异常被暂停
+        val currentTask = runBlocking { DownloadManager.getTask(task.id) }
+        if (currentTask?.status == DownloadStatus.PAUSED && currentTask.pauseReason == com.pichs.download.model.PauseReason.NETWORK_ERROR) {
+            DownloadLog.d("MultiThreadDownloadEngine", "任务因网络异常暂停，跳过文件合并: ${task.id}")
+            return
+        }
         
         // 合并文件
         DownloadLog.d("MultiThreadDownloadEngine", "开始合并文件: ${task.id}")
@@ -294,7 +305,41 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         }
         } catch (e: Exception) {
             DownloadLog.e("MultiThreadDownloadEngine", "分片下载异常: ${task.id} - 分片: ${chunk.index}", e)
-            ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, chunk.downloaded, ChunkStatus.FAILED)
+            
+            // 根据异常类型决定任务状态
+            val pauseReason = com.pichs.download.utils.ErrorClassifier.getPauseReason(e)
+            if (pauseReason != null) {
+                // 网络异常或存储异常，暂停任务并停止所有分片
+                // 使用最新的分片数据获取准确的当前进度
+                val latestChunks = runBlocking {
+                    ctl.chunkManager?.getChunks(task.id)
+                } ?: ctl.chunks
+                ctl.chunks = latestChunks
+
+                val effectiveTotal = if (ctl.total > 0) ctl.total else task.totalSize
+                val progressCalculator = com.pichs.download.core.ProgressCalculatorManager.getCalculator(task.id)
+                val currentProgress = progressCalculator.getCurrentProgress(task.id, latestChunks, effectiveTotal)
+                val currentSize = latestChunks.sumOf { it.downloaded }
+                
+                val pausedTask = task.copy(
+                    status = DownloadStatus.PAUSED,
+                    pauseReason = pauseReason,
+                    progress = currentProgress,
+                    totalSize = if (effectiveTotal > 0) effectiveTotal else task.totalSize,
+                    currentSize = currentSize,
+                    speed = 0L, // 暂停时速度归零
+                    updateTime = System.currentTimeMillis()
+                )
+                DownloadManager.updateTaskInternal(pausedTask)
+                
+                // 立即停止所有分片下载
+                ctl.paused.set(true)
+                DownloadLog.d("MultiThreadDownloadEngine", 
+                    "任务因 ${pauseReason} 暂停，停止所有分片: ${task.id}, 当前进度: ${currentProgress}%")
+            } else {
+                // 其他异常，标记分片失败
+                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, chunk.downloaded, ChunkStatus.FAILED)
+            }
         }
     }
     

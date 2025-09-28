@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
+import com.pichs.download.model.PauseReason
 
 @Entity(tableName = "downloads")
 internal data class DownloadEntity(
@@ -22,13 +23,14 @@ internal data class DownloadEntity(
     val packageName: String? = null,
     val storeVersionCode: Long? = null,
     val extras: String? = null,
+    val pauseReason: PauseReason? = null,
 ) {
     fun toModel(): DownloadTask = DownloadTask(
-        id, url, fileName, filePath, status, progress, totalSize, currentSize, speed, priority, createTime, updateTime, packageName, storeVersionCode, extras
+        id, url, fileName, filePath, status, progress, totalSize, currentSize, speed, priority, createTime, updateTime, packageName, storeVersionCode, extras, pauseReason
     )
     companion object {
         fun fromModel(t: DownloadTask) = DownloadEntity(
-            t.id, t.url, t.fileName, t.filePath, t.status, t.progress, t.totalSize, t.currentSize, t.speed, t.priority, t.createTime, t.updateTime, t.packageName, t.storeVersionCode, t.extras
+            t.id, t.url, t.fileName, t.filePath, t.status, t.progress, t.totalSize, t.currentSize, t.speed, t.priority, t.createTime, t.updateTime, t.packageName, t.storeVersionCode, t.extras, t.pauseReason
         )
     }
 }

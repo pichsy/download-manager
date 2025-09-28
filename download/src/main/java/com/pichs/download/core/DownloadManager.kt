@@ -7,6 +7,7 @@ import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.store.InMemoryTaskStore
 import com.pichs.download.store.TaskRepository
+import com.pichs.download.utils.DownloadLog
 import com.pichs.download.utils.OkHttpHelper
 import com.pichs.download.store.db.DownloadDatabase
 import kotlinx.coroutines.CoroutineDispatcher
@@ -40,6 +41,7 @@ object DownloadManager {
     @Volatile private var storageManager: StorageManager? = null
     @Volatile private var cacheManager: CacheManager? = null
     @Volatile private var retentionManager: RetentionManager? = null
+    @Volatile private var networkAutoResumeManager: NetworkAutoResumeManager? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val dispatcherIO: CoroutineDispatcher = Dispatchers.IO
@@ -71,9 +73,13 @@ object DownloadManager {
         storageManager = StorageManager(context.applicationContext, repository!!)
         cacheManager = CacheManager(repository!!)
         retentionManager = RetentionManager(repository!!, storageManager!!)
+        networkAutoResumeManager = NetworkAutoResumeManager(this, context.applicationContext)
         
         // 启动存储监控
         storageManager!!.startMonitoring()
+        
+        // 启动网络自动恢复管理器
+        networkAutoResumeManager?.init()
         
         // 启动高级调度器
         val scheduler = DownloadScheduler(context.applicationContext, engine, dispatcher)
@@ -102,11 +108,120 @@ object DownloadManager {
                 }
                 // 初始化后同步一次 StateFlow
                 _tasksState.value = InMemoryTaskStore.getAll().sortedBy { it.createTime }
+                
+                // 异步恢复智能暂停/恢复状态
+                scope.launch(dispatcherIO) {
+                    restorePauseResumeState()
+                    restoreProgressCalculators()
+                }
+                
                 // 自动清理：按保留策略执行（若配置开启）
                 config.retention.takeIf { it.keepDays > 0 || it.keepLatestCompleted > 0 }?.let { retention ->
                     scope.launch(dispatcherIO) { cleanCompletedInternal(deleteFiles = false, retention = retention) }
                 }
             }
+        }
+    }
+    
+    /**
+     * 恢复智能暂停/恢复状态
+     * 进程重启后检查所有暂停的任务，根据pauseReason决定是否自动恢复
+     */
+    private fun restorePauseResumeState() {
+        try {
+            val allTasks = InMemoryTaskStore.getAll()
+            val pausedTasks = allTasks.filter { it.status == DownloadStatus.PAUSED }
+            
+            if (pausedTasks.isNotEmpty()) {
+                DownloadLog.d("DownloadManager", "发现 ${pausedTasks.size} 个暂停的任务，检查是否需要自动恢复")
+                
+                pausedTasks.forEach { task ->
+                    when (task.pauseReason) {
+                        com.pichs.download.model.PauseReason.NETWORK_ERROR -> {
+                            DownloadLog.d("DownloadManager", "发现网络异常暂停的任务: ${task.id} - ${task.fileName}")
+                            val networkAvailable = networkAutoResumeManager?.isNetworkAvailable() ?: true
+                            if (networkAvailable) {
+                                // 网络已恢复，重新排队等待下载
+                                val waitingTask = task.copy(
+                                    status = DownloadStatus.WAITING,
+                                    pauseReason = null,
+                                    updateTime = System.currentTimeMillis()
+                                )
+                                InMemoryTaskStore.put(waitingTask)
+                                scope.launch { repository?.save(waitingTask) }
+                                dispatcher.enqueue(waitingTask)
+                                DownloadLog.d("DownloadManager", "网络已连接，自动恢复任务: ${task.id}")
+                            } else {
+                                // 网络仍不可用，保持暂停状态，等待监听器自动恢复
+                                DownloadLog.d("DownloadManager", "网络仍不可用，保持任务暂停: ${task.id}")
+                            }
+                        }
+                        com.pichs.download.model.PauseReason.STORAGE_FULL -> {
+                            // 存储空间不足暂停的任务，检查存储空间决定是否自动恢复
+                            DownloadLog.d("DownloadManager", "发现存储空间不足暂停的任务: ${task.id} - ${task.fileName}")
+                            // 检查存储空间是否足够（简化实现）
+                            val availableSpace = storageManager?.getAvailableSpace() ?: Long.MAX_VALUE
+                            val hasEnoughSpace = availableSpace > task.totalSize
+                            if (hasEnoughSpace) {
+                                val waitingTask = task.copy(
+                                    status = DownloadStatus.WAITING,
+                                    pauseReason = null,
+                                    updateTime = System.currentTimeMillis()
+                                )
+                                InMemoryTaskStore.put(waitingTask)
+                                scope.launch { repository?.save(waitingTask) }
+                                dispatcher.enqueue(waitingTask)
+                                DownloadLog.d("DownloadManager", "存储空间恢复，自动恢复任务: ${task.id}")
+                            }
+                        }
+                        com.pichs.download.model.PauseReason.USER_MANUAL -> {
+                            // 用户手动暂停的任务，保持暂停状态
+                            DownloadLog.d("DownloadManager", "保持用户手动暂停的任务: ${task.id} - ${task.fileName}")
+                        }
+                        else -> {
+                            // 其他暂停原因，保持暂停状态
+                            DownloadLog.d("DownloadManager", "保持其他原因暂停的任务: ${task.id} - ${task.fileName}")
+                        }
+                    }
+                }
+                
+                // 更新StateFlow
+                _tasksState.value = InMemoryTaskStore.getAll().sortedBy { it.createTime }
+                
+                // 尝试调度新恢复的任务
+                scheduleNext()
+            } else {
+                DownloadLog.d("DownloadManager", "没有发现暂停的任务")
+            }
+        } catch (e: Exception) {
+            DownloadLog.e("DownloadManager", "恢复暂停/恢复状态时发生异常", e)
+        }
+    }
+    
+    /**
+     * 恢复 ProgressCalculator 状态
+     * 为所有正在下载的任务重新初始化 ProgressCalculator
+     */
+    private fun restoreProgressCalculators() {
+        try {
+            val allTasks = InMemoryTaskStore.getAll()
+            val downloadingTasks = allTasks.filter { 
+                it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.WAITING 
+            }
+            
+            if (downloadingTasks.isNotEmpty()) {
+                DownloadLog.d("DownloadManager", "恢复 ${downloadingTasks.size} 个任务的 ProgressCalculator")
+                
+                downloadingTasks.forEach { task ->
+                    // 为每个任务重新初始化 ProgressCalculator
+                    ProgressCalculatorManager.getCalculator(task.id)
+                    DownloadLog.d("DownloadManager", "恢复任务 ProgressCalculator: ${task.id}")
+                }
+            } else {
+                DownloadLog.d("DownloadManager", "没有需要恢复 ProgressCalculator 的任务")
+            }
+        } catch (e: Exception) {
+            DownloadLog.e("DownloadManager", "恢复 ProgressCalculator 时发生异常", e)
         }
     }
 
@@ -263,14 +378,27 @@ object DownloadManager {
 
     // 引擎控制
     fun pause(taskId: String) {
+        pauseTask(taskId, com.pichs.download.model.PauseReason.USER_MANUAL)
+    }
+    
+    /**
+     * 暂停任务（支持指定暂停原因）
+     * @param taskId 任务ID
+     * @param pauseReason 暂停原因
+     */
+    fun pauseTask(taskId: String, pauseReason: com.pichs.download.model.PauseReason) {
         // 移出等待队列
         dispatcher.remove(taskId)
         val t = InMemoryTaskStore.get(taskId)
-    if (t != null && (t.status == DownloadStatus.WAITING || t.status == DownloadStatus.PENDING)) {
-            val paused = t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
+        if (t != null && (t.status == DownloadStatus.WAITING || t.status == DownloadStatus.PENDING)) {
+            val paused = t.copy(
+                status = DownloadStatus.PAUSED, 
+                pauseReason = pauseReason,
+                speed = 0L, 
+                updateTime = System.currentTimeMillis()
+            )
             updateTaskInternal(paused)
-            // 主动通知一次，驱动 UI 立即刷新为“继续”
-            // 旧监听器已移除，现在通过EventBus和Flow通知
+            DownloadLog.d("DownloadManager", "任务暂停: $taskId, 原因: $pauseReason")
         } else {
             // 正在下载则交由引擎处理
             engine.pause(taskId)
@@ -280,12 +408,18 @@ object DownloadManager {
 
     fun resume(taskId: String) {
         val t = InMemoryTaskStore.get(taskId) ?: return
-        // 标记为待执行并入队
-    val pending = t.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis())
+        // 标记为待执行并入队，清除暂停原因
+        val pending = t.copy(
+            status = DownloadStatus.WAITING, 
+            pauseReason = null,
+            speed = 0L, 
+            updateTime = System.currentTimeMillis()
+        )
         InMemoryTaskStore.put(pending)
         repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
         dispatcher.enqueue(pending)
-        // 主动通知一次，UI 立刻显示“等待中”
+        DownloadLog.d("DownloadManager", "任务恢复: $taskId")
+        // 主动通知一次，UI 立刻显示"等待中"
         // 旧监听器已移除，现在通过EventBus和Flow通知
         scheduleNext()
     }
