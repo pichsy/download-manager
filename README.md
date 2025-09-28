@@ -39,6 +39,13 @@
         implementation("com.gitee.pichs:downloader:1.0.0")
     }
     ```
+    
+    
+    
+    
+## 下载体验
+   - ![](https://www.pgyer.com/app/qrcode/yingyongshichang)
+
 
 ## 🚀 核心特性
 
