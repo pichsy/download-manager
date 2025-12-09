@@ -54,6 +54,10 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 DownloadLog.e("MultiThreadDownloadEngine", "下载失败: ${task.id}", e)
                 val failed = task.copy(status = DownloadStatus.FAILED, updateTime = System.currentTimeMillis())
                 DownloadManager.updateTaskInternal(failed)
+            } finally {
+                // 关键修复：任务结束（无论成功、失败还是取消）都必须移除 Controller，防止内存泄漏
+                controllers.remove(task.id)
+                DownloadLog.d("MultiThreadDownloadEngine", "清理任务资源: ${task.id}")
             }
         }
     }
@@ -250,13 +254,13 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             
             // 处理 416: 请求区间无效，通常是文件大小变化或断点越界 -> 重下
             if (code == 416) {
-                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, 0, ChunkStatus.PENDING)
+                ctl.chunkManager?.updateChunkProgress(task, chunk.index, 0, ChunkStatus.PENDING)
                 return
             }
             
             // 若返回 200 且有断点，说明 If-Range 校验不通过或不支持 Range -> 全量重下
             if (code == 200 && chunk.downloaded > 0L) {
-                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, 0, ChunkStatus.PENDING)
+                ctl.chunkManager?.updateChunkProgress(task, chunk.index, 0, ChunkStatus.PENDING)
                 return
             }
             
@@ -276,7 +280,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     
                     // 更新本地累计值
                     localDownloaded += read
-                    ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, localDownloaded, ChunkStatus.DOWNLOADING)
+                    ctl.chunkManager?.updateChunkProgress(task, chunk.index, localDownloaded, ChunkStatus.DOWNLOADING)
                     
                     // 使用ProgressCalculatorManager获取该任务的专用计算器
                     // 实时获取最新分片数据，而不是使用静态的ctl.chunks
@@ -305,7 +309,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             
             if (!ctl.cancelled.get() && !ctl.paused.get()) {
                 DownloadLog.d("MultiThreadDownloadEngine", "分片下载完成: ${task.id} - 分片: ${chunk.index}, 已下载: $localDownloaded")
-                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, localDownloaded, ChunkStatus.COMPLETED)
+                ctl.chunkManager?.updateChunkProgress(task, chunk.index, localDownloaded, ChunkStatus.COMPLETED)
             } else {
                 DownloadLog.d("MultiThreadDownloadEngine", "分片下载被取消或暂停: ${task.id} - 分片: ${chunk.index}")
             }
@@ -345,7 +349,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     "任务因 ${pauseReason} 暂停，停止所有分片: ${task.id}, 当前进度: ${currentProgress}%")
             } else {
                 // 其他异常，标记分片失败
-                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, chunk.downloaded, ChunkStatus.FAILED)
+                ctl.chunkManager?.updateChunkProgress(task, chunk.index, chunk.downloaded, ChunkStatus.FAILED)
             }
         }
     }

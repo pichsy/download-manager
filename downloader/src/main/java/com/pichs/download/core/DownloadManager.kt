@@ -35,7 +35,8 @@ object DownloadManager {
     // 下载引擎（多线程分片实现）
     private val engine: DownloadEngine = MultiThreadDownloadEngine()
     private val dispatcher = AdvancedDownloadQueueDispatcher()
-    private val scheduler: DownloadScheduler? = null
+
+    @Volatile private var scheduler: DownloadScheduler? = null
     @Volatile private var repository: TaskRepository? = null
     @Volatile private var chunkManager: ChunkManager? = null
     @Volatile private var atomicCommitManager: AtomicCommitManager? = null
@@ -82,10 +83,10 @@ object DownloadManager {
         storageManager!!.startMonitoring()
         
         // 启动高级调度器
-        val scheduler = DownloadScheduler(context.applicationContext, engine, dispatcher)
-        scheduler.start()
-        // 同步恢复历史任务到内存；在 IO 线程阻塞一次，确保 App 冷启动可见
-        runBlocking(Dispatchers.IO) {
+        scheduler = DownloadScheduler(context.applicationContext, engine, dispatcher)
+        scheduler?.start()
+        // 同步恢复历史任务到内存；使用协程异步加载，避免阻塞主线程
+        scope.launch(dispatcherIO) {
             runCatching {
                 val history = repository!!.getAll()
                 val now = System.currentTimeMillis()
@@ -94,15 +95,14 @@ object DownloadManager {
                     val fileGone = (t.status == DownloadStatus.COMPLETED)
                             && !java.io.File(t.filePath, t.fileName).exists()
                     if (fileGone) {
-                        scope.launch { repository?.delete(t.id) }
+                        repository?.delete(t.id)
                         return@forEach
                     }
                     val fixed = if (t.status == DownloadStatus.DOWNLOADING || t.status == DownloadStatus.PENDING) {
                         t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = now)
                     } else t
                     if (fixed !== t) {
-                        // 异步持久化修正，避免阻塞 forEach
-                        scope.launch { repository?.save(fixed) }
+                        repository?.save(fixed)
                     }
                     InMemoryTaskStore.put(fixed)
                 }
@@ -110,14 +110,12 @@ object DownloadManager {
                 _tasksState.value = InMemoryTaskStore.getAll().sortedBy { it.createTime }
                 
                 // 异步恢复智能暂停/恢复状态
-                scope.launch(dispatcherIO) {
-                    restorePauseResumeState()
-                    restoreProgressCalculators()
-                }
+                restorePauseResumeState()
+                restoreProgressCalculators()
                 
                 // 自动清理：按保留策略执行（若配置开启）
                 config.retention.takeIf { it.keepDays > 0 || it.keepLatestCompleted > 0 }?.let { retention ->
-                    scope.launch(dispatcherIO) { cleanCompletedInternal(deleteFiles = false, retention = retention) }
+                    cleanCompletedInternal(deleteFiles = false, retention = retention)
                 }
             }
         }
@@ -372,6 +370,8 @@ object DownloadManager {
     fun config(block: DownloadConfig.() -> Unit) {
         block(config)
         OkHttpHelper.rebuildClient(config)
+        // 传播配置变更到调度器
+        scheduler?.updateConfig(config)
     }
 
     internal fun currentConfig(): DownloadConfig = config
@@ -392,18 +392,9 @@ object DownloadManager {
         // 高级调度器会自动处理调度
     }
 
-    @Synchronized
     private fun scheduleNext() {
-        // 尝试取出直到达到并发上限
-        while (true) {
-            val next = dispatcher.dequeue() ?: break
-            // 直接标记为 DOWNLOADING，让 UI 立即切到进度态
-            val running = next.copy(status = DownloadStatus.DOWNLOADING, speed = 0L, updateTime = System.currentTimeMillis())
-            updateTaskInternal(running)
-            // 触发一次进度通知，推动 UI 立刻刷新（即使暂时为 0%）
-            // 旧监听器已移除，现在通过EventBus和Flow通知
-            scope.launch { engine.start(next) }
-        }
+        // 调度逻辑已移交 DownloadScheduler，此处保留空实现或直接移除调用
+        scheduler?.trySchedule()
     }
 
     fun setMaxConcurrent(count: Int) { dispatcher.setMaxConcurrentTasks(count) }

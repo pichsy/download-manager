@@ -45,7 +45,13 @@ internal class NetworkMonitor(private val context: Context) {
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-        connectivityManager.registerNetworkCallback(request, networkCallback)
+        try {
+            connectivityManager.registerNetworkCallback(request, networkCallback)
+        } catch (e: SecurityException) {
+            // 权限缺失，无法监听网络状态
+            // 可以记录日志或降级处理
+            e.printStackTrace()
+        }
         
         updateNetworkType()
         updateBatteryStatus()

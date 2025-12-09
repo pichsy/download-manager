@@ -64,9 +64,9 @@ internal class ChunkManager(private val chunkDao: DownloadChunkDao) {
     }
     
     // 更新分片进度
-    suspend fun updateChunkProgress(taskId: String, chunkIndex: Int, downloaded: Long, status: ChunkStatus) {
+    suspend fun updateChunkProgress(task: com.pichs.download.model.DownloadTask, chunkIndex: Int, downloaded: Long, status: ChunkStatus) {
         withContext(Dispatchers.IO) {
-            val chunks = chunkDao.getByTask(taskId)
+            val chunks = chunkDao.getByTask(task.id)
             val chunk = chunks.find { it.index == chunkIndex } ?: return@withContext
             
             val updatedChunk = chunk.copy(
@@ -78,22 +78,21 @@ internal class ChunkManager(private val chunkDao: DownloadChunkDao) {
             
             // 分片状态更新后，触发进度计算和事件发送
             if (status == ChunkStatus.COMPLETED || status == ChunkStatus.DOWNLOADING) {
-                triggerProgressUpdate(taskId)
+                triggerProgressUpdate(task)
             }
         }
     }
     
     // 触发进度更新
-    private suspend fun triggerProgressUpdate(taskId: String) {
+    // 优化：直接传入 task 对象，避免 runBlocking 查询数据库
+    suspend fun triggerProgressUpdate(task: com.pichs.download.model.DownloadTask) {
         try {
-            // 获取任务信息
-            val task = runBlocking { DownloadManager.getTask(taskId) } ?: return
-            val chunks = getChunks(taskId)
+            val chunks = getChunks(task.id)
             val totalSize = task.totalSize
             
             if (totalSize > 0 && chunks.isNotEmpty()) {
                 // 使用ProgressCalculatorManager获取该任务的专用计算器
-                val calculator = ProgressCalculatorManager.getCalculator(taskId)
+                val calculator = ProgressCalculatorManager.getCalculator(task.id)
                 val (shouldUpdate, updatedTask) = calculator.calculateProgress(
                     task = task,
                     chunks = chunks,
@@ -106,11 +105,11 @@ internal class ChunkManager(private val chunkDao: DownloadChunkDao) {
                     DownloadManager.emitProgress(updatedTask, updatedTask.progress, updatedTask.speed)
                     
                     DownloadLog.d("ChunkManager", 
-                        "分片进度更新: ${taskId} - 进度: ${updatedTask.progress}%, 速度: ${updatedTask.speed}bytes/s, 已下载: ${updatedTask.currentSize}/${updatedTask.totalSize}")
+                        "分片进度更新: ${task.id} - 进度: ${updatedTask.progress}%, 速度: ${updatedTask.speed}bytes/s, 已下载: ${updatedTask.currentSize}/${updatedTask.totalSize}")
                 }
             }
         } catch (e: Exception) {
-            DownloadLog.e("ChunkManager", "触发进度更新失败: $taskId", e)
+            DownloadLog.e("ChunkManager", "触发进度更新失败: ${task.id}", e)
         }
     }
     

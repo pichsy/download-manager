@@ -17,7 +17,7 @@ internal class DownloadScheduler(
     private val networkMonitor = NetworkMonitor(context)
     private val runningJobs = ConcurrentHashMap<String, Job>()
     
-    private val config = SchedulerConfig()
+    private var config = com.pichs.download.config.DownloadConfig()
     
     fun start() {
         networkMonitor.startMonitoring()
@@ -39,7 +39,7 @@ internal class DownloadScheduler(
         // 启动调度循环
         scope.launch {
             while (isActive) {
-                scheduleNext()
+                scheduleNextInternal()
                 delay(1000) // 每秒检查一次
             }
         }
@@ -74,7 +74,14 @@ internal class DownloadScheduler(
         }
     }
     
-    private suspend fun scheduleNext() {
+    // 公开调度方法供 Manager 调用
+    fun trySchedule() {
+        scope.launch {
+            scheduleNextInternal()
+        }
+    }
+
+    private suspend fun scheduleNextInternal() {
         val currentLimit = dispatcher.getCurrentConcurrencyLimit()
         val runningCount = dispatcher.getRunningTasks().size
         
@@ -147,7 +154,10 @@ internal class DownloadScheduler(
         if (isLowBattery) {
             // 低电量，降低并发数并暂停后台任务
             dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnLowBattery)
-            dispatcher.pauseLowPriorityTasks()
+            // dispatcher.pauseLowPriorityTasks() // Dispatcher 无法直接暂停，逻辑移到此处
+            dispatcher.getBackgroundTasks().forEach { task ->
+                engine.pause(task.id)
+            }
         } else {
             // 电量充足，恢复正常并发数
             val networkType = networkMonitor.getCurrentNetworkType()
@@ -156,7 +166,11 @@ internal class DownloadScheduler(
                 NetworkType.CELLULAR_4G, NetworkType.CELLULAR_5G -> dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnCellular)
                 else -> dispatcher.setMaxConcurrentTasks(config.maxConcurrentTasks)
             }
-            dispatcher.resumeLowPriorityTasks()
+            // dispatcher.resumeLowPriorityTasks()
+            // 恢复逻辑：将后台任务重新入队或恢复状态，由 scheduleNextInternal 自动调度
+            dispatcher.getBackgroundTasks().forEach { task ->
+                engine.resume(task.id)
+            }
         }
     }
     
@@ -171,7 +185,10 @@ internal class DownloadScheduler(
     fun getNormalTasks(): List<DownloadTask> = dispatcher.getNormalTasks()
     fun getBackgroundTasks(): List<DownloadTask> = dispatcher.getBackgroundTasks()
     
-    fun updateConfig(newConfig: SchedulerConfig) {
-        dispatcher.updateConfig(newConfig)
+    fun updateConfig(newConfig: com.pichs.download.config.DownloadConfig) {
+        this.config = newConfig
+        dispatcher.setMaxConcurrentTasks(newConfig.maxConcurrentTasks)
+        // 触发一次调度以应用新配置
+        trySchedule()
     }
 }
