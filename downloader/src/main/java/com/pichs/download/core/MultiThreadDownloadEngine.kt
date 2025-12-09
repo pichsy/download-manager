@@ -294,6 +294,21 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     )
                     
                     if (shouldUpdate) {
+                        // 关键修复：防止竞态条件覆盖暂停状态
+                        if (ctl.paused.get() || ctl.cancelled.get()) {
+                             DownloadLog.d("MultiThreadDownloadEngine", "任务已暂停或取消，停止更新进度: ${task.id}")
+                             break
+                        }
+                        
+                        // 双重检查：从内存获取最新状态，如果已被主线程标记为非下载中（如PAUSED），则放弃此次更新
+                        val currentTask = DownloadManager.getTaskImmediate(task.id)
+                        if (currentTask != null && (currentTask.status == DownloadStatus.PAUSED || currentTask.status == DownloadStatus.CANCELLED)) {
+                             DownloadLog.d("MultiThreadDownloadEngine", "发现状态冲突，检测到外部暂停指令，停止更新进度: ${task.id}")
+                             // 立即响应暂停
+                             ctl.paused.set(true)
+                             break
+                        }
+
                         val finalTask = updatedTask.copy(
                             fileName = ctl.finalFile?.name ?: task.fileName
                         )

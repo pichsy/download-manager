@@ -76,10 +76,11 @@ internal class ChunkManager(private val chunkDao: DownloadChunkDao) {
             )
             chunkDao.update(updatedChunk)
             
-            // 分片状态更新后，触发进度计算和事件发送
-            if (status == ChunkStatus.COMPLETED || status == ChunkStatus.DOWNLOADING) {
-                triggerProgressUpdate(task)
-            }
+            // 优化：移除此处对 triggerProgressUpdate 的调用
+            // 进度更新完全交由 Engine 控制，避免双重计算和竞态条件
+            // if (status == ChunkStatus.COMPLETED || status == ChunkStatus.DOWNLOADING) {
+            //    triggerProgressUpdate(task)
+            // }
         }
     }
     
