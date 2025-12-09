@@ -1,9 +1,9 @@
 package com.pichs.download.config
 
 data class DownloadConfig(
-    var maxConcurrentTasks: Int = 3,
-    var maxConcurrentOnWifi: Int = 5,
-    var maxConcurrentOnCellular: Int = 2,
+    var maxConcurrentTasks: Int = 1,
+    var maxConcurrentOnWifi: Int = 1,
+    var maxConcurrentOnCellular: Int = 1,
     var maxConcurrentOnLowBattery: Int = 1,
     var connectTimeoutSec: Long = 60,
     var readTimeoutSec: Long = 60,

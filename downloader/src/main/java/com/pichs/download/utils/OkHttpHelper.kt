@@ -20,6 +20,16 @@ object OkHttpHelper {
             .connectTimeout(cfg.connectTimeoutSec, TimeUnit.SECONDS)
             .readTimeout(cfg.readTimeoutSec, TimeUnit.SECONDS)
             .writeTimeout(cfg.writeTimeoutSec, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val url = original.url
+                val req = original.newBuilder()
+                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
+                    .header("Referer", "${url.scheme}://${url.host}/")
+                    .header("Accept", "*/*")
+                    .build()
+                chain.proceed(req)
+            }
             .build()
     }
 

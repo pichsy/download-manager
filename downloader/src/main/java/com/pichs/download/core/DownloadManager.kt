@@ -401,6 +401,21 @@ object DownloadManager {
 
     // 供引擎使用的内部方法
     internal fun updateTaskInternal(task: DownloadTask) {
+        // 状态机守卫：防止已停止的任务被过期的“下载中”状态覆盖
+        // 这是一个架构级的保护，用于拦截Worker线程在停止前的最后一次汇报
+        val current = InMemoryTaskStore.get(task.id)
+        if (current != null) {
+            val isStopped = current.status == DownloadStatus.PAUSED || 
+                          current.status == DownloadStatus.CANCELLED || 
+                          current.status == DownloadStatus.FAILED
+            val isReportingRunning = task.status == DownloadStatus.DOWNLOADING
+            
+            if (isStopped && isReportingRunning) {
+                DownloadLog.d("DownloadManager", "状态机守卫拦截: 忽略过期的进度更新 ${task.id}, 当前状态: ${current.status}")
+                return
+            }
+        }
+
         InMemoryTaskStore.put(task)
         scope.launch(dispatcherIO) {
             cacheManager?.putTask(task)
@@ -530,9 +545,22 @@ object DownloadManager {
         MutableSharedFlow(replay = 1, extraBufferCapacity = 64)
     }.asSharedFlow()
 
+    private val lastEmissionMap = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    
     // 供引擎与管理器内部调用的进度派发
     internal fun emitProgress(task: DownloadTask, progress: Int, speed: Long) {
-        taskProgressFlows[task.id]?.tryEmit(progress to speed)
+        val now = System.currentTimeMillis()
+        val last = lastEmissionMap[task.id] ?: 0L
+        
+        // 限制发射频率：每200ms最多一次，或者当进度达到100%时强制发射
+        // 防止大规模并发下载时 System Server 死锁或 ANR
+        if (now - last >= 200 || progress >= 100) {
+            lastEmissionMap[task.id] = now
+            taskProgressFlows[task.id]?.tryEmit(progress to speed)
+            if (progress >= 100) {
+               lastEmissionMap.remove(task.id)
+            }
+        }
     }
 
     // 内部清理实现

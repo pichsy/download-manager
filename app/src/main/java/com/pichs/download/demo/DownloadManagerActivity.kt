@@ -239,9 +239,8 @@ private class SimpleTaskAdapter(
         val idx = data.indexOfFirst { it.id == task.id }
         if (idx >= 0) {
             data[idx] = task
-            // 立即更新进度显示，避免频繁的notifyItemChanged
-            // 由于无法直接访问RecyclerView，暂时使用notifyItemChanged
-            notifyItemChanged(idx)
+            // 使用Payload进行局部刷新，避免由notifyItemChanged触发的full bind导致的图片加载和PM调用
+            notifyItemChanged(idx, "PROGRESS_UPDATE")
         }
     }
 
@@ -258,6 +257,17 @@ private class SimpleTaskAdapter(
 
     override fun onBindViewHolder(holder: SimpleTaskVH, position: Int) {
         holder.bind(data[position])
+    }
+
+    // 处理局部刷新
+    override fun onBindViewHolder(holder: SimpleTaskVH, position: Int, payloads: MutableList<Any>) {
+        if (payloads.isNotEmpty()) {
+            val task = data[position]
+            // 仅更新进度和速度
+            holder.updateProgress(task.progress, task.speed)
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 }
 
