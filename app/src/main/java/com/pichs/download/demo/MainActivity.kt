@@ -258,18 +258,26 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private fun startDownload(item: DownloadItem, vb: ItemGridDownloadBeanBinding) {
         val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
         // 将图标/名称/包名/版本写入 extras(JSON)
-        val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
-            mapOf(
-                "name" to (item.name ?: ""),
-                "packageName" to (item.packageName ?: ""),
-                "versionCode" to (item.versionCode ?: 0L),
-                "icon" to (item.icon ?: "")
-            )
-        )
+//        val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
+//            mapOf(
+//                "name" to (item.name ?: ""),
+//                "packageName" to (item.packageName ?: ""),
+//                "versionCode" to (item.versionCode ?: 0L),
+//                "icon" to (item.icon ?: "")
+//            )
+//        )
+        // 文件名带上 .apk 后缀
+        val fileName1 = if (item.name.isEmpty()) {
+            "1.apk"
+        } else if (item.name.endsWith(".apk", ignoreCase = true)) {
+            item.name
+        } else {
+            "${item.name}.apk"
+        }
         // 使用新的优先级API，用户主动下载使用HIGH优先级
         val task = DownloadManager.downloadWithPriority(item.url, DownloadPriority.HIGH)
             .path(dir)
-            .fileName(item.name)
+            .fileName(fileName1)
             .start()
         item.task = task
         bindButtonUIWithInstalledAndFile(vb, item)

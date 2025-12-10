@@ -160,29 +160,49 @@ object FileUtils {
 
     /**
      * 生成文件名,带后缀的。
+     * 优先级：用户传入的文件名(带后缀) > URL中的后缀 > Content-Type映射
      */
     fun generateFilename(fileName: String?, url: String, contentType: String?): String {
         val trimFileName = fileName?.trim()
-        // 判断filename带不带后缀，如果带后缀，直接返回
-        if (trimFileName != null && trimFileName.contains('.')) return trimFileName
-        // 如果不带后缀，则从url中获取后缀后拼接到fileName后面
+        
+        // 1. 用户传入的文件名带后缀，直接使用
+        if (!trimFileName.isNullOrEmpty() && trimFileName.contains('.')) {
+            return sanitizeFilename(trimFileName)
+        }
 
-        val decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8.name())
-        val lastPart = decodedUrl.substringAfterLast('/')
+        // 2. 从 URL 中解析后缀
+        val decodedUrl = try {
+            URLDecoder.decode(url, StandardCharsets.UTF_8.name())
+        } catch (e: Exception) {
+            url
+        }
+        val cleanUrl = decodedUrl.substringBefore('?').substringBefore('#')
+        val lastPart = cleanUrl.substringAfterLast('/')
+        val urlExtension = lastPart.substringAfterLast('.', "").takeIf { it.length in 1..5 } ?: ""
+        
+        // 3. 从 Content-Type 解析后缀（作为最后选择）
+        val contentTypeExtension = getExtensionFromContentType(contentType) ?: ""
+        
+        // 优先使用 URL 后缀，解析不到才用 Content-Type
+        val extension = urlExtension.ifEmpty { contentTypeExtension }
 
-        val extension = getExtensionFromContentType(contentType) ?: lastPart.substringAfterLast('.', "")
-
-        if (!trimFileName.isNullOrEmpty() && trimFileName.isNotBlank()) {
-            return addExtensionIfMissing(trimFileName, extension)
-        } else if (lastPart.isEmpty()) {
-            return "${MD5Utils.md5(url)}${if (extension.isNotEmpty()) ".$extension" else ""}"
-        } else {
-            val sanitizedName = sanitizeFilename(lastPart)
+        // 生成最终文件名
+        return if (!trimFileName.isNullOrEmpty()) {
+            // 用户传入了文件名（不带后缀），补上后缀
+            if (extension.isNotEmpty()) "$trimFileName.$extension" else trimFileName
+        } else if (lastPart.isNotEmpty()) {
+            // 用 URL 中的文件名
+            val sanitizedName = sanitizeFilename(lastPart.substringBefore('?'))
             if (sanitizedName.length > MAX_FILENAME_LENGTH) {
-                return truncateFilename(lastPart, extension)
+                truncateFilename(sanitizedName.substringBeforeLast('.', sanitizedName), extension)
+            } else if (sanitizedName.contains('.')) {
+                sanitizedName
             } else {
-                return addExtensionIfMissing(sanitizedName, extension)
+                if (extension.isNotEmpty()) "$sanitizedName.$extension" else sanitizedName
             }
+        } else {
+            // 兜底：用 MD5
+            "${MD5Utils.md5(url)}${if (extension.isNotEmpty()) ".$extension" else ""}"
         }
     }
 
