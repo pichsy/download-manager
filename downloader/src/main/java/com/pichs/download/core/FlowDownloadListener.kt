@@ -76,66 +76,49 @@ class FlowDownloadListener {
         onTaskResumed: (DownloadTask) -> Unit = { _ -> },
         onTaskCancelled: (DownloadTask) -> Unit = { _ -> }
     ) {
+        // 监听任务状态变化和进度
         lifecycleOwner.lifecycleScope.launch {
-            // 监听任务状态变化
+            val activeProgressListeners = mutableSetOf<String>()
+            
             observeAllTasks().collect { tasks: List<DownloadTask> ->
                 tasks.forEach { task ->
                     when (task.status) {
                         com.pichs.download.model.DownloadStatus.COMPLETED -> {
-                            // 完成，触发完成回调
                             val file = File(task.filePath, task.fileName)
                             if (file.exists()) {
                                 onTaskComplete(task, file)
                             }
                         }
                         com.pichs.download.model.DownloadStatus.FAILED -> {
-                            // 失败，触发错误回调
                             onTaskError(task, com.pichs.download.core.DownloadError.NetworkError)
                         }
                         com.pichs.download.model.DownloadStatus.PAUSED -> {
-                            // 暂停，触发暂停回调
                             onTaskPaused(task)
                         }
                         com.pichs.download.model.DownloadStatus.CANCELLED -> {
-                            // 取消，触发取消回调
                             onTaskCancelled(task)
                         }
-                        else -> {
-                            // 其他状态，如WAITING, PENDING等
+                        com.pichs.download.model.DownloadStatus.WAITING,
+                        com.pichs.download.model.DownloadStatus.PENDING -> {
+                            onTaskResumed(task)
                         }
-                    }
-                }
-            }
-        }
-        
-        // 单独监听每个任务的进度变化（优化：减少重复监听）
-        lifecycleOwner.lifecycleScope.launch {
-            val activeProgressListeners = mutableSetOf<String>()
-            
-            observeAllTasks().collect { tasks: List<DownloadTask> ->
-                val downloadingTasks = tasks.filter { it.status == com.pichs.download.model.DownloadStatus.DOWNLOADING }
-                
-                // 启动新任务的进度监听
-                downloadingTasks.forEach { task ->
-                    if (!activeProgressListeners.contains(task.id)) {
-                        activeProgressListeners.add(task.id)
-                        launch {
-                            observeTaskProgress(task.id).collect { (progress, speed) ->
-                                // 获取最新的任务状态
-                                val latestTask = DownloadManager.getTask(task.id)
-                                if (latestTask != null && latestTask.status == com.pichs.download.model.DownloadStatus.DOWNLOADING) {
-                                    onTaskProgress(latestTask, progress, speed)
+                        com.pichs.download.model.DownloadStatus.DOWNLOADING -> {
+                            // 为下载中的任务启动进度监听
+                            if (!activeProgressListeners.contains(task.id)) {
+                                activeProgressListeners.add(task.id)
+                                launch {
+                                    observeTaskProgress(task.id).collect { (progress, speed) ->
+                                        val latestTask = DownloadManager.getTask(task.id)
+                                        if (latestTask != null && latestTask.status == com.pichs.download.model.DownloadStatus.DOWNLOADING) {
+                                            onTaskProgress(latestTask, progress, speed)
+                                        }
+                                    }
                                 }
                             }
                         }
+                        else -> { }
                     }
                 }
-                
-                // 清理已完成任务的监听
-                val completedTaskIds = tasks.filter { 
-                    it.status != com.pichs.download.model.DownloadStatus.DOWNLOADING 
-                }.map { it.id }
-                activeProgressListeners.removeAll(completedTaskIds)
             }
         }
     }
@@ -152,53 +135,46 @@ class FlowDownloadListener {
         onTaskResumed: (DownloadTask) -> Unit = { _ -> },
         onTaskCancelled: (DownloadTask) -> Unit = { _ -> }
     ) {
+        // 监听任务状态变化和进度
         scope.launch(Dispatchers.Main) {
-            // 监听任务状态变化
+            val activeProgressListeners = mutableSetOf<String>()
+            
             observeAllTasks().collect { tasks: List<DownloadTask> ->
                 tasks.forEach { task ->
                     when (task.status) {
                         com.pichs.download.model.DownloadStatus.COMPLETED -> {
-                            // 完成，触发完成回调
                             val file = File(task.filePath, task.fileName)
                             if (file.exists()) {
                                 onTaskComplete(task, file)
                             }
                         }
                         com.pichs.download.model.DownloadStatus.FAILED -> {
-                            // 失败，触发错误回调
                             onTaskError(task, com.pichs.download.core.DownloadError.NetworkError)
                         }
                         com.pichs.download.model.DownloadStatus.PAUSED -> {
-                            // 暂停，触发暂停回调
                             onTaskPaused(task)
                         }
                         com.pichs.download.model.DownloadStatus.CANCELLED -> {
-                            // 取消，触发取消回调
                             onTaskCancelled(task)
                         }
-                        else -> {
-                            // 其他状态，如WAITING, PENDING等
+                        com.pichs.download.model.DownloadStatus.WAITING,
+                        com.pichs.download.model.DownloadStatus.PENDING -> {
+                            onTaskResumed(task)
                         }
-                    }
-                }
-            }
-        }
-        
-        // 单独监听每个任务的进度变化
-        scope.launch(Dispatchers.Main) {
-            observeAllTasks().collect { tasks: List<DownloadTask> ->
-                tasks.forEach { task ->
-                    if (task.status == com.pichs.download.model.DownloadStatus.DOWNLOADING) {
-                        // 为每个下载中的任务启动进度监听
-                        launch {
-                            observeTaskProgress(task.id).collect { (progress, speed) ->
-                                // 获取最新的任务状态
-                                val latestTask = DownloadManager.getTask(task.id)
-                                if (latestTask != null) {
-                                    onTaskProgress(latestTask, progress, speed)
+                        com.pichs.download.model.DownloadStatus.DOWNLOADING -> {
+                            if (!activeProgressListeners.contains(task.id)) {
+                                activeProgressListeners.add(task.id)
+                                launch {
+                                    observeTaskProgress(task.id).collect { (progress, speed) ->
+                                        val latestTask = DownloadManager.getTask(task.id)
+                                        if (latestTask != null && latestTask.status == com.pichs.download.model.DownloadStatus.DOWNLOADING) {
+                                            onTaskProgress(latestTask, progress, speed)
+                                        }
+                                    }
                                 }
                             }
                         }
+                        else -> { }
                     }
                 }
             }

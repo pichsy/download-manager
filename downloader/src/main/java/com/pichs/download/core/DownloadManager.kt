@@ -500,8 +500,8 @@ object DownloadManager {
         repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
         dispatcher.enqueue(pending)
         DownloadLog.d("DownloadManager", "任务恢复: $taskId")
-        // 主动通知一次，UI 立刻显示"等待中"
-        // 旧监听器已移除，现在通过EventBus和Flow通知
+        // 发送 TaskResumed 事件，UI 立刻显示"等待中"
+        DownloadEventBus.emitTaskEvent(TaskEvent.TaskResumed(pending))
         scheduleNext()
     }
 

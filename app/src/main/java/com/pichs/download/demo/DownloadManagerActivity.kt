@@ -46,13 +46,7 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
                 }
                 DownloadStatus.PAUSED -> {
                     DownloadManager.resume(task.id)
-                    // 乐观更新：立即切换到 DOWNLOADING，避免快速连点时仍按 PAUSED 判断
-                    val idx = downloading.indexOfFirst { it.id == task.id }
-                    if (idx >= 0) {
-                        val resumed = downloading[idx].copy(status = DownloadStatus.DOWNLOADING, updateTime = System.currentTimeMillis())
-                        downloading[idx] = resumed
-                        downloadingAdapter.updateItem(resumed)
-                    }
+                    // 状态更新由 onTaskResumed 回调处理，task.status 会变为 WAITING
                 }
                 DownloadStatus.PENDING, DownloadStatus.WAITING -> {
                     DownloadManager.pause(task.id)
@@ -353,37 +347,59 @@ private class SimpleTaskVH(
 
         when (task.status) {
             DownloadStatus.DOWNLOADING -> {
-                btn.text = "暂停"; btn.isEnabled = true
+                // 只有正在下载中才显示"暂停"
+                btn.text = "暂停"
+                btn.isEnabled = true
+                tvSpeed.visibility = android.view.View.VISIBLE
             }
 
             DownloadStatus.PAUSED -> {
-                btn.text = "继续"; btn.isEnabled = true
+                // 已暂停显示"继续"
+                btn.text = "继续"
+                btn.isEnabled = true
+                tvSpeed.visibility = android.view.View.GONE
+                tvSpeed.text = ""
             }
 
             DownloadStatus.WAITING, DownloadStatus.PENDING -> {
-                btn.text = "等待中"; btn.isEnabled = true
+                // 排队中显示"等待中"，可点击暂停
+                btn.text = "等待中"
+                btn.isEnabled = true
+                tvSpeed.visibility = android.view.View.GONE
+                tvSpeed.text = ""
             }
 
             DownloadStatus.FAILED -> {
-                btn.text = "重试"; btn.isEnabled = true
+                btn.text = "重试"
+                btn.isEnabled = true
+                tvSpeed.visibility = android.view.View.GONE
+                tvSpeed.text = ""
             }
 
             DownloadStatus.COMPLETED -> {
-                progressBar.isIndeterminate = false; progressBar.progress = 100; tvProgress.text = "100%"
+                progressBar.isIndeterminate = false
+                progressBar.progress = 100
+                tvProgress.text = "100%"
+                tvSpeed.visibility = android.view.View.GONE
+                tvSpeed.text = ""
                 if (showOpen) {
-                    btn.text = "打开"; btn.isEnabled = true
+                    btn.text = "打开"
+                    btn.isEnabled = true
                 } else {
                     if (health == AppUtils.FileHealth.OK) {
-                        btn.text = "安装"; btn.isEnabled = true
+                        btn.text = "安装"
+                        btn.isEnabled = true
                     } else {
-                        // 不显示安装按钮：禁用并清空文案，交互交给右侧 X
-                        btn.text = ""; btn.isEnabled = false
+                        btn.text = ""
+                        btn.isEnabled = false
                     }
                 }
             }
 
             else -> {
-                btn.text = "下载"; btn.isEnabled = true
+                btn.text = "下载"
+                btn.isEnabled = true
+                tvSpeed.visibility = android.view.View.GONE
             }
         }
         btn.setOnClickListener { if (btn.isEnabled) onAction(task) }
@@ -392,26 +408,16 @@ private class SimpleTaskVH(
     // 专门用于更新进度的方法，避免重新绑定整个ViewHolder
     fun updateProgress(progress: Int, speed: Long) {
         // 更新进度条
+        progressBar.isIndeterminate = false
         progressBar.progress = progress
         tvProgress.text = "${progress}%"
         
         // 更新速度显示
         tvSpeed.text = com.pichs.download.utils.SpeedUtils.formatDownloadSpeed(speed)
+        tvSpeed.visibility = android.view.View.VISIBLE
         
-        // 更新按钮状态
-        when {
-            progress >= 100 -> {
-                btn.text = "安装"
-                btn.isEnabled = true
-            }
-            progress > 0 -> {
-                btn.text = "暂停"
-                btn.isEnabled = true
-            }
-            else -> {
-                btn.text = "等待中"
-                btn.isEnabled = true
-            }
-        }
+        // 正在下载中，按钮显示"暂停"
+        btn.text = "暂停"
+        btn.isEnabled = true
     }
 }
