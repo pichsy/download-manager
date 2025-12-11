@@ -267,15 +267,35 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             // 维护本地累计下载量，避免依赖数据库中的旧值
             var localDownloaded = chunk.downloaded
             
-            RandomAccessFile(ctl.tempFile, "rw").use { raf ->
+            // 检查临时文件是否存在
+            val tempFile = ctl.tempFile ?: throw IllegalStateException("临时文件未初始化")
+            if (!tempFile.exists()) {
+                throw java.io.IOException("临时文件被删除: ${tempFile.absolutePath}")
+            }
+            
+            RandomAccessFile(tempFile, "rw").use { raf ->
                 raf.seek(startByte)
                 val source = body.source()
                 val buffer = okio.Buffer()
+                
+                // 用于定期检查文件存在性的计数器
+                var checkCounter = 0
+                val checkInterval = 50 // 每读取 50 次（约 400KB）检查一次文件是否存在
                 
                 while (true) {
                     if (ctl.paused.get() || ctl.cancelled.get()) break
                     val read = source.read(buffer, 8 * 1024)
                     if (read == -1L) break
+                    
+                    // 定期检查临时文件是否存在
+                    checkCounter++
+                    if (checkCounter >= checkInterval) {
+                        checkCounter = 0
+                        if (!tempFile.exists()) {
+                            throw java.io.IOException("临时文件被删除: ${tempFile.absolutePath}")
+                        }
+                    }
+                    
                     raf.channel.write(buffer.readByteArray(read).let { java.nio.ByteBuffer.wrap(it) })
                     
                     // 更新本地累计值
