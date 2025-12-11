@@ -86,7 +86,26 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
             if (health == AppUtils.FileHealth.OK) {
                 openApk(task)
             } else {
-                // 不显示安装按钮，仅展示红字提示并保留 X（由 ViewHolder 负责）
+                // 文件缺失或损坏，删除旧任务并重新下载
+                lifecycleScope.launch {
+                    DownloadManager.deleteTask(task.id, deleteFile = true)
+                    // 从 completed 列表移除
+                    val idx = completed.indexOfFirst { it.id == task.id }
+                    if (idx >= 0) {
+                        completed.removeAt(idx)
+                        completedAdapter.notifyItemRemoved(idx)
+                    }
+                    // 重新创建下载任务
+                    val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
+                    val newTask = DownloadManager.download(task.url)
+                        .path(dir)
+                        .fileName(task.fileName)
+                        .start()
+                    // 添加到下载中列表
+                    downloading.add(0, newTask)
+                    downloadingAdapter.notifyItemInserted(0)
+                    android.widget.Toast.makeText(this@DownloadManagerActivity, "开始重新下载", android.widget.Toast.LENGTH_SHORT).show()
+                }
             }
         })
         binding.recyclerViewDownloaded.setItemAnimatorDisable()
@@ -258,7 +277,7 @@ private class SimpleTaskAdapter(
         if (payloads.isNotEmpty()) {
             val task = data[position]
             // 仅更新进度和速度
-            holder.updateProgress(task.progress, task.speed)
+            holder.updateProgress(task)
         } else {
             super.onBindViewHolder(holder, position, payloads)
         }
@@ -272,13 +291,26 @@ private class SimpleTaskVH(
 
     private val ivCover: com.pichs.xwidget.cardview.XCardImageView = itemView.findViewById(R.id.iv_cover)
     private val title: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tv_title)
-    private val progressBar: android.widget.ProgressBar = itemView.findViewById(R.id.progressBar)
-    private val tvProgress: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tvProgress)
     private val tvSpeed: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tvSpeed)
     private val tvHint: com.pichs.xwidget.view.XTextView = itemView.findViewById(R.id.tvHint)
-    private val btn: com.pichs.xwidget.cardview.XCardButton = itemView.findViewById(R.id.btn_download)
+    private val btn: com.pichs.download.demo.widget.ProgressButton = itemView.findViewById(R.id.btn_download)
+    
+    // 保存当前任务引用
+    private var currentTask: DownloadTask? = null
+    
+    init {
+        // 在构造时设置点击监听器，使用 currentTask 引用
+        btn.setOnClickListener { 
+            android.util.Log.d("SimpleTaskVH", "Button clicked, currentTask: ${currentTask?.id}, status: ${currentTask?.status}")
+            currentTask?.let { task ->
+                onAction(task)
+            }
+        }
+    }
 
     fun bind(task: DownloadTask) {
+        currentTask = task
+        
         // 绑定图标：优先从 extras(JSON) 读取缓存；其次从首页注册表；再尝试本地已安装应用图标；最后占位色
         data class ExtraMeta(
             val name: String? = null,
@@ -311,14 +343,10 @@ private class SimpleTaskVH(
         }
 
         title.text = meta?.name ?: task.fileName
-    val indeterminate = (task.status == DownloadStatus.DOWNLOADING || task.status == DownloadStatus.PENDING || task.status == DownloadStatus.WAITING) && task.totalSize <= 0
-        progressBar.isIndeterminate = indeterminate
-        if (!indeterminate) {
-            progressBar.progress = task.progress
-            tvProgress.text = "${task.progress}%"
-        } else {
-            tvProgress.text = "处理中…"
-        }
+        
+        // 设置进度条
+        btn.setProgress(task.progress)
+        
         tvSpeed.text = com.pichs.download.utils.SpeedUtils.formatDownloadSpeed(task.speed)
         
         // 显示优先级标识
@@ -330,12 +358,13 @@ private class SimpleTaskVH(
             else -> ""
         }
         title.text = "${title.text}$priorityText"
-    // 优先判断是否“已安装且版本>=商店” → 显示打开
+        
+        // 优先判断是否"已安装且版本>=商店" → 显示打开
         val pkg = task.packageName
             ?: AppUtils.getPackageNameForTask(itemView.context, task)
             ?: ""
         val storeVC = task.storeVersionCode ?: AppUtils.getStoreVersionCode(itemView.context, pkg)
-    val showOpen = pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(itemView.context, pkg, storeVC)
+        val showOpen = pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(itemView.context, pkg, storeVC)
 
         // 文件健康检查
         val health = AppUtils.checkFileHealth(task)
@@ -347,77 +376,88 @@ private class SimpleTaskVH(
 
         when (task.status) {
             DownloadStatus.DOWNLOADING -> {
-                // 只有正在下载中才显示"暂停"
-                btn.text = "暂停"
+                btn.setText("${task.progress}%")
+                btn.setProgress(task.progress)
                 btn.isEnabled = true
                 tvSpeed.visibility = android.view.View.VISIBLE
             }
 
             DownloadStatus.PAUSED -> {
-                // 已暂停显示"继续"
-                btn.text = "继续"
+                btn.setText("继续")
                 btn.isEnabled = true
                 tvSpeed.visibility = android.view.View.GONE
                 tvSpeed.text = ""
             }
 
             DownloadStatus.WAITING, DownloadStatus.PENDING -> {
-                // 排队中显示"等待中"，可点击暂停
-                btn.text = "等待中"
+                btn.setText("等待中")
                 btn.isEnabled = true
                 tvSpeed.visibility = android.view.View.GONE
                 tvSpeed.text = ""
             }
 
             DownloadStatus.FAILED -> {
-                btn.text = "重试"
+                btn.setText("重试")
                 btn.isEnabled = true
                 tvSpeed.visibility = android.view.View.GONE
                 tvSpeed.text = ""
             }
 
             DownloadStatus.COMPLETED -> {
-                progressBar.isIndeterminate = false
-                progressBar.progress = 100
-                tvProgress.text = "100%"
-                tvSpeed.visibility = android.view.View.GONE
-                tvSpeed.text = ""
+                btn.setProgress(100)
+                // 显示文件大小或文件状态
+                if (health == AppUtils.FileHealth.OK) {
+                    tvSpeed.text = formatFileSize(task.totalSize)
+                    tvSpeed.visibility = android.view.View.VISIBLE
+                } else {
+                    tvSpeed.text = if (health == AppUtils.FileHealth.MISSING) "文件缺失" else "文件损坏"
+                    tvSpeed.visibility = android.view.View.VISIBLE
+                }
                 if (showOpen) {
-                    btn.text = "打开"
+                    btn.setText("打开")
                     btn.isEnabled = true
                 } else {
                     if (health == AppUtils.FileHealth.OK) {
-                        btn.text = "安装"
+                        btn.setText("安装")
                         btn.isEnabled = true
                     } else {
-                        btn.text = ""
-                        btn.isEnabled = false
+                        btn.setText("重新下载")
+                        btn.isEnabled = true
                     }
                 }
             }
 
             else -> {
-                btn.text = "下载"
+                btn.setText("下载")
+                btn.setProgress(0)
                 btn.isEnabled = true
                 tvSpeed.visibility = android.view.View.GONE
             }
         }
-        btn.setOnClickListener { if (btn.isEnabled) onAction(task) }
     }
 
     // 专门用于更新进度的方法，避免重新绑定整个ViewHolder
-    fun updateProgress(progress: Int, speed: Long) {
-        // 更新进度条
-        progressBar.isIndeterminate = false
-        progressBar.progress = progress
-        tvProgress.text = "${progress}%"
+    fun updateProgress(task: DownloadTask) {
+        currentTask = task
+        btn.setProgress(task.progress)
+        btn.setText("${task.progress}%")
         
-        // 更新速度显示
-        tvSpeed.text = com.pichs.download.utils.SpeedUtils.formatDownloadSpeed(speed)
+        tvSpeed.text = com.pichs.download.utils.SpeedUtils.formatDownloadSpeed(task.speed)
         tvSpeed.visibility = android.view.View.VISIBLE
         
-        // 正在下载中，按钮显示"暂停"
-        btn.text = "暂停"
         btn.isEnabled = true
+    }
+    
+    private fun formatFileSize(size: Long): String {
+        if (size <= 0) return "--"
+        val kb = 1024.0
+        val mb = kb * 1024
+        val gb = mb * 1024
+        return when {
+            size >= gb -> String.format("%.2f GB", size / gb)
+            size >= mb -> String.format("%.2f MB", size / mb)
+            size >= kb -> String.format("%.2f KB", size / kb)
+            else -> "${size} B"
+        }
     }
 }

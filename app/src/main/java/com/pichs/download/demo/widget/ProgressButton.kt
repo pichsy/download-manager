@@ -152,6 +152,10 @@ class ProgressButton @JvmOverloads constructor(
             }
         }
         clipToOutline = true
+        
+        // 使按钮可点击
+        isClickable = true
+        isFocusable = true
 
     }
 
