@@ -18,6 +18,7 @@ class DownloadRequestBuilder {
     private var checksum: Checksum? = null
     private var lifecycleOwner: LifecycleOwner? = null
     private var priority: Int = 1
+    private var estimatedSize: Long = 0L
 
     fun url(url: String) = apply { this.url = url }
     fun path(path: String) = apply { this.path = path }
@@ -26,6 +27,7 @@ class DownloadRequestBuilder {
     fun checksum(checksum: Checksum?) = apply { this.checksum = checksum }
     fun lifecycleOwner(lifecycleOwner: LifecycleOwner?) = apply { this.lifecycleOwner = lifecycleOwner }
     fun priority(priority: Int) = apply { this.priority = priority }
+    fun estimatedSize(size: Long) = apply { this.estimatedSize = size }
 
     fun start(): DownloadTask {
         val targetName = fileName ?: url.substringAfterLast('/').substringBefore('?')
@@ -85,7 +87,8 @@ class DownloadRequestBuilder {
             priority = priority,
             createTime = System.currentTimeMillis(),
             updateTime = System.currentTimeMillis(),
-            extras = null
+            extras = null,
+            estimatedSize = estimatedSize
         )
 
         // 设置任务特定头部

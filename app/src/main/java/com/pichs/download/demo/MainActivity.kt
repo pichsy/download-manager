@@ -23,6 +23,7 @@ import com.pichs.download.utils.DownloadLog
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.receiver.NetStateReceiver
 import com.pichs.shanhai.base.utils.toast.ToastUtils
+import com.pichs.xbase.kotlinext.fastClick
 import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 import com.pichs.xbase.utils.GsonUtils
 import java.io.File
@@ -38,11 +39,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private fun normalizeName(n: String): String = n.substringBeforeLast('.').lowercase()
 
     override fun afterOnCreate() {
-        XXPermissions.with(this)
-            .unchecked()
-            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
-            .permission(Permission.REQUEST_INSTALL_PACKAGES)
-            .request { _, _ -> }
+
+        binding.ivDownloadSettings.fastClick {
+            startActivity(Intent(this, AppUseDataSettingsActivity::class.java))
+        }
+        XXPermissions.with(this).unchecked().permission(Permission.MANAGE_EXTERNAL_STORAGE).permission(Permission.REQUEST_INSTALL_PACKAGES).request { _, _ -> }
 
         initListener()
 
@@ -55,29 +56,152 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         initRecyclerView()
         // 绑定全局监听（新方式）
         bindFlowListener()
+
+        // 模拟批量后台下载（延迟 10 秒）
+        binding.root.postDelayed({
+            simulateBatchDownload()
+        }, 10_000)
+    }
+
+    /**
+     * 模拟批量后台下载
+     * 从列表中选 5 个应用进行批量下载
+     */
+    private fun simulateBatchDownload() {
+
+        // 选 5 个包名（写死）
+        val targetPackages = listOf(
+            "com.phoenix.read",      // 红果免费短剧
+            "com.kugou.android",     // 酷狗音乐
+            "tv.danmaku.bili",       // 哔哩哔哩
+            "com.ss.android.ugc.aweme", // 抖音
+            "com.tencent.mm"         // 微信
+        )
+
+        // 从列表中筛选出这 5 个应用
+        val appsToDownload = list.filter { it.packageName in targetPackages }
+
+        if (appsToDownload.isEmpty()) {
+            DownloadLog.d("模拟批量下载", "未找到目标应用")
+            return
+        }
+
+        // 计算总大小
+        val totalSize = appsToDownload.sumOf { it.size }
+        val config = DownloadManager.getNetworkConfig()
+        val isWifi = DownloadManager.isWifiAvailable()
+
+        DownloadLog.d("模拟批量下载", "准备下载 ${appsToDownload.size} 个应用，总大小: $totalSize, WiFi: $isWifi")
+
+        // 使用端智能判断逻辑
+        when {
+            // WiFi 可用，直接下载
+            isWifi -> {
+                startBatchDownload(appsToDownload)
+            }
+            // 仅 WiFi 模式
+            config.wifiOnly -> {
+                runOnUiThread {
+                    ToastUtils.show("当前设置为仅 WiFi 下载，请连接 WiFi")
+                }
+            }
+            // 允许流量 + 不提醒
+            config.cellularPromptMode == com.pichs.download.model.CellularPromptMode.NEVER -> {
+                startBatchDownload(appsToDownload)
+            }
+            // 允许流量 + 交给用户（智能提醒）
+            config.cellularPromptMode == com.pichs.download.model.CellularPromptMode.USER_CONTROLLED -> {
+                if (CellularThresholdManager.shouldPrompt(totalSize)) {
+                    // 超过阈值，弹窗确认
+                    showBatchDownloadConfirmDialog(appsToDownload, totalSize)
+                } else {
+                    // 未超阈值，静默下载
+                    DownloadLog.d("模拟批量下载", "智能提醒：未超阈值，静默下载")
+                    DownloadManager.markCellularDownloadAllowed()
+                    startBatchDownload(appsToDownload)
+                }
+            }
+            // 允许流量 + 每次提醒
+            else -> {
+                showBatchDownloadConfirmDialog(appsToDownload, totalSize)
+            }
+        }
+    }
+
+    private fun showBatchDownloadConfirmDialog(apps: List<DownloadItem>, totalSize: Long) {
+        val sizeText = formatFileSize(totalSize)
+        android.app.AlertDialog.Builder(this).setTitle("流量下载提醒").setMessage("当前使用移动网络，将下载 ${apps.size} 个应用共 $sizeText\n确定使用流量下载？")
+            .setNeutralButton("取消") { dialog, _ -> dialog.dismiss() }.setNegativeButton("连接 WiFi") { _, _ ->
+                runCatching {
+                    startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
+                }
+            }.setPositiveButton("使用流量") { _, _ ->
+                DownloadManager.markCellularDownloadAllowed()
+                startBatchDownload(apps)
+            }.setCancelable(false).show()
+    }
+
+    private fun startBatchDownload(apps: List<DownloadItem>) {
+        DownloadLog.d("模拟批量下载", "开始创建 ${apps.size} 个任务")
+        val dir = getExternalFilesDir(null)?.absolutePath ?: filesDir.absolutePath
+        apps.forEach { app ->
+            val fileName = if (app.name.endsWith(".apk", ignoreCase = true)) {
+                app.name
+            } else {
+                "${app.name}.apk"
+            }
+            DownloadManager.download(app.url).path(dir).fileName(fileName).estimatedSize(app.size).start()
+        }
+        runOnUiThread {
+            ToastUtils.show("批量下载已开始：${apps.size} 个应用")
+        }
+    }
+
+    private fun formatFileSize(bytes: Long): String {
+        return when {
+            bytes >= 1024 * 1024 * 1024 -> "%.2f GB".format(bytes / 1024.0 / 1024.0 / 1024.0)
+            bytes >= 1024 * 1024 -> "%.2f MB".format(bytes / 1024.0 / 1024.0)
+            bytes >= 1024 -> "%.2f KB".format(bytes / 1024.0)
+            else -> "$bytes B"
+        }
     }
 
 
     private var isFirstNetRegister = true
 
     private fun initListener() {
+        // 初始化阈值管理器
+        CellularThresholdManager.init(this)
+        
         binding.ivDownloadManager.setOnClickListener {
             startActivity(Intent(this, DownloadManagerActivity::class.java))
         }
-        binding.ivSearch.setOnClickListener { ToastUtils.show("搜索") }
 
-        NetStateReceiver(onNetConnected = {
-            // 网络恢复时，通知下载管理器恢复网络异常暂停的任务
+        binding.ivSearch.fastClick {
+            simulateBatchDownload()
+        }
+
+        // 设置网络决策回调
+        DownloadManager.setDecisionCallback(MyDownloadDecisionCallback(this))
+
+        NetStateReceiver(onNetConnected = { isWifi ->
+            // 网络恢复时
             if (!isFirstNetRegister) {
-                DownloadLog.d("网络连接成功，isWifi=$it")
-                // 调用下载管理器的网络恢复API
+                DownloadLog.d("网络连接成功，isWifi=$isWifi")
+                if (isWifi) {
+                    // WiFi 连接：重置流量会话，恢复 WiFi 暂停的任务
+                    DownloadManager.onWifiConnected()
+                }
+                // 通用网络恢复：恢复网络异常暂停的任务
                 DownloadManager.onNetworkRestored()
             }
             isFirstNetRegister = false
         }, onNetDisConnected = {
             if (!isFirstNetRegister) {
                 DownloadLog.d("网络连接断开")
-                // 网络断开时，只暂停正在下载的任务，不影响用户手动暂停的任务
+                // 通知网络规则管理器处理 WiFi 断开
+                DownloadManager.onWifiDisconnected()
+                // 网络断开时，暂停正在下载的任务
                 DownloadManager.pauseAllForNetworkError()
             }
             isFirstNetRegister = false
@@ -275,10 +399,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             "${item.name}.apk"
         }
         // 使用新的优先级API，用户主动下载使用HIGH优先级
-        val task = DownloadManager.downloadWithPriority(item.url, DownloadPriority.HIGH)
-            .path(dir)
-            .fileName(fileName1)
-            .start()
+        val task = DownloadManager.downloadWithPriority(item.url, DownloadPriority.HIGH).path(dir).fileName(fileName1).estimatedSize(item.size).start()
         item.task = task
         bindButtonUIWithInstalledAndFile(vb, item)
     }
@@ -346,34 +467,26 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     // 新增：绑定Flow监听，保持列表项与任务状态同步
     private fun bindFlowListener() {
-        flowListener.bindToLifecycle(
-            lifecycleOwner = this,
-            onTaskProgress = { task, progress, speed ->
-                if (isDestroyed) return@bindToLifecycle
-                // 更新任务进度和速度
-                updateItemTaskWithProgress(task, progress, speed)
-            },
-            onTaskComplete = { task, file ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            },
-            onTaskError = { task, error ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            },
-            onTaskPaused = { task ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            },
-            onTaskResumed = { task ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            },
-            onTaskCancelled = { task ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            }
-        )
+        flowListener.bindToLifecycle(lifecycleOwner = this, onTaskProgress = { task, progress, speed ->
+            if (isDestroyed) return@bindToLifecycle
+            // 更新任务进度和速度
+            updateItemTaskWithProgress(task, progress, speed)
+        }, onTaskComplete = { task, file ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        }, onTaskError = { task, error ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        }, onTaskPaused = { task ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        }, onTaskResumed = { task ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        }, onTaskCancelled = { task ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        })
     }
 
     // 根据任务匹配列表项并刷新
@@ -416,10 +529,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     // 更新ViewHolder中的进度显示
     private fun updateProgressInViewHolder(
-        viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder,
-        progress: Int,
-        speed: Long,
-        status: com.pichs.download.model.DownloadStatus
+        viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder, progress: Int, speed: Long, status: com.pichs.download.model.DownloadStatus
     ) {
         // 这里需要根据实际的ViewHolder结构来更新
         // 由于使用了BRV库，我们需要通过其他方式来更新进度

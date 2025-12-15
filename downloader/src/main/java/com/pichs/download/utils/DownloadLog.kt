@@ -19,6 +19,14 @@ object DownloadLog {
         if (isDebug) Log.d(tag, message)
     }
 
+    fun v(tag: String = TAG, message: String) {
+        if (isDebug) Log.v(tag, message)
+    }
+
+    fun i(tag: String = TAG, message: String) {
+        if (isDebug) Log.i(tag, message)
+    }
+
     fun e(message: String, e: Throwable? = null) {
         if (isDebug) Log.e(TAG, message, e)
     }
@@ -26,4 +34,14 @@ object DownloadLog {
     fun e(tag: String = TAG, message: String, e: Throwable? = null) {
         if (isDebug) Log.e(tag, message, e)
     }
+
+    fun w(message: String, e: Throwable? = null) {
+        if (isDebug) Log.w(TAG, message, e)
+    }
+
+    fun w(tag: String = TAG, message: String, e: Throwable? = null) {
+        if (isDebug) Log.w(tag, message, e)
+    }
+
+
 }

@@ -33,5 +33,17 @@ enum class PauseReason {
      * 系统资源不足暂停
      * 系统资源恢复后会自动恢复下载
      */
-    SYSTEM_RESOURCE_LOW
+    SYSTEM_RESOURCE_LOW,
+    
+    /**
+     * WiFi 不可用暂停（仅 WiFi 模式下）
+     * WiFi 连接后会自动恢复下载
+     */
+    WIFI_UNAVAILABLE,
+    
+    /**
+     * 等待流量确认暂停
+     * 用户确认使用流量后会恢复下载
+     */
+    CELLULAR_PENDING
 }
