@@ -24,13 +24,46 @@ internal data class DownloadEntity(
     val storeVersionCode: Long? = null,
     val extras: String? = null,
     val pauseReason: PauseReason? = null,
+    val estimatedSize: Long = 0L,  // 新增：预估大小
 ) {
     fun toModel(): DownloadTask = DownloadTask(
-        id, url, fileName, filePath, status, progress, totalSize, currentSize, speed, priority, createTime, updateTime, packageName, storeVersionCode, extras, pauseReason
+        id = id,
+        url = url,
+        fileName = fileName,
+        filePath = filePath,
+        status = status,
+        progress = progress,
+        totalSize = totalSize,
+        currentSize = currentSize,
+        speed = speed,
+        priority = priority,
+        createTime = createTime,
+        updateTime = updateTime,
+        packageName = packageName,
+        storeVersionCode = storeVersionCode,
+        extras = extras,
+        pauseReason = pauseReason,
+        estimatedSize = estimatedSize,
     )
     companion object {
         fun fromModel(t: DownloadTask) = DownloadEntity(
-            t.id, t.url, t.fileName, t.filePath, t.status, t.progress, t.totalSize, t.currentSize, t.speed, t.priority, t.createTime, t.updateTime, t.packageName, t.storeVersionCode, t.extras, t.pauseReason
+            id = t.id,
+            url = t.url,
+            fileName = t.fileName,
+            filePath = t.filePath,
+            status = t.status,
+            progress = t.progress,
+            totalSize = t.totalSize,
+            currentSize = t.currentSize,
+            speed = t.speed,
+            priority = t.priority,
+            createTime = t.createTime,
+            updateTime = t.updateTime,
+            packageName = t.packageName,
+            storeVersionCode = t.storeVersionCode,
+            extras = t.extras,
+            pauseReason = t.pauseReason,
+            estimatedSize = t.estimatedSize,
         )
     }
 }

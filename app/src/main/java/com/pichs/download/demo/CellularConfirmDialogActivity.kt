@@ -1,0 +1,106 @@
+package com.pichs.download.demo
+
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.provider.Settings
+import android.view.Window
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.pichs.download.core.DownloadManager
+import com.pichs.download.demo.databinding.ActivityCellularConfirmDialogBinding
+import kotlinx.coroutines.launch
+
+/**
+ * 流量下载确认弹窗 Activity
+ * 使用透明主题，可以在任何界面弹起
+ */
+class CellularConfirmDialogActivity : AppCompatActivity() {
+
+    companion object {
+        private const val EXTRA_TOTAL_SIZE = "total_size"
+        private const val EXTRA_TASK_COUNT = "task_count"
+        
+        /**
+         * 启动确认弹窗
+         * @param context 上下文
+         * @param totalSize 待下载总大小（字节）
+         * @param taskCount 任务数量
+         */
+        fun start(context: Context, totalSize: Long, taskCount: Int) {
+            val intent = Intent(context, CellularConfirmDialogActivity::class.java).apply {
+                putExtra(EXTRA_TOTAL_SIZE, totalSize)
+                putExtra(EXTRA_TASK_COUNT, taskCount)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
+    }
+    
+    private lateinit var binding: ActivityCellularConfirmDialogBinding
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // 设置无标题
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
+        
+        binding = ActivityCellularConfirmDialogBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        
+        // 获取参数
+        val totalSize = intent.getLongExtra(EXTRA_TOTAL_SIZE, 0L)
+        val taskCount = intent.getIntExtra(EXTRA_TASK_COUNT, 0)
+        
+        // 点击外部区域关闭
+        binding.root.setOnClickListener {
+            handleDeny()
+        }
+        
+        // 阻止内容区域的点击事件传递到根布局
+        binding.llContent.setOnClickListener { }
+        
+        // 设置内容
+        val sizeText = formatFileSize(totalSize)
+        binding.tvMessage.text = "当前使用移动网络，将下载 ${taskCount} 个应用共 $sizeText\n确定使用流量下载？"
+        
+        // 取消按钮
+        binding.btnCancel.setOnClickListener {
+            handleDeny()
+        }
+        
+        // 连接 WiFi 按钮
+        binding.btnConnectWifi.setOnClickListener {
+            runCatching {
+                startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+            }
+//            handleDeny()
+        }
+        
+        // 使用流量按钮
+        binding.btnUseCellular.setOnClickListener {
+            handleConfirm()
+        }
+    }
+    
+    private fun handleConfirm() {
+        DownloadManager.markCellularDownloadAllowed()
+        lifecycleScope.launch {
+            CellularConfirmViewModel.confirm()
+        }
+        finish()
+    }
+    
+    private fun handleDeny() {
+        lifecycleScope.launch {
+            CellularConfirmViewModel.deny()
+        }
+        finish()
+    }
+    
+    override fun onBackPressed() {
+        handleDeny()
+    }
+    
+    private fun formatFileSize(bytes: Long): String = FormatUtils.formatFileSize(bytes)
+}

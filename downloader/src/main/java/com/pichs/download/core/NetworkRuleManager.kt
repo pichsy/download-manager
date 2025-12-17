@@ -85,18 +85,62 @@ class NetworkRuleManager(
             DownloadDecision.Deny(DenyReason.WIFI_ONLY_MODE)
         } else {
             // 允许流量模式，检查提醒策略
-            checkCellularDownloadPermission(task)
+            checkCellularDownloadPermission()
         }
     }
     
-    private fun checkCellularDownloadPermission(task: DownloadTask): DownloadDecision {
-        // 已经临时放行
-        if (CellularSessionManager.isCellularDownloadAllowed()) {
-            return DownloadDecision.Allow
+    // ==================== 预检查 API（先决策后创建任务） ====================
+    
+    /**
+     * 预检查下载权限（在创建任务前调用）
+     * 用于实现"先决策后创建任务"的流程
+     * @param estimatedSize 预估下载大小（字节）
+     * @return 预检查结果
+     */
+    fun preCheckDownload(estimatedSize: Long = 0L): PreCheckResult {
+        val isWifi = NetworkUtils.isWifiAvailable(context)
+        val isCellular = NetworkUtils.isCellularAvailable(context)
+        
+        DownloadLog.d(TAG, "预检查下载权限: wifi=$isWifi, cellular=$isCellular, size=$estimatedSize")
+        
+        // 无网络
+        if (!isWifi && !isCellular) {
+            return PreCheckResult.NoNetwork
         }
         
-        // 该任务已单独确认
-        if (CellularSessionManager.isTaskConfirmed(task.id)) {
+        // WiFi 可用，直接允许
+        if (isWifi) {
+            return PreCheckResult.Allow
+        }
+        
+        // 仅 WiFi 模式
+        if (config.wifiOnly) {
+            return PreCheckResult.WifiOnly
+        }
+        
+        // 已经临时放行
+        if (CellularSessionManager.isCellularDownloadAllowed()) {
+            return PreCheckResult.Allow
+        }
+        
+        // 根据提醒模式决定
+        return when (config.cellularPromptMode) {
+            CellularPromptMode.ALWAYS -> {
+                PreCheckResult.NeedConfirmation(estimatedSize)
+            }
+            CellularPromptMode.NEVER -> {
+                PreCheckResult.Allow
+            }
+            CellularPromptMode.USER_CONTROLLED -> {
+                // 交给使用端判断阈值
+                PreCheckResult.UserControlled(estimatedSize)
+            }
+        }
+    }
+    
+    private fun checkCellularDownloadPermission(): DownloadDecision {
+        // 已经临时放行
+        if (CellularSessionManager.isCellularDownloadAllowed()) {
             return DownloadDecision.Allow
         }
         

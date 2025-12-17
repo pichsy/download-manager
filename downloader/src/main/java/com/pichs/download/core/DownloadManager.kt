@@ -354,6 +354,17 @@ object DownloadManager {
     fun isMeteredNetwork(): Boolean {
         return appContext?.let { NetworkUtils.isMeteredNetwork(it) } ?: true
     }
+    
+    /**
+     * 预检查下载权限（在创建任务前调用）
+     * 用于实现"先决策后创建任务"的流程
+     * @param estimatedSize 预估下载大小（字节）
+     * @return 预检查结果
+     */
+    fun preCheckDownload(estimatedSize: Long = 0L): com.pichs.download.model.PreCheckResult {
+        return networkRuleManager?.preCheckDownload(estimatedSize) 
+            ?: com.pichs.download.model.PreCheckResult.Allow
+    }
 
     // 网络恢复相关API
     fun onNetworkRestored() {
@@ -366,6 +377,40 @@ object DownloadManager {
     
     suspend fun getNetworkPausedTasks(): List<DownloadTask> {
         return networkAutoResumeManager?.getNetworkPausedTasks() ?: emptyList()
+    }
+    
+    // ==================== URL 查询 API ====================
+    
+    /**
+     * 通过 URL 查询任务（返回第一个匹配的）
+     * 用于检查某个 URL 是否已有任务
+     * @param url 下载 URL
+     * @return 匹配的任务，如果没有则返回 null
+     */
+    fun getTaskByUrl(url: String): DownloadTask? {
+        return InMemoryTaskStore.getAll().firstOrNull { it.url == url }
+    }
+    
+    /**
+     * 通过 URL 查询所有匹配的任务
+     * @param url 下载 URL
+     * @return 所有匹配的任务列表
+     */
+    fun getTasksByUrl(url: String): List<DownloadTask> {
+        return InMemoryTaskStore.getAll().filter { it.url == url }
+    }
+    
+    /**
+     * 批量通过 URL 查询任务
+     * @param urls URL 列表
+     * @return URL 到任务的映射（仅包含有任务的 URL）
+     */
+    fun getTasksByUrls(urls: List<String>): Map<String, DownloadTask> {
+        val allTasks = InMemoryTaskStore.getAll()
+        val urlSet = urls.toSet()
+        return allTasks
+            .filter { it.url in urlSet }
+            .associateBy { it.url }
     }
     
     // ==================== 网络规则 API ====================
@@ -486,29 +531,24 @@ object DownloadManager {
     // 旧的监听器API已移除，请使用 flowListener 进行响应式监听
 
     // 内部事件：创建任务时注册并派发开始事件，并启动下载
+    // 新设计：使用端已通过 preCheckDownload() 做了预检查，这里直接入队
     fun onTaskCreated(task: DownloadTask) {
         InMemoryTaskStore.put(task)
         scope.launch(dispatcherIO) {
             cacheManager?.putTask(task)
         }
         
-        // 检查网络规则
+        // 简化后的网络检查（不弹窗，因为使用端已确认）
         when (val decision = checkDownloadPermission(task)) {
             is DownloadDecision.Allow -> {
                 // 允许下载，入队并尝试调度
                 dispatcher.enqueue(task)
-                // 初始进入队列时标记为 WAITING，便于 UI 直观展示
                 updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
             }
             is DownloadDecision.NeedConfirmation -> {
-                // 需要用户确认，先暂停任务
-                updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = System.currentTimeMillis()))
-                // 请求用户确认
-                requestCellularConfirmation(listOf(task)) {
-                    // 用户确认后，入队并开始下载
-                    dispatcher.enqueue(task)
-                    updateTaskInternal(task.copy(status = DownloadStatus.WAITING, pauseReason = null, speed = 0L, updateTime = System.currentTimeMillis()))
-                }
+                // 新设计：使用端已预检查，这里直接允许（因为到达这里说明已确认）
+                dispatcher.enqueue(task)
+                updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
             }
             is DownloadDecision.Deny -> {
                 when (decision.reason) {
@@ -517,18 +557,16 @@ object DownloadManager {
                         updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR, updateTime = System.currentTimeMillis()))
                     }
                     DenyReason.WIFI_ONLY_MODE -> {
-                        // 仅 WiFi 模式，暂停任务并提示
+                        // 仅 WiFi 模式，暂停任务
                         updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE, updateTime = System.currentTimeMillis()))
-                        showWifiOnlyHint(task)
                     }
                     DenyReason.USER_CONTROLLED_NOT_ALLOWED -> {
-                        // 交给用户模式，未放行则暂停（由使用端自行判断和放行）
+                        // 使用端控制模式，暂停等待放行
                         updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = System.currentTimeMillis()))
                     }
                 }
             }
         }
-        // 高级调度器会自动处理调度
     }
 
     private fun scheduleNext() {

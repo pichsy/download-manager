@@ -1,20 +1,39 @@
 package com.pichs.download.demo
 
-import android.app.Activity
-import android.app.AlertDialog
-import android.content.Intent
-import android.provider.Settings
 import android.widget.Toast
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import com.pichs.download.core.DownloadDecisionCallback
 import com.pichs.download.model.DownloadTask
+import kotlinx.coroutines.launch
 
 /**
  * 下载决策回调实现
  * 使用端实现 UI 展示
  */
 class MyDownloadDecisionCallback(
-    private val activity: Activity
+    private val activity: FragmentActivity
 ) : DownloadDecisionCallback {
+
+    // 待执行的回调
+    private var pendingOnUseCellular: (() -> Unit)? = null
+    
+    init {
+        // 使用 Activity 的 lifecycleScope，自动随生命周期取消
+        activity.lifecycleScope.launch {
+            CellularConfirmViewModel.confirmEvent.collect { event ->
+                when (event) {
+                    is CellularConfirmEvent.Confirmed -> {
+                        pendingOnUseCellular?.invoke()
+                        pendingOnUseCellular = null
+                    }
+                    is CellularConfirmEvent.Denied -> {
+                        pendingOnUseCellular = null
+                    }
+                }
+            }
+        }
+    }
 
     override fun requestCellularConfirmation(
         pendingTasks: List<DownloadTask>,
@@ -22,27 +41,10 @@ class MyDownloadDecisionCallback(
         onConnectWifi: () -> Unit,
         onUseCellular: () -> Unit
     ) {
-        val sizeText = formatFileSize(totalSize)
-        val taskCount = pendingTasks.size
-        
-        AlertDialog.Builder(activity)
-            .setTitle("流量下载提醒")
-            .setMessage("当前使用移动网络，${taskCount}个任务共 $sizeText\n确定使用流量下载？")
-            .setNeutralButton("取消") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setNegativeButton("连接 WiFi") { _, _ -> 
-                onConnectWifi()
-                // 可选：打开 WiFi 设置
-                runCatching {
-                    activity.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-                }
-            }
-            .setPositiveButton("使用流量下载") { _, _ -> 
-                onUseCellular() 
-            }
-            .setCancelable(false)
-            .show()
+        // 保存回调
+        pendingOnUseCellular = onUseCellular
+        // 启动弹窗
+        CellularConfirmDialogActivity.start(activity, totalSize, pendingTasks.size)
     }
 
     override fun showWifiOnlyHint(task: DownloadTask?) {
@@ -60,15 +62,6 @@ class MyDownloadDecisionCallback(
                 "WiFi 已断开，$pausedCount 个下载任务已暂停", 
                 Toast.LENGTH_SHORT
             ).show()
-        }
-    }
-    
-    private fun formatFileSize(bytes: Long): String {
-        return when {
-            bytes >= 1024 * 1024 * 1024 -> "%.2f GB".format(bytes / 1024.0 / 1024.0 / 1024.0)
-            bytes >= 1024 * 1024 -> "%.2f MB".format(bytes / 1024.0 / 1024.0)
-            bytes >= 1024 -> "%.2f KB".format(bytes / 1024.0)
-            else -> "$bytes B"
         }
     }
 }

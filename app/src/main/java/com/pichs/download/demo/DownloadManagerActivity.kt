@@ -311,28 +311,25 @@ private class SimpleTaskVH(
     fun bind(task: DownloadTask) {
         currentTask = task
         
-        // 绑定图标：优先从 extras(JSON) 读取缓存；其次从首页注册表；再尝试本地已安装应用图标；最后占位色
+        // 从 extras(JSON) 读取应用信息
         data class ExtraMeta(
             val name: String? = null,
             val packageName: String? = null,
             val versionCode: Long? = null,
-            val icon: String? = null
+            val icon: String? = null,
+            val size: Long? = null
         )
-        val extraMeta: ExtraMeta? = runCatching {
+        val meta: ExtraMeta? = runCatching {
             val raw = task.extras
             if (!raw.isNullOrBlank()) com.pichs.xbase.utils.GsonUtils.fromJson(raw, ExtraMeta::class.java) else null
         }.getOrNull()
-        val meta = extraMeta ?: AppMetaRegistry.getByName(task.fileName)?.let {
-            ExtraMeta(name = it.name, packageName = it.packageName, versionCode = it.versionCode, icon = it.icon)
-        }
+        
         val ctx = itemView.context
         val iconUrl = meta?.icon
         if (!iconUrl.isNullOrBlank()) {
             Glide.with(ivCover).load(iconUrl).into(ivCover)
         } else {
-            val pkg = task.packageName
-                ?: AppUtils.getPackageNameForTask(ctx, task)
-                ?: ""
+            val pkg = meta?.packageName ?: task.packageName ?: ""
             if (pkg.isNotBlank()) {
                 runCatching { ctx.packageManager.getApplicationIcon(pkg) }
                     .onSuccess { ivCover.setImageDrawable(it) }
@@ -448,16 +445,5 @@ private class SimpleTaskVH(
         btn.isEnabled = true
     }
     
-    private fun formatFileSize(size: Long): String {
-        if (size <= 0) return "--"
-        val kb = 1024.0
-        val mb = kb * 1024
-        val gb = mb * 1024
-        return when {
-            size >= gb -> String.format("%.2f GB", size / gb)
-            size >= mb -> String.format("%.2f MB", size / mb)
-            size >= kb -> String.format("%.2f KB", size / kb)
-            else -> "${size} B"
-        }
-    }
+    private fun formatFileSize(size: Long): String = FormatUtils.formatFileSize(size)
 }

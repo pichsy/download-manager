@@ -17,6 +17,7 @@ import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
+import androidx.activity.viewModels
 import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemGridDownloadBeanBinding
 import com.pichs.download.utils.DownloadLog
@@ -31,6 +32,9 @@ import java.io.File
 class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     private val list = arrayListOf<DownloadItem>()
+    
+    // ViewModel
+    private val viewModel: MainViewModel by viewModels()
 
     // 旧的监听器已移除，现在使用Flow监听器
     private val flowListener = DownloadManager.flowListener
@@ -47,123 +51,19 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
         initListener()
 
-        val appJsonStr = assets.open("app_list.json").bufferedReader().use { it.readText() }
-        val appListBean = GsonUtils.fromJson<AppListBean>(appJsonStr, AppListBean::class.java)
-        appListBean.appList?.let { list.addAll(it) }
-        // 将首页的数据注册到进程内注册表，供其他页面优先读取
-        AppMetaRegistry.registerAll(list)
+        // 初始化 ViewModel 的应用列表，并订阅数据变化同步到本地 list
+        viewModel.loadAppListFromAssets()
+        lifecycleScope.launch {
+            viewModel.appList.collect { appList ->
+                list.clear()
+                list.addAll(appList)
+                binding.recyclerView.adapter?.notifyDataSetChanged()
+            }
+        }
 
         initRecyclerView()
         // 绑定全局监听（新方式）
         bindFlowListener()
-
-        // 模拟批量后台下载（延迟 10 秒）
-        binding.root.postDelayed({
-            simulateBatchDownload()
-        }, 10_000)
-    }
-
-    /**
-     * 模拟批量后台下载
-     * 从列表中选 5 个应用进行批量下载
-     */
-    private fun simulateBatchDownload() {
-
-        // 选 5 个包名（写死）
-        val targetPackages = listOf(
-            "com.phoenix.read",      // 红果免费短剧
-            "com.kugou.android",     // 酷狗音乐
-            "tv.danmaku.bili",       // 哔哩哔哩
-            "com.ss.android.ugc.aweme", // 抖音
-            "com.tencent.mm"         // 微信
-        )
-
-        // 从列表中筛选出这 5 个应用
-        val appsToDownload = list.filter { it.packageName in targetPackages }
-
-        if (appsToDownload.isEmpty()) {
-            DownloadLog.d("模拟批量下载", "未找到目标应用")
-            return
-        }
-
-        // 计算总大小
-        val totalSize = appsToDownload.sumOf { it.size }
-        val config = DownloadManager.getNetworkConfig()
-        val isWifi = DownloadManager.isWifiAvailable()
-
-        DownloadLog.d("模拟批量下载", "准备下载 ${appsToDownload.size} 个应用，总大小: $totalSize, WiFi: $isWifi")
-
-        // 使用端智能判断逻辑
-        when {
-            // WiFi 可用，直接下载
-            isWifi -> {
-                startBatchDownload(appsToDownload)
-            }
-            // 仅 WiFi 模式
-            config.wifiOnly -> {
-                runOnUiThread {
-                    ToastUtils.show("当前设置为仅 WiFi 下载，请连接 WiFi")
-                }
-            }
-            // 允许流量 + 不提醒
-            config.cellularPromptMode == com.pichs.download.model.CellularPromptMode.NEVER -> {
-                startBatchDownload(appsToDownload)
-            }
-            // 允许流量 + 交给用户（智能提醒）
-            config.cellularPromptMode == com.pichs.download.model.CellularPromptMode.USER_CONTROLLED -> {
-                if (CellularThresholdManager.shouldPrompt(totalSize)) {
-                    // 超过阈值，弹窗确认
-                    showBatchDownloadConfirmDialog(appsToDownload, totalSize)
-                } else {
-                    // 未超阈值，静默下载
-                    DownloadLog.d("模拟批量下载", "智能提醒：未超阈值，静默下载")
-                    DownloadManager.markCellularDownloadAllowed()
-                    startBatchDownload(appsToDownload)
-                }
-            }
-            // 允许流量 + 每次提醒
-            else -> {
-                showBatchDownloadConfirmDialog(appsToDownload, totalSize)
-            }
-        }
-    }
-
-    private fun showBatchDownloadConfirmDialog(apps: List<DownloadItem>, totalSize: Long) {
-        val sizeText = formatFileSize(totalSize)
-        android.app.AlertDialog.Builder(this).setTitle("流量下载提醒").setMessage("当前使用移动网络，将下载 ${apps.size} 个应用共 $sizeText\n确定使用流量下载？")
-            .setNeutralButton("取消") { dialog, _ -> dialog.dismiss() }.setNegativeButton("连接 WiFi") { _, _ ->
-                runCatching {
-                    startActivity(android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
-                }
-            }.setPositiveButton("使用流量") { _, _ ->
-                DownloadManager.markCellularDownloadAllowed()
-                startBatchDownload(apps)
-            }.setCancelable(false).show()
-    }
-
-    private fun startBatchDownload(apps: List<DownloadItem>) {
-        DownloadLog.d("模拟批量下载", "开始创建 ${apps.size} 个任务")
-        val dir = getExternalFilesDir(null)?.absolutePath ?: filesDir.absolutePath
-        apps.forEach { app ->
-            val fileName = if (app.name.endsWith(".apk", ignoreCase = true)) {
-                app.name
-            } else {
-                "${app.name}.apk"
-            }
-            DownloadManager.download(app.url).path(dir).fileName(fileName).estimatedSize(app.size).start()
-        }
-        runOnUiThread {
-            ToastUtils.show("批量下载已开始：${apps.size} 个应用")
-        }
-    }
-
-    private fun formatFileSize(bytes: Long): String {
-        return when {
-            bytes >= 1024 * 1024 * 1024 -> "%.2f GB".format(bytes / 1024.0 / 1024.0 / 1024.0)
-            bytes >= 1024 * 1024 -> "%.2f MB".format(bytes / 1024.0 / 1024.0)
-            bytes >= 1024 -> "%.2f KB".format(bytes / 1024.0)
-            else -> "$bytes B"
-        }
     }
 
 
@@ -178,7 +78,25 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         }
 
         binding.ivSearch.fastClick {
-            simulateBatchDownload()
+            viewModel.simulateBatchDownload()
+        }
+        
+        // 订阅 ViewModel 的 UI 事件
+        lifecycleScope.launch {
+            viewModel.uiEvent.collect { event ->
+                when (event) {
+                    is UiEvent.ShowToast -> {
+                        ToastUtils.show(event.message)
+                    }
+                    is UiEvent.ShowCellularConfirmDialog -> {
+                        // 保存待执行的下载操作
+                        CellularConfirmViewModel.pendingAction = {
+                            viewModel.confirmBatchDownload(event.apps)
+                        }
+                        CellularConfirmDialogActivity.start(this@MainActivity, event.totalSize, event.apps.size)
+                    }
+                }
+            }
         }
 
         // 设置网络决策回调
@@ -223,15 +141,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     vb.ivCover.setImageResource(R.color.purple_200)
                 }
                 vb.tvAppName.text = item.name
-                // 冷启动映射历史任务到列表项
-                runCatching {
-                    val dirBind = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-                    lifecycleScope.launch {
-                        val existingTask = DownloadManager.getAllTasks().firstOrNull {
-                            it.url == item.url && it.filePath == dirBind && normalizeName(it.fileName) == normalizeName(item.name)
-                        }
-                        if (existingTask != null) item.task = existingTask
-                    }
+                // 自动关联已有任务（使用 URL 查询）
+                if (item.task == null) {
+                    val existingTask = DownloadManager.getTaskByUrl(item.url)
+                    if (existingTask != null) item.task = existingTask
                 }
                 bindButtonUIWithInstalledAndFile(vb, item)
                 vb.btnDownload.setOnClickListener { handleClickWithInstalled(item, vb) }
@@ -380,28 +293,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     }
 
     private fun startDownload(item: DownloadItem, vb: ItemGridDownloadBeanBinding) {
-        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-        // 将图标/名称/包名/版本写入 extras(JSON)
-//        val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
-//            mapOf(
-//                "name" to (item.name ?: ""),
-//                "packageName" to (item.packageName ?: ""),
-//                "versionCode" to (item.versionCode ?: 0L),
-//                "icon" to (item.icon ?: "")
-//            )
-//        )
-        // 文件名带上 .apk 后缀
-        val fileName1 = if (item.name.isEmpty()) {
-            "1.apk"
-        } else if (item.name.endsWith(".apk", ignoreCase = true)) {
-            item.name
-        } else {
-            "${item.name}.apk"
-        }
-        // 使用新的优先级API，用户主动下载使用HIGH优先级
-        val task = DownloadManager.downloadWithPriority(item.url, DownloadPriority.HIGH).path(dir).fileName(fileName1).estimatedSize(item.size).start()
-        item.task = task
-        bindButtonUIWithInstalledAndFile(vb, item)
+        // 使用 ViewModel 的预检查流程
+        viewModel.requestDownload(item)
     }
 
     private fun openApk(task: DownloadTask) {
@@ -491,10 +384,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     // 根据任务匹配列表项并刷新
     private fun updateItemTask(task: DownloadTask) {
-        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-        val idx = list.indexOfFirst {
-            it.url == task.url && dir == task.filePath && normalizeName(it.name) == normalizeName(task.fileName)
-        }
+        val idx = list.indexOfFirst { it.url == task.url }
         if (idx >= 0) {
             list[idx].task = task
             binding.recyclerView.adapter?.notifyItemChanged(idx)
@@ -513,10 +403,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         }
         lastProgressUpdateTimeMap[task.id] = now
 
-        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-        val idx = list.indexOfFirst {
-            it.url == task.url && dir == task.filePath && normalizeName(it.name) == normalizeName(task.fileName)
-        }
+        val idx = list.indexOfFirst { it.url == task.url }
         if (idx >= 0) {
             // 更新任务数据
             list[idx].task = task

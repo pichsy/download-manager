@@ -173,6 +173,14 @@
             android:exported="true"
             android:launchMode="standard" />
 
+        <!-- 流量确认弹窗 Activity（透明主题） -->
+        <activity
+            android:name="com.pichs.download.demo.CellularConfirmDialogActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|fontScale|density|colorMode|navigation|layoutDirection|uiMode|screenLayout|smallestScreenSize"
+            android:exported="false"
+            android:launchMode="standard"
+            android:theme="@style/Theme.Dialog.Transparent" />
+
     </application>
 
 </manifest>

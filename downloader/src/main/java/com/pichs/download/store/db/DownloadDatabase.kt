@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-@Database(entities = [DownloadEntity::class, DownloadChunkEntity::class], version = 4, exportSchema = true)
+@Database(entities = [DownloadEntity::class, DownloadChunkEntity::class], version = 5, exportSchema = true)
 @TypeConverters(Converters::class)
 internal abstract class DownloadDatabase : RoomDatabase() {
     abstract fun dao(): DownloadDao
