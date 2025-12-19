@@ -189,6 +189,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiEvent.emit(UiEvent.ShowToast(msg))
         }
     }
+    
+    /**
+     * 等待网络下载：创建任务并暂停（无网络时使用）
+     * 框架层会在网络恢复后自动恢复
+     */
+    fun startDownloadAndPauseForNetwork(apps: List<DownloadItem>) {
+        viewModelScope.launch {
+            apps.forEach { app ->
+                val extrasJson = buildExtrasJson(app)
+                val fileName = buildFileName(app.name)
+
+                val task = DownloadManager.download(app.url)
+                    .path(downloadDir)
+                    .fileName(fileName)
+                    .estimatedSize(app.size)
+                    .extras(extrasJson)
+                    .start()
+
+                // 立即暂停，设置为网络异常原因
+                DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.NETWORK_ERROR)
+                app.task = task.copy(
+                    status = com.pichs.download.model.DownloadStatus.PAUSED,
+                    pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR
+                )
+            }
+
+            // 触发列表更新
+            _appList.value = _appList.value.toList()
+
+            val msg = if (apps.size == 1) "已加入下载队列，等待网络连接" else "已加入下载队列（${apps.size}个），等待网络连接"
+            _uiEvent.emit(UiEvent.ShowToast(msg))
+        }
+    }
 
     /**
      * 开始下载（带预检查）
@@ -204,7 +237,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 is com.pichs.download.model.CheckBeforeResult.NoNetwork -> {
-                    _uiEvent.emit(UiEvent.ShowToast("无网络连接"))
+                    // 无网络：弹窗让用户选择【连接WiFi】或【等待网络下载】
+                    _uiEvent.emit(UiEvent.ShowNoNetworkDialog(listOf(item), item.size))
                 }
 
                 is com.pichs.download.model.CheckBeforeResult.WifiOnly -> {
@@ -339,4 +373,7 @@ sealed class UiEvent {
 
     /** 仅WiFi模式提示弹窗 */
     data class ShowWifiOnlyDialog(val apps: List<DownloadItem>, val totalSize: Long) : UiEvent()
+    
+    /** 无网络提示弹窗 */
+    data class ShowNoNetworkDialog(val apps: List<DownloadItem>, val totalSize: Long) : UiEvent()
 }

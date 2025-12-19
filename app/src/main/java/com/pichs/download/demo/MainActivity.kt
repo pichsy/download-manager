@@ -60,7 +60,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 //            .permission(Permission.SYSTEM_ALERT_WINDOW)
 //            .request { _, _ -> }
 
-        XXPermissions.isGranted(this,
+        XXPermissions.isGranted(
+            this,
             android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
             android.Manifest.permission.WRITE_CONTACTS,
             android.Manifest.permission.READ_CONTACTS,
@@ -75,6 +76,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 DownloadLog.d("缺少必要权限，正在请求...")
             }
         }
+
         requestPermissions(
             arrayOf(
                 android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
@@ -165,6 +167,19 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             event.totalSize,
                             event.apps.size,
                             CellularConfirmDialogActivity.MODE_WIFI_ONLY
+                        )
+                    }
+
+                    is UiEvent.ShowNoNetworkDialog -> {
+                        // 无网络弹窗：点击确认后创建任务并暂停等待网络
+                        CellularConfirmViewModel.pendingAction = {
+                            viewModel.startDownloadAndPauseForNetwork(event.apps)
+                        }
+                        CellularConfirmDialogActivity.start(
+                            this@MainActivity,
+                            event.totalSize,
+                            event.apps.size,
+                            CellularConfirmDialogActivity.MODE_NO_NETWORK
                         )
                     }
                 }
@@ -322,20 +337,25 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 }
 
                 DownloadStatus.PAUSED -> {
-                    // 立即更新 UI 提供即时反馈（乐观更新）
-                    // 根据槽位可用性决定显示状态
-                    if (DownloadManager.hasAvailableSlot()) {
-                        // 有空闲槽位，立即显示下载中
-                        vb.btnDownload.setText("${task.progress}%")
-                        vb.btnDownload.setProgress(task.progress)
-                        item.task = task.copy(status = DownloadStatus.DOWNLOADING, updateTime = System.currentTimeMillis())
+                    // 检查网络
+                    if (!com.pichs.download.utils.NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                        android.widget.Toast.makeText(this@MainActivity, "网络不可用，请检查网络后重试", android.widget.Toast.LENGTH_SHORT).show()
                     } else {
-                        // 无空闲槽位，显示等待中
-                        vb.btnDownload.setText("等待中")
-                        item.task = task.copy(status = DownloadStatus.WAITING, updateTime = System.currentTimeMillis())
+                        // 立即更新 UI 提供即时反馈（乐观更新）
+                        // 根据槽位可用性决定显示状态
+                        if (DownloadManager.hasAvailableSlot()) {
+                            // 有空闲槽位，立即显示下载中
+                            vb.btnDownload.setText("${task.progress}%")
+                            vb.btnDownload.setProgress(task.progress)
+                            item.task = task.copy(status = DownloadStatus.DOWNLOADING, updateTime = System.currentTimeMillis())
+                        } else {
+                            // 无空闲槽位，显示等待中
+                            vb.btnDownload.setText("等待中")
+                            item.task = task.copy(status = DownloadStatus.WAITING, updateTime = System.currentTimeMillis())
+                        }
+                        vb.btnDownload.isEnabled = true
+                        DownloadManager.resume(task.id)
                     }
-                    vb.btnDownload.isEnabled = true
-                    DownloadManager.resume(task.id)
                 }
 
                 DownloadStatus.WAITING, DownloadStatus.PENDING -> {

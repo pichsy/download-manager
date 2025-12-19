@@ -130,10 +130,10 @@ class AppDetailActivity : AppCompatActivity() {
                     doStartDownload(dir)
                 }
                 is com.pichs.download.model.CheckBeforeResult.NoNetwork -> {
-                    android.widget.Toast.makeText(this@AppDetailActivity, "无网络连接", android.widget.Toast.LENGTH_SHORT).show()
+                    showNoNetworkDialog(dir)
                 }
                 is com.pichs.download.model.CheckBeforeResult.WifiOnly -> {
-                    android.widget.Toast.makeText(this@AppDetailActivity, "当前设置为仅 WiFi 下载，请连接 WiFi", android.widget.Toast.LENGTH_SHORT).show()
+                    showWifiOnlyDialog(dir)
                 }
                 is com.pichs.download.model.CheckBeforeResult.NeedConfirmation -> {
                     showCellularConfirmDialog(dir, result.estimatedSize)
@@ -148,6 +148,20 @@ class AppDetailActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+    
+    private fun showNoNetworkDialog(dir: String) {
+        CellularConfirmViewModel.pendingAction = {
+            doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.NETWORK_ERROR)
+        }
+        CellularConfirmDialogActivity.start(this, size, 1, CellularConfirmDialogActivity.MODE_NO_NETWORK)
+    }
+    
+    private fun showWifiOnlyDialog(dir: String) {
+        CellularConfirmViewModel.pendingAction = {
+            doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE)
+        }
+        CellularConfirmDialogActivity.start(this, size, 1, CellularConfirmDialogActivity.MODE_WIFI_ONLY)
     }
     
     private fun showCellularConfirmDialog(dir: String, totalSize: Long) {
@@ -185,6 +199,37 @@ class AppDetailActivity : AppCompatActivity() {
             .extras(extrasJson)
             .start()
         bindButtonUI(task)
+    }
+    
+    private fun doStartDownloadAndPause(dir: String, pauseReason: com.pichs.download.model.PauseReason) {
+        val storeVC = CatalogRepository.getStoreVersionCode(this, packageNameStr) ?: 0L
+        val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
+            mapOf(
+                "name" to (name),
+                "packageName" to (packageNameStr),
+                "versionCode" to (storeVC),
+                "icon" to (icon ?: ""),
+                "size" to (size)
+            )
+        )
+        val newTask = DownloadManager.download(url)
+            .path(dir)
+            .fileName(name)
+            .estimatedSize(size)
+            .extras(extrasJson)
+            .start()
+        
+        // 立即暂停，设置暂停原因
+        DownloadManager.pauseTask(newTask.id, pauseReason)
+        task = newTask.copy(status = DownloadStatus.PAUSED, pauseReason = pauseReason)
+        bindButtonUI(task)
+        
+        val msg = when (pauseReason) {
+            com.pichs.download.model.PauseReason.NETWORK_ERROR -> "已加入下载队列，等待网络连接"
+            com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE -> "已加入下载队列，等待WiFi连接"
+            else -> "已加入下载队列"
+        }
+        android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()
     }
     
     private fun startOrRestartDownload(dir: String) {

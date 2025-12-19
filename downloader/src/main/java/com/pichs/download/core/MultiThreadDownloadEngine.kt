@@ -51,9 +51,29 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 DownloadLog.d("MultiThreadDownloadEngine", "下载被取消: ${task.id}")
                 // ignore
             } catch (e: Throwable) {
-                DownloadLog.e("MultiThreadDownloadEngine", "下载失败: ${task.id}", e)
-                val failed = task.copy(status = DownloadStatus.FAILED, updateTime = System.currentTimeMillis())
-                DownloadManager.updateTaskInternal(failed)
+                DownloadLog.e("MultiThreadDownloadEngine", "下载异常: ${task.id}", e)
+                
+                // 根据异常类型决定任务状态
+                val pauseReason = com.pichs.download.utils.ErrorClassifier.getPauseReason(e)
+                if (pauseReason != null) {
+                    // 网络/存储异常 → 暂停，可自动恢复
+                    val paused = task.copy(
+                        status = DownloadStatus.PAUSED,
+                        pauseReason = pauseReason,
+                        speed = 0L,
+                        updateTime = System.currentTimeMillis()
+                    )
+                    DownloadManager.updateTaskInternal(paused)
+                    DownloadLog.d("MultiThreadDownloadEngine", "任务因 $pauseReason 暂停: ${task.id}")
+                } else {
+                    // 其他异常 → 真正的失败
+                    val failed = task.copy(
+                        status = DownloadStatus.FAILED,
+                        updateTime = System.currentTimeMillis()
+                    )
+                    DownloadManager.updateTaskInternal(failed)
+                    DownloadLog.d("MultiThreadDownloadEngine", "任务失败: ${task.id}")
+                }
             } finally {
                 // 关键修复：任务结束（无论成功、失败还是取消）都必须移除 Controller，防止内存泄漏
                 controllers.remove(task.id)

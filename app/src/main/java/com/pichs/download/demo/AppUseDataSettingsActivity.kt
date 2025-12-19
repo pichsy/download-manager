@@ -25,7 +25,9 @@ class AppUseDataSettingsActivity : BaseActivity<ActivityAppUseDataSettingsBindin
             val newChecked = !binding.switchPreCheck.isChecked
             binding.switchPreCheck.setChecked(newChecked)
             val config = DownloadManager.getNetworkConfig()
+            com.pichs.download.utils.DownloadLog.d("Settings", "切换前置检查: $newChecked, 当前config: $config")
             DownloadManager.setNetworkConfig(config.copy(checkBeforeCreate = newChecked))
+            com.pichs.download.utils.DownloadLog.d("Settings", "保存后config: ${DownloadManager.getNetworkConfig()}")
         }
 
         // 监听网络模式切换（仅 WiFi / 允许流量）
@@ -65,6 +67,7 @@ class AppUseDataSettingsActivity : BaseActivity<ActivityAppUseDataSettingsBindin
 
     private fun loadConfig() {
         val config = DownloadManager.getNetworkConfig()
+        com.pichs.download.utils.DownloadLog.d("Settings", "加载配置: $config")
         
         // 设置前置检查开关
         binding.switchPreCheck.setChecked(config.checkBeforeCreate)

@@ -635,6 +635,14 @@ object DownloadManager {
                         tasks.forEach { task ->
                             updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR, updateTime = System.currentTimeMillis()))
                         }
+                        // 调用回调通知使用端（使用端可以显示 Toast）
+                        networkRuleManager?.decisionCallback?.requestConfirmation(
+                            scenario = NetworkScenario.NO_NETWORK,
+                            pendingTasks = tasks,
+                            totalSize = totalSize,
+                            onConnectWifi = { },
+                            onUseCellular = { }
+                        )
                     }
                     DenyReason.WIFI_ONLY_MODE -> {
                         // 仅 WiFi 模式，暂停所有任务

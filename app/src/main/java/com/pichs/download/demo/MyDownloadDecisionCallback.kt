@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.pichs.download.core.DownloadDecisionCallback
+import com.pichs.download.core.NetworkScenario
 import com.pichs.download.model.DownloadTask
 import kotlinx.coroutines.launch
 
@@ -39,17 +40,43 @@ class MyDownloadDecisionCallback(
         }
     }
 
-    override fun requestCellularConfirmation(
+    /**
+     * 根据场景决定如何展示 UI
+     */
+    override fun requestConfirmation(
+        scenario: NetworkScenario,
         pendingTasks: List<DownloadTask>,
         totalSize: Long,
         onConnectWifi: () -> Unit,
         onUseCellular: () -> Unit
     ) {
-        // 保存回调
-        pendingOnUseCellular = onUseCellular
-        pendingOnConnectWifi = onConnectWifi
-        // 启动弹窗
-        CellularConfirmDialogActivity.start(activity, totalSize, pendingTasks.size)
+        when (scenario) {
+            NetworkScenario.CELLULAR_CONFIRMATION -> {
+                // 流量确认：弹窗
+                pendingOnUseCellular = onUseCellular
+                pendingOnConnectWifi = onConnectWifi
+                CellularConfirmDialogActivity.start(activity, totalSize, pendingTasks.size)
+            }
+            NetworkScenario.WIFI_ONLY_MODE -> {
+                // 仅WiFi模式：使用端可以选择弹窗或Toast
+                pendingOnUseCellular = onUseCellular
+                pendingOnConnectWifi = onConnectWifi
+                CellularConfirmDialogActivity.start(
+                    activity, totalSize, pendingTasks.size, 
+                    CellularConfirmDialogActivity.MODE_WIFI_ONLY
+                )
+            }
+            NetworkScenario.NO_NETWORK -> {
+                // 无网络：Toast 提示
+                if (pendingTasks.isNotEmpty()) {
+                    Toast.makeText(
+                        activity,
+                        "等待网络下载",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
     }
 
     override fun showWifiOnlyHint(task: DownloadTask?) {
@@ -70,3 +97,4 @@ class MyDownloadDecisionCallback(
         }
     }
 }
+

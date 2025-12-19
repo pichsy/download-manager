@@ -26,6 +26,8 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         const val MODE_CELLULAR = 0
         /** 仅WiFi模式 */
         const val MODE_WIFI_ONLY = 1
+        /** 无网络模式 */
+        const val MODE_NO_NETWORK = 2
         
         /**
          * 启动确认弹窗（默认流量确认模式）
@@ -77,14 +79,22 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         val sizeText = formatFileSize(totalSize)
         val countText = if (taskCount == 1) "1 个应用" else "${taskCount} 个应用"
         
-        if (mode == MODE_WIFI_ONLY) {
-            // 仅WiFi模式
-            binding.tvMessage.text = "当前未连接WiFi，将下载 $countText 共 $sizeText"
-            binding.btnUseCellular.text = "等待WiFi下载"
-        } else {
-            // 流量确认模式
-            binding.tvMessage.text = "当前使用移动网络，将下载 $countText 共 $sizeText\n确定使用流量下载？"
-            binding.btnUseCellular.text = "使用流量下载"
+        when (mode) {
+            MODE_NO_NETWORK -> {
+                // 无网络模式
+                binding.tvMessage.text = "暂无网络连接\n将下载 $countText 共 $sizeText"
+                binding.btnUseCellular.text = "等待网络下载"
+            }
+            MODE_WIFI_ONLY -> {
+                // 仅WiFi模式
+                binding.tvMessage.text = "当前未连接WiFi，将下载 $countText 共 $sizeText"
+                binding.btnUseCellular.text = "等待WiFi下载"
+            }
+            else -> {
+                // 流量确认模式
+                binding.tvMessage.text = "当前使用移动网络，将下载 $countText 共 $sizeText\n确定使用流量下载？"
+                binding.btnUseCellular.text = "使用流量下载"
+            }
         }
         
         // 取消按钮

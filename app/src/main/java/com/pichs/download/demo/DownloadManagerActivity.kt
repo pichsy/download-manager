@@ -37,21 +37,33 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
                     // 信任框架回调 onTaskPaused 来更新 UI
                 }
                 DownloadStatus.PAUSED -> {
-                    // 立即更新 UI 提供即时反馈（乐观更新）
-                    // 根据槽位可用性决定显示状态
-                    val targetStatus = if (DownloadManager.hasAvailableSlot()) {
-                        DownloadStatus.DOWNLOADING
+                    // 检查网络
+                    if (!com.pichs.download.utils.NetworkUtils.isNetworkAvailable(this)) {
+                        android.widget.Toast.makeText(this, "网络不可用，请检查网络后重试", android.widget.Toast.LENGTH_SHORT).show()
                     } else {
-                        DownloadStatus.WAITING
+                        // 立即更新 UI 提供即时反馈（乐观更新）
+                        // 根据槽位可用性决定显示状态
+                        val targetStatus = if (DownloadManager.hasAvailableSlot()) {
+                            DownloadStatus.DOWNLOADING
+                        } else {
+                            DownloadStatus.WAITING
+                        }
+                        updateSingleImmediate(task.id, targetStatus)
+                        DownloadManager.resume(task.id)
                     }
-                    updateSingleImmediate(task.id, targetStatus)
-                    DownloadManager.resume(task.id)
                 }
                 DownloadStatus.PENDING, DownloadStatus.WAITING -> {
                     DownloadManager.pause(task.id)
                     // 信任框架回调 onTaskPaused 来更新 UI
                 }
-                DownloadStatus.FAILED -> DownloadManager.resume(task.id)
+                DownloadStatus.FAILED -> {
+                    // 检查网络
+                    if (!com.pichs.download.utils.NetworkUtils.isNetworkAvailable(this)) {
+                        android.widget.Toast.makeText(this, "网络不可用，请检查网络后重试", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        DownloadManager.resume(task.id)
+                    }
+                }
                 else -> {}
             }
         })
@@ -117,7 +129,8 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
             all.forEach { task ->
                 when (task.status) {
                     DownloadStatus.COMPLETED -> completed.add(task)
-                    DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.PENDING, DownloadStatus.WAITING -> downloading.add(task)
+                    // FAILED 也放在下载中列表，方便用户重试
+                    DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.PENDING, DownloadStatus.WAITING, DownloadStatus.FAILED -> downloading.add(task)
                     else -> {}
                 }
             }

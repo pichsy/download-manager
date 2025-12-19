@@ -22,6 +22,7 @@ class NetworkRuleManager(
         private const val PREFS_NAME = "download_network_config"
         private const val KEY_WIFI_ONLY = "wifi_only"
         private const val KEY_CELLULAR_PROMPT_MODE = "cellular_prompt_mode"
+        private const val KEY_CHECK_BEFORE_CREATE = "check_before_create"
     }
     
     private val prefs: SharedPreferences = 
@@ -47,13 +48,15 @@ class NetworkRuleManager(
         val promptMode = promptModeStr?.let { 
             runCatching { CellularPromptMode.valueOf(it) }.getOrNull() 
         } ?: CellularPromptMode.ALWAYS
-        return NetworkDownloadConfig(wifiOnly, promptMode)
+        val checkBeforeCreate = prefs.getBoolean(KEY_CHECK_BEFORE_CREATE, true)
+        return NetworkDownloadConfig(wifiOnly, promptMode, checkBeforeCreate)
     }
     
     private fun saveConfig(config: NetworkDownloadConfig) {
         prefs.edit()
             .putBoolean(KEY_WIFI_ONLY, config.wifiOnly)
             .putString(KEY_CELLULAR_PROMPT_MODE, config.cellularPromptMode.name)
+            .putBoolean(KEY_CHECK_BEFORE_CREATE, config.checkBeforeCreate)
             .apply()
         DownloadLog.d(TAG, "配置已保存: $config")
     }
@@ -306,14 +309,33 @@ class NetworkRuleManager(
     fun onWifiDisconnected() {
         DownloadLog.d(TAG, "WiFi 已断开")
         
+        // 首先检查是否有流量网络可用
+        val isCellular = NetworkUtils.isCellularAvailable(context)
+        
         if (config.wifiOnly) {
             // 仅 WiFi 模式，暂停所有任务
             val count = pauseAllForWifiUnavailable()
             mainHandler.post {
                 decisionCallback?.showWifiDisconnectedHint(count)
             }
+        } else if (!isCellular) {
+            // WiFi断开且无流量，暂停任务等待网络恢复
+            val count = pauseAllForNetworkUnavailable()
+            val tasks = getActiveDownloadTasks()
+            val totalSize = tasks.sumOf { it.totalSize }
+            // 通知使用端，让使用端决定如何展示（Toast、弹窗或不处理）
+            mainHandler.post {
+                decisionCallback?.requestConfirmation(
+                    scenario = NetworkScenario.NO_NETWORK,
+                    pendingTasks = tasks,
+                    totalSize = totalSize,
+                    onConnectWifi = { /* 用户选择去连接WiFi */ },
+                    onUseCellular = { /* 等待网络后自动恢复 */ }
+                )
+            }
+            DownloadLog.d(TAG, "WiFi断开且无流量，任务已暂停等待网络恢复")
         } else if (!CellularSessionManager.isCellularDownloadAllowed() && config.cellularPromptMode == CellularPromptMode.ALWAYS) {
-            // 允许流量 + 未放行 + 每次提醒，需要确认
+            // 有流量 + 未放行 + 每次提醒，需要确认
             val activeTasks = getActiveDownloadTasks()
             if (activeTasks.isNotEmpty()) {
                 requestCellularConfirmation(activeTasks) {
@@ -321,7 +343,7 @@ class NetworkRuleManager(
                 }
             }
         }
-        // else: 已放行 / 不提醒 / 交给用户，继续下载或由使用端处理
+        // else: 有流量 + 已放行/不提醒，继续下载
     }
     
     private fun getActiveDownloadTasks(): List<DownloadTask> {
@@ -336,6 +358,14 @@ class NetworkRuleManager(
         val tasks = getActiveDownloadTasks()
         tasks.forEach { task ->
             downloadManager.pauseTask(task.id, PauseReason.WIFI_UNAVAILABLE)
+        }
+        return tasks.size
+    }
+    
+    private fun pauseAllForNetworkUnavailable(): Int {
+        val tasks = getActiveDownloadTasks()
+        tasks.forEach { task ->
+            downloadManager.pauseTask(task.id, PauseReason.NETWORK_ERROR)
         }
         return tasks.size
     }
