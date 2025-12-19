@@ -47,8 +47,64 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         binding.ivDownloadSettings.fastClick {
             startActivity(Intent(this, AppUseDataSettingsActivity::class.java))
         }
-        XXPermissions.with(this).unchecked().permission(Permission.MANAGE_EXTERNAL_STORAGE).permission(Permission.REQUEST_INSTALL_PACKAGES).request { _, _ -> }
 
+
+//        XXPermissions.with(this).unchecked()
+//            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
+//            .permission(Permission.REQUEST_INSTALL_PACKAGES)
+//            .permission(Permission.READ_CONTACTS)
+//            .permission(Permission.READ_SMS)
+//            .permission(Permission.READ_CALL_LOG)
+//            .permission(Permission.WRITE_CONTACTS)
+//            .permission(Permission.WRITE_CALL_LOG)
+//            .permission(Permission.SYSTEM_ALERT_WINDOW)
+//            .request { _, _ -> }
+
+        XXPermissions.isGranted(this,
+            android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+            android.Manifest.permission.WRITE_CONTACTS,
+            android.Manifest.permission.READ_CONTACTS,
+            android.Manifest.permission.CALL_PHONE,
+            android.Manifest.permission.READ_CALL_LOG,
+            android.Manifest.permission.WRITE_CALL_LOG,
+            android.Manifest.permission.READ_SMS,
+        ).let { granted ->
+            if (granted) {
+                DownloadLog.d("所有权限已授予")
+            } else {
+                DownloadLog.d("缺少必要权限，正在请求...")
+            }
+        }
+        requestPermissions(
+            arrayOf(
+                android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+                android.Manifest.permission.WRITE_CONTACTS,
+                android.Manifest.permission.READ_CONTACTS,
+                android.Manifest.permission.CALL_PHONE,
+                android.Manifest.permission.READ_CALL_LOG,
+                android.Manifest.permission.WRITE_CALL_LOG,
+                android.Manifest.permission.READ_SMS,
+            ),
+            1002
+        )
+
+//        XXPermissions.with(this@MainActivity)
+//            .unchecked()
+//            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
+////            .permission(Permission.WRITE_EXTERNAL_STORAGE)
+////            .permission(Permission.READ_EXTERNAL_STORAGE)
+//
+//            .permission(Permission.CALL_PHONE)
+//            .permission(Permission.READ_CALL_LOG)
+//            .permission(Permission.WRITE_CALL_LOG)
+//
+//            .permission(Permission.READ_CONTACTS)
+//            .permission(Permission.WRITE_CONTACTS)
+//
+//            .permission(Permission.READ_SMS)
+//            .request { grantedList, deniedList ->
+//
+//            }
         initListener()
 
         // 初始化 ViewModel 的应用列表，并订阅数据变化同步到本地 list
@@ -64,6 +120,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         initRecyclerView()
         // 绑定全局监听（新方式）
         bindFlowListener()
+
+
     }
 
 
