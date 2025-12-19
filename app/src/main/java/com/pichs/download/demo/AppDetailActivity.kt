@@ -123,22 +123,22 @@ class AppDetailActivity : AppCompatActivity() {
      */
     private fun requestDownloadWithPreCheck(dir: String) {
         lifecycleScope.launch {
-            val result = DownloadManager.preCheckDownload(size)
+            val result = DownloadManager.checkBeforeCreate(size)
             
             when (result) {
-                is com.pichs.download.model.PreCheckResult.Allow -> {
+                is com.pichs.download.model.CheckBeforeResult.Allow -> {
                     doStartDownload(dir)
                 }
-                is com.pichs.download.model.PreCheckResult.NoNetwork -> {
+                is com.pichs.download.model.CheckBeforeResult.NoNetwork -> {
                     android.widget.Toast.makeText(this@AppDetailActivity, "无网络连接", android.widget.Toast.LENGTH_SHORT).show()
                 }
-                is com.pichs.download.model.PreCheckResult.WifiOnly -> {
+                is com.pichs.download.model.CheckBeforeResult.WifiOnly -> {
                     android.widget.Toast.makeText(this@AppDetailActivity, "当前设置为仅 WiFi 下载，请连接 WiFi", android.widget.Toast.LENGTH_SHORT).show()
                 }
-                is com.pichs.download.model.PreCheckResult.NeedConfirmation -> {
+                is com.pichs.download.model.CheckBeforeResult.NeedConfirmation -> {
                     showCellularConfirmDialog(dir, result.estimatedSize)
                 }
-                is com.pichs.download.model.PreCheckResult.UserControlled -> {
+                is com.pichs.download.model.CheckBeforeResult.UserControlled -> {
                     if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
                         showCellularConfirmDialog(dir, result.estimatedSize)
                     } else {
@@ -198,6 +198,7 @@ class AppDetailActivity : AppCompatActivity() {
             binding.btnDownload.isEnabled = true
             return
         }
+        
         when (task?.status) {
             DownloadStatus.DOWNLOADING -> {
                 binding.btnDownload.setText("${task.progress}%")

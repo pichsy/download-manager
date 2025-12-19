@@ -36,13 +36,11 @@ internal class DownloadScheduler(
             }
         }
         
-        // 启动调度循环
-        scope.launch {
-            while (isActive) {
-                scheduleNextInternal()
-                delay(1000) // 每秒检查一次
-            }
-        }
+        // 不需要轮询循环：调度由事件驱动
+        // - 任务完成/失败/暂停 → updateTaskInternal() 调用 scheduleNext()
+        // - 任务恢复 → resume() 调用 scheduleNext()
+        // - 新任务入队 → enqueue() 调用 scheduleNext()
+        // - 网络/电池变化 → 上面的 collect 处理
     }
     
     fun stop() {
@@ -75,8 +73,9 @@ internal class DownloadScheduler(
     }
     
     // 公开调度方法供 Manager 调用
+    // 使用 UNDISPATCHED 确保立即开始执行，不等待调度器
     fun trySchedule() {
-        scope.launch {
+        scope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
             scheduleNextInternal()
         }
     }

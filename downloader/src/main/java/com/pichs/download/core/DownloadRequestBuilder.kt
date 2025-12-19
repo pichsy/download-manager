@@ -74,6 +74,38 @@ class DownloadRequestBuilder {
         
         return createNewTask(targetName)
     }
+    
+    /**
+     * 只创建任务对象，不触发后续检查（供批量下载使用）
+     */
+    fun buildTask(): DownloadTask {
+        require(url.isNotBlank()) { "[DownloadRequestBuilder] url is blank" }
+        val targetName = fileName ?: url.substringAfterLast('/').substringBefore('?')
+        
+        val task = DownloadTask(
+            id = UUID.randomUUID().toString(),
+            url = url,
+            fileName = targetName,
+            filePath = path,
+            totalSize = 0L,
+            currentSize = 0L,
+            progress = 0,
+            speed = 0L,
+            status = DownloadStatus.PENDING,
+            priority = priority,
+            createTime = System.currentTimeMillis(),
+            updateTime = System.currentTimeMillis(),
+            extras = extras,
+            estimatedSize = estimatedSize
+        )
+
+        // 设置任务特定头部
+        if (headers.isNotEmpty()) {
+            DownloadManager.setTaskHeaders(task.id, headers)
+        }
+        
+        return task
+    }
 
     private fun createNewTask(targetName: String): DownloadTask {
         val task = DownloadTask(
@@ -99,7 +131,7 @@ class DownloadRequestBuilder {
         }
 
         // 创建任务
-        DownloadManager.onTaskCreated(task)
+        DownloadManager.checkAfterCreate(task)
         return task
     }
 

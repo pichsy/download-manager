@@ -5,6 +5,7 @@ import com.pichs.download.config.Retention
 // 旧的监听器已移除，现在使用Flow监听器
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
+import com.pichs.download.model.NetworkDownloadConfig
 import com.pichs.download.store.InMemoryTaskStore
 import com.pichs.download.store.TaskRepository
 import com.pichs.download.utils.NetworkUtils
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 object DownloadManager {
 
+    private const val TAG = "DownloadManager"
     private val config = DownloadConfig()
     
     // Flow监听器（新方式）
@@ -239,6 +241,16 @@ object DownloadManager {
     fun getUrgentTasks(): List<DownloadTask> = dispatcher.getUrgentTasks()
     fun getNormalTasks(): List<DownloadTask> = dispatcher.getNormalTasks()
     fun getBackgroundTasks(): List<DownloadTask> = dispatcher.getBackgroundTasks()
+    
+    /**
+     * 检查是否有可用的下载槽位
+     * @return true 表示可以立即开始下载，false 表示需要排队等待
+     */
+    fun hasAvailableSlot(): Boolean {
+        val running = dispatcher.getRunningTasks().size
+        val limit = dispatcher.getCurrentConcurrencyLimit()
+        return running < limit
+    }
 
     private fun normalizeName(name: String): String = name.substringBeforeLast('.').lowercase()
 
@@ -263,6 +275,28 @@ object DownloadManager {
     // 新增：创建后台任务
     fun downloadBackground(url: String): DownloadRequestBuilder {
         return DownloadRequestBuilder().url(url).priority(DownloadPriority.LOW.value)
+    }
+    
+    // ==================== 批量下载 API ====================
+    
+    /**
+     * 批量创建下载任务
+     * @param builders 任务构建器列表
+     * @return 创建的任务列表
+     */
+    fun startTasks(builders: List<DownloadRequestBuilder>): List<DownloadTask> {
+        // 先创建所有任务对象（不触发检查）
+        val tasks = builders.map { builder ->
+            builder.buildTask()
+        }
+        
+        // 计算总大小
+        val totalSize = tasks.sumOf { it.estimatedSize }
+        
+        // 批量调用创建后检查
+        checkAfterCreate(totalSize, tasks)
+        
+        return tasks
     }
 
     // 批量操作
@@ -356,14 +390,14 @@ object DownloadManager {
     }
     
     /**
-     * 预检查下载权限（在创建任务前调用）
-     * 用于实现"先决策后创建任务"的流程
-     * @param estimatedSize 预估下载大小（字节）
-     * @return 预检查结果
+     * 创建前检查
+     * @param totalSize 总大小
+     * @param count 任务数量
+     * @return 检查结果
      */
-    fun preCheckDownload(estimatedSize: Long = 0L): com.pichs.download.model.PreCheckResult {
-        return networkRuleManager?.preCheckDownload(estimatedSize) 
-            ?: com.pichs.download.model.PreCheckResult.Allow
+    fun checkBeforeCreate(totalSize: Long, count: Int = 1): com.pichs.download.model.CheckBeforeResult {
+        return networkRuleManager?.checkBeforeCreate(totalSize, count) 
+            ?: com.pichs.download.model.CheckBeforeResult.Allow
     }
 
     // 网络恢复相关API
@@ -530,43 +564,99 @@ object DownloadManager {
 
     // 旧的监听器API已移除，请使用 flowListener 进行响应式监听
 
-    // 内部事件：创建任务时注册并派发开始事件，并启动下载
-    // 新设计：使用端已通过 preCheckDownload() 做了预检查，这里直接入队
-    fun onTaskCreated(task: DownloadTask) {
-        InMemoryTaskStore.put(task)
-        scope.launch(dispatcherIO) {
-            cacheManager?.putTask(task)
+    /**
+     * 创建后检查（任务创建后调用）
+     * @param totalSize 总大小
+     * @param tasks 任务列表
+     */
+    fun checkAfterCreate(totalSize: Long, tasks: List<DownloadTask>) {
+        // 保存所有任务到内存和数据库
+        tasks.forEach { task ->
+            InMemoryTaskStore.put(task)
+            scope.launch(dispatcherIO) {
+                cacheManager?.putTask(task)
+            }
         }
         
-        // 简化后的网络检查（不弹窗，因为使用端已确认）
-        when (val decision = checkDownloadPermission(task)) {
-            is DownloadDecision.Allow -> {
-                // 允许下载，入队并尝试调度
+        val config = networkRuleManager?.config ?: NetworkDownloadConfig()
+        
+        // 如果未启用创建后检查，直接入队
+        if (!config.checkAfterCreate) {
+            tasks.forEach { task ->
                 dispatcher.enqueue(task)
                 updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
             }
+            return
+        }
+        
+        // 检查网络规则（使用第一个任务的权限判断，因为都是同一批下载）
+        val firstTask = tasks.firstOrNull() ?: return
+        when (val decision = checkDownloadPermission(firstTask)) {
+            is DownloadDecision.Allow -> {
+                // 允许下载，全部入队
+                tasks.forEach { task ->
+                    dispatcher.enqueue(task)
+                    updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
+                }
+            }
             is DownloadDecision.NeedConfirmation -> {
-                // 新设计：使用端已预检查，这里直接允许（因为到达这里说明已确认）
-                dispatcher.enqueue(task)
-                updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
+                // 需要确认：暂停所有任务，通过回调弹窗
+                tasks.forEach { task ->
+                    updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = System.currentTimeMillis()))
+                }
+                
+                // 调用决策回调弹窗
+                networkRuleManager?.decisionCallback?.requestCellularConfirmation(
+                    pendingTasks = tasks,
+                    totalSize = totalSize,
+                    onConnectWifi = {
+                        // 用户选择连接WiFi，任务保持暂停状态
+                        DownloadLog.d(TAG, "用户选择连接WiFi，${tasks.size} 个任务保持暂停")
+                    },
+                    onUseCellular = {
+                        // 用户确认使用流量，标记放行并恢复所有任务
+                        CellularSessionManager.allowCellularDownload()
+                        tasks.forEach { task -> resume(task.id) }
+                        DownloadLog.d(TAG, "用户确认使用流量，${tasks.size} 个任务恢复下载")
+                    }
+                ) ?: run {
+                    // 未设置回调，直接放行
+                    DownloadLog.w(TAG, "未设置 decisionCallback，直接放行 ${tasks.size} 个任务")
+                    tasks.forEach { task ->
+                        dispatcher.enqueue(task)
+                        updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
+                    }
+                }
             }
             is DownloadDecision.Deny -> {
                 when (decision.reason) {
                     DenyReason.NO_NETWORK -> {
-                        // 无网络，暂停任务
-                        updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR, updateTime = System.currentTimeMillis()))
+                        // 无网络，暂停所有任务
+                        tasks.forEach { task ->
+                            updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR, updateTime = System.currentTimeMillis()))
+                        }
                     }
                     DenyReason.WIFI_ONLY_MODE -> {
-                        // 仅 WiFi 模式，暂停任务
-                        updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE, updateTime = System.currentTimeMillis()))
+                        // 仅 WiFi 模式，暂停所有任务
+                        tasks.forEach { task ->
+                            updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE, updateTime = System.currentTimeMillis()))
+                        }
+                        networkRuleManager?.decisionCallback?.showWifiOnlyHint(firstTask)
                     }
                     DenyReason.USER_CONTROLLED_NOT_ALLOWED -> {
                         // 使用端控制模式，暂停等待放行
-                        updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = System.currentTimeMillis()))
+                        tasks.forEach { task ->
+                            updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = System.currentTimeMillis()))
+                        }
                     }
                 }
             }
         }
+    }
+    
+    /** 单个任务创建后检查（便捷方法） */
+    fun checkAfterCreate(task: DownloadTask) {
+        checkAfterCreate(task.estimatedSize, listOf(task))
     }
 
     private fun scheduleNext() {
@@ -594,10 +684,14 @@ object DownloadManager {
         }
 
         InMemoryTaskStore.put(task)
+        
+        // 立即同步更新 StateFlow（从内存读取，无延迟）
+        // 这是关键修复：确保 UI 监听的 tasksState 立即响应
+        _tasksState.value = InMemoryTaskStore.getAll().sortedBy { it.createTime }
+        
+        // 异步持久化到数据库（不阻塞 UI 更新）
         scope.launch(dispatcherIO) {
             cacheManager?.putTask(task)
-            // 更新 StateFlow
-            _tasksState.value = cacheManager?.getAllTasks()?.sortedBy { it.createTime } ?: emptyList()
         }
         // 当任务结束或被取消/暂停时，从运行集中移除并尝试补位
         if (task.status == DownloadStatus.COMPLETED ||

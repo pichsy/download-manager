@@ -92,48 +92,55 @@ class NetworkRuleManager(
     // ==================== 预检查 API（先决策后创建任务） ====================
     
     /**
-     * 预检查下载权限（在创建任务前调用）
+     * 创建前检查（在创建任务前调用）
      * 用于实现"先决策后创建任务"的流程
-     * @param estimatedSize 预估下载大小（字节）
-     * @return 预检查结果
+     * @param totalSize 预估下载总大小（字节）
+     * @param count 任务数量
+     * @return 检查结果
      */
-    fun preCheckDownload(estimatedSize: Long = 0L): PreCheckResult {
+    fun checkBeforeCreate(totalSize: Long, count: Int = 1): CheckBeforeResult {
+        // 如果未启用创建前检查，直接返回 Allow
+        if (!config.checkBeforeCreate) {
+            DownloadLog.d(TAG, "创建前检查未启用，直接允许下载")
+            return CheckBeforeResult.Allow
+        }
+        
         val isWifi = NetworkUtils.isWifiAvailable(context)
         val isCellular = NetworkUtils.isCellularAvailable(context)
         
-        DownloadLog.d(TAG, "预检查下载权限: wifi=$isWifi, cellular=$isCellular, size=$estimatedSize")
+        DownloadLog.d(TAG, "创建前检查: wifi=$isWifi, cellular=$isCellular, size=$totalSize, count=$count")
         
         // 无网络
         if (!isWifi && !isCellular) {
-            return PreCheckResult.NoNetwork
+            return CheckBeforeResult.NoNetwork
         }
         
         // WiFi 可用，直接允许
         if (isWifi) {
-            return PreCheckResult.Allow
+            return CheckBeforeResult.Allow
         }
         
         // 仅 WiFi 模式
         if (config.wifiOnly) {
-            return PreCheckResult.WifiOnly
+            return CheckBeforeResult.WifiOnly
         }
         
         // 已经临时放行
         if (CellularSessionManager.isCellularDownloadAllowed()) {
-            return PreCheckResult.Allow
+            return CheckBeforeResult.Allow
         }
         
         // 根据提醒模式决定
         return when (config.cellularPromptMode) {
             CellularPromptMode.ALWAYS -> {
-                PreCheckResult.NeedConfirmation(estimatedSize)
+                CheckBeforeResult.NeedConfirmation(totalSize)
             }
             CellularPromptMode.NEVER -> {
-                PreCheckResult.Allow
+                CheckBeforeResult.Allow
             }
             CellularPromptMode.USER_CONTROLLED -> {
                 // 交给使用端判断阈值
-                PreCheckResult.UserControlled(estimatedSize)
+                CheckBeforeResult.UserControlled(totalSize)
             }
         }
     }

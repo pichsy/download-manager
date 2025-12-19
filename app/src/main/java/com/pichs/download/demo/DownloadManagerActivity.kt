@@ -34,31 +34,22 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
             when (task.status) {
                 DownloadStatus.DOWNLOADING -> {
                     DownloadManager.pause(task.id)
-                    // 借鉴MainActivity：立即更新本地数据，然后通过updateSingle触发UI刷新
-                    val paused = task.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
-                    // 先更新本地列表数据
-                    val idx = downloading.indexOfFirst { it.id == task.id }
-                    if (idx >= 0) {
-                        downloading[idx] = paused
-                    }
-                    // 再触发UI更新
-                    updateSingle(paused)
+                    // 信任框架回调 onTaskPaused 来更新 UI
                 }
                 DownloadStatus.PAUSED -> {
+                    // 立即更新 UI 提供即时反馈（乐观更新）
+                    // 根据槽位可用性决定显示状态
+                    val targetStatus = if (DownloadManager.hasAvailableSlot()) {
+                        DownloadStatus.DOWNLOADING
+                    } else {
+                        DownloadStatus.WAITING
+                    }
+                    updateSingleImmediate(task.id, targetStatus)
                     DownloadManager.resume(task.id)
-                    // 状态更新由 onTaskResumed 回调处理，task.status 会变为 WAITING
                 }
                 DownloadStatus.PENDING, DownloadStatus.WAITING -> {
                     DownloadManager.pause(task.id)
-                    // 同步本地一份，立刻显示"继续"
-                    val paused = task.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
-                    // 先更新本地列表数据
-                    val idx = downloading.indexOfFirst { it.id == task.id }
-                    if (idx >= 0) {
-                        downloading[idx] = paused
-                    }
-                    // 再触发UI更新
-                    updateSingle(paused)
+                    // 信任框架回调 onTaskPaused 来更新 UI
                 }
                 DownloadStatus.FAILED -> DownloadManager.resume(task.id)
                 else -> {}
@@ -156,6 +147,21 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
             downloading[idx] = task
             // 立即更新进度显示
             downloadingAdapter.updateItemWithProgress(task, progress, speed)
+        }
+    }
+
+    // 立即更新状态（用于按钮点击后的即时反馈）
+    private fun updateSingleImmediate(taskId: String, newStatus: DownloadStatus) {
+        val idx = downloading.indexOfFirst { it.id == taskId }
+        if (idx >= 0) {
+            val task = downloading[idx]
+            val updated = task.copy(
+                status = newStatus,
+                speed = if (newStatus == DownloadStatus.PAUSED) 0L else task.speed,
+                updateTime = System.currentTimeMillis()
+            )
+            downloading[idx] = updated
+            downloadingAdapter.updateItem(updated)
         }
     }
 
@@ -370,7 +376,7 @@ private class SimpleTaskVH(
             tvHint.text = if (health == AppUtils.FileHealth.MISSING) "文件缺失" else "文件损坏"
             tvHint.visibility = android.view.View.VISIBLE
         }
-
+        
         when (task.status) {
             DownloadStatus.DOWNLOADING -> {
                 btn.setText("${task.progress}%")

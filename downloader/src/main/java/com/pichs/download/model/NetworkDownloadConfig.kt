@@ -19,5 +19,9 @@ data class NetworkDownloadConfig(
     /** 是否仅 WiFi 下载 */
     val wifiOnly: Boolean = false,
     /** 流量提醒模式 */
-    val cellularPromptMode: CellularPromptMode = CellularPromptMode.ALWAYS
+    val cellularPromptMode: CellularPromptMode = CellularPromptMode.ALWAYS,
+    /** 创建前检查 */
+    val checkBeforeCreate: Boolean = true,
+    /** 创建后检查 */
+    val checkAfterCreate: Boolean = true
 )

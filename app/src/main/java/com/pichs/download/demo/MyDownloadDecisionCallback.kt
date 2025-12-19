@@ -17,6 +17,7 @@ class MyDownloadDecisionCallback(
 
     // 待执行的回调
     private var pendingOnUseCellular: (() -> Unit)? = null
+    private var pendingOnConnectWifi: (() -> Unit)? = null
     
     init {
         // 使用 Activity 的 lifecycleScope，自动随生命周期取消
@@ -26,9 +27,12 @@ class MyDownloadDecisionCallback(
                     is CellularConfirmEvent.Confirmed -> {
                         pendingOnUseCellular?.invoke()
                         pendingOnUseCellular = null
+                        pendingOnConnectWifi = null
                     }
                     is CellularConfirmEvent.Denied -> {
+                        pendingOnConnectWifi?.invoke()
                         pendingOnUseCellular = null
+                        pendingOnConnectWifi = null
                     }
                 }
             }
@@ -43,6 +47,7 @@ class MyDownloadDecisionCallback(
     ) {
         // 保存回调
         pendingOnUseCellular = onUseCellular
+        pendingOnConnectWifi = onConnectWifi
         // 启动弹窗
         CellularConfirmDialogActivity.start(activity, totalSize, pendingTasks.size)
     }

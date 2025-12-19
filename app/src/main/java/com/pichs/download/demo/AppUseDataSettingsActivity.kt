@@ -4,7 +4,6 @@ import androidx.core.view.isVisible
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.ActivityAppUseDataSettingsBinding
 import com.pichs.download.model.CellularPromptMode
-import com.pichs.download.model.NetworkDownloadConfig
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.xbase.clickhelper.fastClick
 
@@ -20,6 +19,14 @@ class AppUseDataSettingsActivity : BaseActivity<ActivityAppUseDataSettingsBindin
 
         // 加载当前配置
         loadConfig()
+        
+        // 监听前置检查开关（整行点击切换）
+        binding.llPreCheckSwitch.fastClick {
+            val newChecked = !binding.switchPreCheck.isChecked
+            binding.switchPreCheck.setChecked(newChecked)
+            val config = DownloadManager.getNetworkConfig()
+            DownloadManager.setNetworkConfig(config.copy(checkBeforeCreate = newChecked))
+        }
 
         // 监听网络模式切换（仅 WiFi / 允许流量）
         binding.llDownloadGroup.setOnRadioCheckedListener { _, _, isChecked, position ->
@@ -58,6 +65,9 @@ class AppUseDataSettingsActivity : BaseActivity<ActivityAppUseDataSettingsBindin
 
     private fun loadConfig() {
         val config = DownloadManager.getNetworkConfig()
+        
+        // 设置前置检查开关
+        binding.switchPreCheck.setChecked(config.checkBeforeCreate)
 
         // 设置网络模式选择
         if (config.wifiOnly) {
