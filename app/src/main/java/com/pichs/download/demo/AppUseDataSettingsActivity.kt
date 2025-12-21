@@ -5,6 +5,7 @@ import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.ActivityAppUseDataSettingsBinding
 import com.pichs.download.model.CellularPromptMode
 import com.pichs.shanhai.base.base.BaseActivity
+import com.pichs.shanhai.base.utils.toast.ToastUtils
 import com.pichs.xbase.clickhelper.fastClick
 
 class AppUseDataSettingsActivity : BaseActivity<ActivityAppUseDataSettingsBinding>() {
@@ -19,14 +20,14 @@ class AppUseDataSettingsActivity : BaseActivity<ActivityAppUseDataSettingsBindin
 
         // 加载当前配置
         loadConfig()
-        
-        // 监听前置检查开关（整行点击切换）
-        binding.llPreCheckSwitch.fastClick {
-            val newChecked = !binding.switchPreCheck.isChecked
-            binding.switchPreCheck.setChecked(newChecked)
+
+        binding.switchPreCheck.setOnCheckedChangeListener { v, isChecked ->
+//            val newChecked = !binding.switchPreCheck.isChecked
+//            binding.switchPreCheck.setChecked(isChecked)
+            ToastUtils.show("开关：newChecked=${isChecked}")
             val config = DownloadManager.getNetworkConfig()
-            com.pichs.download.utils.DownloadLog.d("Settings", "切换前置检查: $newChecked, 当前config: $config")
-            DownloadManager.setNetworkConfig(config.copy(checkBeforeCreate = newChecked))
+            com.pichs.download.utils.DownloadLog.d("Settings", "切换前置检查: $isChecked, 当前config: $config")
+            DownloadManager.setNetworkConfig(config.copy(checkBeforeCreate = isChecked))
             com.pichs.download.utils.DownloadLog.d("Settings", "保存后config: ${DownloadManager.getNetworkConfig()}")
         }
 

@@ -233,9 +233,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     if (existingTask != null) item.task = existingTask
                 }
                 bindButtonUI(vb, item.task, item, checkInstalled = true)
-                vb.btnDownload.setOnClickListener { handleClickWithInstalled(item, vb) }
+                vb.btnDownload.fastClick { handleClickWithInstalled(item, vb) }
                 // 新增：点击封面跳转详情页
-                vb.ivCover.setOnClickListener { openDetail(item) }
+                vb.ivCover.fastClick { openDetail(item) }
             }
         }.models = list
     }
@@ -412,11 +412,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     }
 
     private fun startDownload(item: DownloadItem, vb: ItemGridDownloadBeanBinding, oldTask: DownloadTask? = null) {
-        // 立即更新 UI 提供即时反馈
-        vb.btnDownload.setText("等待中")
-        vb.btnDownload.setProgress(oldTask?.progress ?: 0)
-        vb.btnDownload.isEnabled = true
-        // 使用 ViewModel 的预检查流程
+        // 先禁用按钮防止重复点击，不更新状态文字（等待预检查结果）
+//        vb.btnDownload.isEnabled = false
+        // 使用 ViewModel 的预检查流程，预检查通过后 ViewModel 会发事件更新 UI
         viewModel.requestDownload(item)
     }
 
