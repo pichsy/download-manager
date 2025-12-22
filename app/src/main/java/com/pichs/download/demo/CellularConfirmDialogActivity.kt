@@ -2,10 +2,16 @@ package com.pichs.download.demo
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.view.Window
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.ActivityCellularConfirmDialogBinding
@@ -48,6 +54,10 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
+            // 添加进入动画（放大出现）
+            if (context is android.app.Activity) {
+                context.overridePendingTransition(R.anim.dialog_scale_in, R.anim.no_anim)
+            }
         }
     }
     
@@ -58,6 +68,9 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         
         // 设置无标题
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
+        
+        // 沉浸式状态栏和导航栏
+        setupImmersiveMode()
         
         binding = ActivityCellularConfirmDialogBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -115,24 +128,51 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         }
     }
     
+    private fun setupImmersiveMode() {
+        // 设置沉浸式状态栏和导航栏
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        window.apply {
+            statusBarColor = Color.TRANSPARENT
+            navigationBarColor = Color.TRANSPARENT
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                attributes.layoutInDisplayCutoutMode = 
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+        
+        // 设置状态栏和导航栏图标颜色为深色（浅色背景）
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+    }
+    
     private fun handleConfirm() {
         DownloadManager.markCellularDownloadAllowed()
         lifecycleScope.launch {
             CellularConfirmViewModel.confirm()
         }
-        finish()
+        finishWithAnimation()
     }
     
     private fun handleDeny() {
         lifecycleScope.launch {
             CellularConfirmViewModel.deny()
         }
-        finish()
+        finishWithAnimation()
     }
     
     override fun onBackPressed() {
         handleDeny()
     }
     
+    private fun finishWithAnimation() {
+        finish()
+        overridePendingTransition(R.anim.no_anim, R.anim.dialog_scale_out)
+    }
+    
     private fun formatFileSize(bytes: Long): String = FormatUtils.formatFileSize(bytes)
 }
+
