@@ -21,7 +21,7 @@ enum class NetworkScenario {
  * 下载决策回调接口
  * 使用端实现此接口以自定义 UI 展示
  */
-interface DownloadDecisionCallback {
+interface CheckAfterCallback {
     
     /**
      * 网络状态变化时的确认请求

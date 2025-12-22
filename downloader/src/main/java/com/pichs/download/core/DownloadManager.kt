@@ -17,7 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -466,8 +465,8 @@ object DownloadManager {
     /**
      * 设置决策回调（使用端实现 UI）
      */
-    fun setDecisionCallback(callback: DownloadDecisionCallback?) {
-        networkRuleManager?.decisionCallback = callback
+    fun setCheckAfterCallback(callback: CheckAfterCallback?) {
+        networkRuleManager?.checkAfterCallback = callback
     }
     
     /**
@@ -485,10 +484,25 @@ object DownloadManager {
     }
     
     /**
-     * 检查任务是否可以下载（内部使用）
+     * 前置检查：检查是否可以创建新下载任务
+     * 在创建任务前调用，判断网络状态和配置
+     * @param totalSize 预估下载总大小（字节）
+     * @param count 任务数量
+     * @return 检查结果
      */
-    internal fun checkDownloadPermission(task: DownloadTask): DownloadDecision {
-        return networkRuleManager?.checkCanDownload(task) ?: DownloadDecision.Allow
+    fun checkBeforePermission(totalSize: Long, count: Int = 1): com.pichs.download.model.CheckBeforeResult {
+        return networkRuleManager?.checkBeforeCreate(totalSize, count)
+            ?: com.pichs.download.model.CheckBeforeResult.Allow
+    }
+    
+    /**
+     * 后置检查：检查任务是否可以恢复/下载
+     * 使用端可调用此方法在恢复前自行判断网络状态
+     * @param task 要检查的任务
+     * @return 下载决策结果
+     */
+    fun checkAfterPermission(task: DownloadTask): CheckAfterResult {
+        return networkRuleManager?.checkCanDownload(task) ?: CheckAfterResult.Allow
     }
     
     /**
@@ -541,13 +555,13 @@ object DownloadManager {
      * @param onAllow 允许下载的回调
      * @param onDeny 拒绝下载的回调
      */
-    fun checkBatchDownloadPermission(
+    fun checkBeforeBatchDownloadPermission(
         totalSize: Long,
         taskCount: Int,
         onAllow: () -> Unit,
         onDeny: () -> Unit
     ) {
-        networkRuleManager?.checkBatchDownloadPermission(totalSize, taskCount, onAllow, onDeny)
+        networkRuleManager?.checkBeforeBatchDownloadPermission(totalSize, taskCount, onAllow, onDeny)
             ?: onAllow() // 未初始化时默认允许
     }
 
@@ -591,22 +605,22 @@ object DownloadManager {
         
         // 检查网络规则（使用第一个任务的权限判断，因为都是同一批下载）
         val firstTask = tasks.firstOrNull() ?: return
-        when (val decision = checkDownloadPermission(firstTask)) {
-            is DownloadDecision.Allow -> {
+        when (val decision = checkAfterPermission(firstTask)) {
+            is CheckAfterResult.Allow -> {
                 // 允许下载，全部入队
                 tasks.forEach { task ->
                     dispatcher.enqueue(task)
                     updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
                 }
             }
-            is DownloadDecision.NeedConfirmation -> {
+            is CheckAfterResult.NeedConfirmation -> {
                 // 需要确认：暂停所有任务，通过回调弹窗
                 tasks.forEach { task ->
                     updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = System.currentTimeMillis()))
                 }
                 
                 // 调用决策回调弹窗
-                networkRuleManager?.decisionCallback?.requestCellularConfirmation(
+                networkRuleManager?.checkAfterCallback?.requestCellularConfirmation(
                     pendingTasks = tasks,
                     totalSize = totalSize,
                     onConnectWifi = {
@@ -628,7 +642,7 @@ object DownloadManager {
                     }
                 }
             }
-            is DownloadDecision.Deny -> {
+            is CheckAfterResult.Deny -> {
                 when (decision.reason) {
                     DenyReason.NO_NETWORK -> {
                         // 无网络，暂停所有任务
@@ -636,7 +650,7 @@ object DownloadManager {
                             updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR, updateTime = System.currentTimeMillis()))
                         }
                         // 调用回调通知使用端（使用端可以显示 Toast）
-                        networkRuleManager?.decisionCallback?.requestConfirmation(
+                        networkRuleManager?.checkAfterCallback?.requestConfirmation(
                             scenario = NetworkScenario.NO_NETWORK,
                             pendingTasks = tasks,
                             totalSize = totalSize,
@@ -649,7 +663,7 @@ object DownloadManager {
                         tasks.forEach { task ->
                             updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE, updateTime = System.currentTimeMillis()))
                         }
-                        networkRuleManager?.decisionCallback?.showWifiOnlyHint(firstTask)
+                        networkRuleManager?.checkAfterCallback?.showWifiOnlyHint(firstTask)
                     }
                     DenyReason.USER_CONTROLLED_NOT_ALLOWED -> {
                         // 使用端控制模式，暂停等待放行
@@ -769,9 +783,28 @@ object DownloadManager {
     fun resume(taskId: String) {
         val t = InMemoryTaskStore.get(taskId) ?: return
         
+        val config = networkRuleManager?.config ?: NetworkDownloadConfig()
+        
+        // 如果后置检查未启用，直接恢复
+        if (!config.checkAfterCreate) {
+            val pending = t.copy(
+                status = DownloadStatus.WAITING, 
+                pauseReason = null,
+                speed = 0L, 
+                updateTime = System.currentTimeMillis()
+            )
+            InMemoryTaskStore.put(pending)
+            repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
+            dispatcher.enqueue(pending)
+            DownloadLog.d("DownloadManager", "任务恢复(后置检查未启用): $taskId")
+            DownloadEventBus.emitTaskEvent(TaskEvent.TaskResumed(pending))
+            scheduleNext()
+            return
+        }
+        
         // 检查网络规则
-        when (val decision = checkDownloadPermission(t)) {
-            is DownloadDecision.Allow -> {
+        when (val decision = checkAfterPermission(t)) {
+            is CheckAfterResult.Allow -> {
                 // 允许下载，标记为待执行并入队
                 val pending = t.copy(
                     status = DownloadStatus.WAITING, 
@@ -785,7 +818,7 @@ object DownloadManager {
                 DownloadLog.d("DownloadManager", "任务恢复: $taskId")
                 DownloadEventBus.emitTaskEvent(TaskEvent.TaskResumed(pending))
             }
-            is DownloadDecision.NeedConfirmation -> {
+            is CheckAfterResult.NeedConfirmation -> {
                 // 需要用户确认
                 requestCellularConfirmation(listOf(t)) {
                     // 用户确认后恢复
@@ -803,7 +836,7 @@ object DownloadManager {
                     scheduleNext()
                 }
             }
-            is DownloadDecision.Deny -> {
+            is CheckAfterResult.Deny -> {
                 when (decision.reason) {
                     DenyReason.NO_NETWORK -> {
                         // 无网络，保持暂停状态

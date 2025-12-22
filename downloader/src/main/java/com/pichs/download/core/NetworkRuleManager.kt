@@ -31,7 +31,7 @@ class NetworkRuleManager(
     private val mainHandler = Handler(Looper.getMainLooper())
     
     /** 决策回调（使用端设置） */
-    var decisionCallback: DownloadDecisionCallback? = null
+    var checkAfterCallback: CheckAfterCallback? = null
     
     /** 当前配置 */
     var config: NetworkDownloadConfig = loadConfig()
@@ -66,7 +66,7 @@ class NetworkRuleManager(
     /**
      * 检查任务是否可以开始下载
      */
-    fun checkCanDownload(task: DownloadTask): DownloadDecision {
+    fun checkCanDownload(task: DownloadTask): CheckAfterResult {
         val isWifi = NetworkUtils.isWifiAvailable(context)
         val isCellular = NetworkUtils.isCellularAvailable(context)
         
@@ -74,18 +74,18 @@ class NetworkRuleManager(
         
         // 无网络
         if (!isWifi && !isCellular) {
-            return DownloadDecision.Deny(DenyReason.NO_NETWORK)
+            return CheckAfterResult.Deny(DenyReason.NO_NETWORK)
         }
         
         // WiFi 可用，直接允许
         if (isWifi) {
-            return DownloadDecision.Allow
+            return CheckAfterResult.Allow
         }
         
         // 以下是流量网络的情况
         return if (config.wifiOnly) {
             // 仅 WiFi 模式，拒绝流量下载
-            DownloadDecision.Deny(DenyReason.WIFI_ONLY_MODE)
+            CheckAfterResult.Deny(DenyReason.WIFI_ONLY_MODE)
         } else {
             // 允许流量模式，检查提醒策略
             checkCellularDownloadPermission()
@@ -148,25 +148,25 @@ class NetworkRuleManager(
         }
     }
     
-    private fun checkCellularDownloadPermission(): DownloadDecision {
+    private fun checkCellularDownloadPermission(): CheckAfterResult {
         // 已经临时放行
         if (CellularSessionManager.isCellularDownloadAllowed()) {
-            return DownloadDecision.Allow
+            return CheckAfterResult.Allow
         }
         
         // 根据提醒模式决定
         return when (config.cellularPromptMode) {
             CellularPromptMode.ALWAYS -> {
                 // 每次提醒，需要确认
-                DownloadDecision.NeedConfirmation
+                CheckAfterResult.NeedConfirmation
             }
             CellularPromptMode.NEVER -> {
                 // 不再提醒，直接允许
-                DownloadDecision.Allow
+                CheckAfterResult.Allow
             }
             CellularPromptMode.USER_CONTROLLED -> {
                 // 交给用户：检查是否已放行，未放行则拒绝（不弹窗）
-                DownloadDecision.Deny(DenyReason.USER_CONTROLLED_NOT_ALLOWED)
+                CheckAfterResult.Deny(DenyReason.USER_CONTROLLED_NOT_ALLOWED)
             }
         }
     }
@@ -190,7 +190,7 @@ class NetworkRuleManager(
         val totalSize = tasks.sumOf { getTaskEffectiveSize(it) }
         
         mainHandler.post {
-            decisionCallback?.requestCellularConfirmation(
+            checkAfterCallback?.requestCellularConfirmation(
                 pendingTasks = tasks,
                 totalSize = totalSize,
                 onConnectWifi = {
@@ -220,7 +220,7 @@ class NetworkRuleManager(
     /**
      * 批量下载前置检查
      */
-    fun checkBatchDownloadPermission(
+    fun checkBeforeBatchDownloadPermission(
         totalSize: Long,
         taskCount: Int,
         onAllow: () -> Unit,
@@ -236,7 +236,7 @@ class NetworkRuleManager(
             // 仅 WiFi 模式，拒绝
             config.wifiOnly -> {
                 mainHandler.post {
-                    decisionCallback?.showWifiOnlyHint(null)
+                    checkAfterCallback?.showWifiOnlyHint(null)
                 }
                 onDeny()
             }
@@ -250,7 +250,7 @@ class NetworkRuleManager(
                     CellularPromptMode.ALWAYS -> {
                         // 每次提醒，通过回调弹窗
                         mainHandler.post {
-                            decisionCallback?.requestBatchCellularConfirmation(
+                            checkAfterCallback?.requestBatchCellularConfirmation(
                                 totalSize = totalSize,
                                 taskCount = taskCount,
                                 onConnectWifi = { onDeny() },
@@ -282,7 +282,7 @@ class NetworkRuleManager(
      */
     fun showWifiOnlyHint(task: DownloadTask?) {
         mainHandler.post {
-            decisionCallback?.showWifiOnlyHint(task) ?: run {
+            checkAfterCallback?.showWifiOnlyHint(task) ?: run {
                 DownloadLog.w(TAG, "未设置 decisionCallback，无法显示 WiFi 提示")
             }
         }
@@ -316,7 +316,7 @@ class NetworkRuleManager(
             // 仅 WiFi 模式，暂停所有任务
             val count = pauseAllForWifiUnavailable()
             mainHandler.post {
-                decisionCallback?.showWifiDisconnectedHint(count)
+                checkAfterCallback?.showWifiDisconnectedHint(count)
             }
         } else if (!isCellular) {
             // WiFi断开且无流量，暂停任务等待网络恢复
@@ -325,7 +325,7 @@ class NetworkRuleManager(
             val totalSize = tasks.sumOf { it.totalSize }
             // 通知使用端，让使用端决定如何展示（Toast、弹窗或不处理）
             mainHandler.post {
-                decisionCallback?.requestConfirmation(
+                checkAfterCallback?.requestConfirmation(
                     scenario = NetworkScenario.NO_NETWORK,
                     pendingTasks = tasks,
                     totalSize = totalSize,
@@ -390,15 +390,15 @@ class NetworkRuleManager(
 /**
  * 下载决策结果
  */
-sealed class DownloadDecision {
+sealed class CheckAfterResult {
     /** 允许下载 */
-    object Allow : DownloadDecision()
+    object Allow : CheckAfterResult()
     
     /** 需要用户确认 */
-    object NeedConfirmation : DownloadDecision()
+    object NeedConfirmation : CheckAfterResult()
     
     /** 拒绝下载 */
-    data class Deny(val reason: DenyReason) : DownloadDecision()
+    data class Deny(val reason: DenyReason) : CheckAfterResult()
 }
 
 /**

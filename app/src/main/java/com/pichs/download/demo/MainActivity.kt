@@ -8,11 +8,8 @@ import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import com.drake.brv.utils.grid
 import com.drake.brv.utils.setup
-import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
 import com.pichs.download.core.DownloadManager
-import com.pichs.download.core.DownloadPriority
-import com.pichs.download.core.FlowDownloadListener
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import kotlinx.coroutines.launch
@@ -26,7 +23,6 @@ import com.pichs.shanhai.base.receiver.NetStateReceiver
 import com.pichs.shanhai.base.utils.toast.ToastUtils
 import com.pichs.xbase.kotlinext.fastClick
 import com.pichs.xbase.kotlinext.setItemAnimatorDisable
-import com.pichs.xbase.utils.GsonUtils
 import java.io.File
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
@@ -187,7 +183,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         }
 
         // 设置网络决策回调
-        DownloadManager.setDecisionCallback(MyDownloadDecisionCallback(this))
+        DownloadManager.setCheckAfterCallback(MyCheckAfterCallback(this))
 
         NetStateReceiver(onNetConnected = { isWifi ->
             // 网络恢复时

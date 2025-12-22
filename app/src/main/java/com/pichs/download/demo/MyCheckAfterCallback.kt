@@ -3,7 +3,7 @@ package com.pichs.download.demo
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
-import com.pichs.download.core.DownloadDecisionCallback
+import com.pichs.download.core.CheckAfterCallback
 import com.pichs.download.core.NetworkScenario
 import com.pichs.download.model.DownloadTask
 import kotlinx.coroutines.launch
@@ -12,9 +12,9 @@ import kotlinx.coroutines.launch
  * 下载决策回调实现
  * 使用端实现 UI 展示
  */
-class MyDownloadDecisionCallback(
+class MyCheckAfterCallback(
     private val activity: FragmentActivity
-) : DownloadDecisionCallback {
+) : CheckAfterCallback {
 
     // 待执行的回调
     private var pendingOnUseCellular: (() -> Unit)? = null
