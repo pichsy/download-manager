@@ -24,7 +24,8 @@ internal data class DownloadEntity(
     val storeVersionCode: Long? = null,
     val extras: String? = null,
     val pauseReason: PauseReason? = null,
-    val estimatedSize: Long = 0L,  // 新增：预估大小
+    val estimatedSize: Long = 0L,
+    val cellularConfirmed: Boolean = false,  // 新增：是否已确认使用流量
 ) {
     fun toModel(): DownloadTask = DownloadTask(
         id = id,
@@ -44,6 +45,7 @@ internal data class DownloadEntity(
         extras = extras,
         pauseReason = pauseReason,
         estimatedSize = estimatedSize,
+        cellularConfirmed = cellularConfirmed,
     )
     companion object {
         fun fromModel(t: DownloadTask) = DownloadEntity(
@@ -64,6 +66,7 @@ internal data class DownloadEntity(
             extras = t.extras,
             pauseReason = t.pauseReason,
             estimatedSize = t.estimatedSize,
+            cellularConfirmed = t.cellularConfirmed,
         )
     }
 }

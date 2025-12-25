@@ -70,7 +70,7 @@ class NetworkRuleManager(
         val isWifi = NetworkUtils.isWifiAvailable(context)
         val isCellular = NetworkUtils.isCellularAvailable(context)
         
-        DownloadLog.d(TAG, "检查下载权限: task=${task.fileName}, wifi=$isWifi, cellular=$isCellular")
+        DownloadLog.d(TAG, "检查下载权限: task=${task.fileName}, wifi=$isWifi, cellular=$isCellular, cellularConfirmed=${task.cellularConfirmed}")
         
         // 无网络
         if (!isWifi && !isCellular) {
@@ -83,13 +83,20 @@ class NetworkRuleManager(
         }
         
         // 以下是流量网络的情况
-        return if (config.wifiOnly) {
-            // 仅 WiFi 模式，拒绝流量下载
-            CheckAfterResult.Deny(DenyReason.WIFI_ONLY_MODE)
-        } else {
-            // 允许流量模式，检查提醒策略
-            checkCellularDownloadPermission()
+        
+        // 仅 WiFi 模式，拒绝流量下载
+        if (config.wifiOnly) {
+            return CheckAfterResult.Deny(DenyReason.WIFI_ONLY_MODE)
         }
+        
+        // 任务级别确认：前置检查已确认使用流量，直接放行
+        if (task.cellularConfirmed) {
+            DownloadLog.d(TAG, "任务已确认使用流量，直接放行: ${task.fileName}")
+            return CheckAfterResult.Allow
+        }
+        
+        // 检查流量提醒策略
+        return checkCellularDownloadPermission()
     }
     
     // ==================== 预检查 API（先决策后创建任务） ====================
@@ -128,12 +135,7 @@ class NetworkRuleManager(
             return CheckBeforeResult.WifiOnly
         }
         
-        // 已经临时放行
-        if (CellularSessionManager.isCellularDownloadAllowed()) {
-            return CheckBeforeResult.Allow
-        }
-        
-        // 根据提醒模式决定
+        // 根据提醒模式决定（任务级别确认在后置检查判断）
         return when (config.cellularPromptMode) {
             CellularPromptMode.ALWAYS -> {
                 CheckBeforeResult.NeedConfirmation(totalSize)
@@ -149,12 +151,7 @@ class NetworkRuleManager(
     }
     
     private fun checkCellularDownloadPermission(): CheckAfterResult {
-        // 已经临时放行
-        if (CellularSessionManager.isCellularDownloadAllowed()) {
-            return CheckAfterResult.Allow
-        }
-        
-        // 根据提醒模式决定
+        // 根据提醒模式决定（任务级别的 cellularConfirmed 已在 checkCanDownload 中判断）
         return when (config.cellularPromptMode) {
             CellularPromptMode.ALWAYS -> {
                 // 每次提醒，需要确认
@@ -200,8 +197,10 @@ class NetworkRuleManager(
                     }
                 },
                 onUseCellular = {
-                    // 标记会话放行
-                    CellularSessionManager.allowCellularDownload()
+                    // 标记任务已确认使用流量
+                    tasks.forEach { task ->
+                        downloadManager.updateTaskCellularConfirmed(task.id, true)
+                    }
                     // 恢复所有 CELLULAR_PENDING 的任务
                     resumeCellularPendingTasks()
                     // 执行允许回调
@@ -240,10 +239,6 @@ class NetworkRuleManager(
                 }
                 onDeny()
             }
-            // 允许流量 + 已放行
-            CellularSessionManager.isCellularDownloadAllowed() -> {
-                onAllow()
-            }
             else -> {
                 // 根据提醒模式决定
                 when (config.cellularPromptMode) {
@@ -255,7 +250,7 @@ class NetworkRuleManager(
                                 taskCount = taskCount,
                                 onConnectWifi = { onDeny() },
                                 onUseCellular = {
-                                    CellularSessionManager.allowCellularDownload()
+                                    // 前置检查通过，任务创建时会标记 cellularConfirmed
                                     onAllow()
                                 }
                             ) ?: run {
@@ -295,8 +290,6 @@ class NetworkRuleManager(
      */
     fun onWifiConnected() {
         DownloadLog.d(TAG, "WiFi 已连接")
-        // 重置流量会话
-        CellularSessionManager.reset()
         // 恢复因 WiFi 不可用暂停的任务
         resumeWifiUnavailableTasks()
         // 恢复等待流量确认的任务（现在有 WiFi 了）
@@ -334,16 +327,19 @@ class NetworkRuleManager(
                 )
             }
             DownloadLog.d(TAG, "WiFi断开且无流量，任务已暂停等待网络恢复")
-        } else if (!CellularSessionManager.isCellularDownloadAllowed() && config.cellularPromptMode == CellularPromptMode.ALWAYS) {
-            // 有流量 + 未放行 + 每次提醒，需要确认
+        } else if (config.cellularPromptMode == CellularPromptMode.ALWAYS) {
+            // 有流量 + 每次提醒，检查活跃任务是否已确认使用流量
             val activeTasks = getActiveDownloadTasks()
-            if (activeTasks.isNotEmpty()) {
-                requestCellularConfirmation(activeTasks) {
+            val unconfirmedTasks = activeTasks.filter { !it.cellularConfirmed }
+            if (unconfirmedTasks.isNotEmpty()) {
+                // 未确认的任务需要弹窗确认
+                requestCellularConfirmation(unconfirmedTasks) {
                     // 用户确认后任务会自动继续
                 }
             }
+            // 已确认的任务继续下载
         }
-        // else: 有流量 + 已放行/不提醒，继续下载
+        // else: 有流量 + NEVER模式，继续下载
     }
     
     private fun getActiveDownloadTasks(): List<DownloadTask> {

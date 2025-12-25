@@ -15,6 +15,7 @@ import com.pichs.download.model.DownloadTask
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import androidx.activity.viewModels
+import com.hjq.permissions.Permission
 import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemGridDownloadBeanBinding
 import com.pichs.download.utils.DownloadLog
@@ -24,6 +25,8 @@ import com.pichs.shanhai.base.utils.toast.ToastUtils
 import com.pichs.xbase.kotlinext.fastClick
 import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 import java.io.File
+import android.provider.Settings
+import com.pichs.download.demo.floatwindow.FloatBallView
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
 
@@ -35,8 +38,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     // 旧的监听器已移除，现在使用Flow监听器
     private val flowListener = DownloadManager.flowListener
 
+    // 悬浮球
+    private var floatBallView: FloatBallView? = null
+
     // 统一的名称归一化工具
     private fun normalizeName(n: String): String = n.substringBeforeLast('.').lowercase()
+     val GRANT_PERMISSIONS = "com.gankao.dpc.request.GRANT_PERMISSIONS"
+
 
     override fun afterOnCreate() {
 
@@ -56,53 +64,84 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 //            .permission(Permission.SYSTEM_ALERT_WINDOW)
 //            .request { _, _ -> }
 
-        XXPermissions.isGranted(
-            this,
-            android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
-            android.Manifest.permission.WRITE_CONTACTS,
-            android.Manifest.permission.READ_CONTACTS,
-            android.Manifest.permission.CALL_PHONE,
-            android.Manifest.permission.READ_CALL_LOG,
-            android.Manifest.permission.WRITE_CALL_LOG,
-            android.Manifest.permission.READ_SMS,
-        ).let { granted ->
-            if (granted) {
-                DownloadLog.d("所有权限已授予")
-            } else {
-                DownloadLog.d("缺少必要权限，正在请求...")
-            }
-        }
+//        XXPermissions.isGranted(
+//            this,
+//            android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+//            android.Manifest.permission.WRITE_CONTACTS,
+//            android.Manifest.permission.READ_CONTACTS,
+//            android.Manifest.permission.CALL_PHONE,
+//            android.Manifest.permission.READ_CALL_LOG,
+//            android.Manifest.permission.WRITE_CALL_LOG,
+//            android.Manifest.permission.READ_SMS,
+//        ).let { granted ->
+//            if (granted) {
+//                DownloadLog.d("所有权限已授予")
+//            } else {
+//                DownloadLog.d("缺少必要权限，正在请求...")
+//            }
+//        }
+
+
+//        sendBroadcast(Intent(GRANT_PERMISSIONS))
 
         requestPermissions(
             arrayOf(
-                android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
-                android.Manifest.permission.WRITE_CONTACTS,
-                android.Manifest.permission.READ_CONTACTS,
+                android.Manifest.permission.ACCESS_FINE_LOCATION,
+                android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                android.Manifest.permission.READ_PHONE_STATE,
+                android.Manifest.permission.READ_PHONE_NUMBERS,
                 android.Manifest.permission.CALL_PHONE,
+                android.Manifest.permission.ANSWER_PHONE_CALLS,
                 android.Manifest.permission.READ_CALL_LOG,
                 android.Manifest.permission.WRITE_CALL_LOG,
                 android.Manifest.permission.READ_SMS,
+                android.Manifest.permission.SEND_SMS,
+                android.Manifest.permission.RECEIVE_SMS,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                android.Manifest.permission.READ_MEDIA_IMAGES,
+                android.Manifest.permission.READ_MEDIA_VIDEO,
+                android.Manifest.permission.READ_MEDIA_AUDIO,
+                android.Manifest.permission.CAMERA,
+                android.Manifest.permission.RECORD_AUDIO,
+                android.Manifest.permission.READ_CONTACTS,
+                android.Manifest.permission.WRITE_CONTACTS,
+                android.Manifest.permission.READ_CALENDAR,
+                android.Manifest.permission.WRITE_CALENDAR,
+                android.Manifest.permission.BLUETOOTH_CONNECT,
+                android.Manifest.permission.BLUETOOTH_SCAN,
+                android.Manifest.permission.BLUETOOTH_ADVERTISE,
+                android.Manifest.permission.NEARBY_WIFI_DEVICES,
+                android.Manifest.permission.POST_NOTIFICATIONS,
+                android.Manifest.permission.SYSTEM_ALERT_WINDOW,
+                "com.android.permission.GET_INSTALLED_APPS",
             ),
             1002
         )
 
-//        XXPermissions.with(this@MainActivity)
-//            .unchecked()
+
+        XXPermissions.with(this@MainActivity)
+            .unchecked()
 //            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
-////            .permission(Permission.WRITE_EXTERNAL_STORAGE)
-////            .permission(Permission.READ_EXTERNAL_STORAGE)
-//
+            .permission(Permission.SYSTEM_ALERT_WINDOW)
+//            .permission(Permission.WRITE_EXTERNAL_STORAGE)
+//            .permission(Permission.READ_EXTERNAL_STORAGE)
 //            .permission(Permission.CALL_PHONE)
 //            .permission(Permission.READ_CALL_LOG)
 //            .permission(Permission.WRITE_CALL_LOG)
-//
 //            .permission(Permission.READ_CONTACTS)
 //            .permission(Permission.WRITE_CONTACTS)
-//
 //            .permission(Permission.READ_SMS)
-//            .request { grantedList, deniedList ->
-//
-//            }
+            .request { grantedList, deniedList ->
+                // 悬浮窗权限申请后，显示悬浮球
+                if (Settings.canDrawOverlays(this)) {
+                    showFloatBall()
+                }
+            }
+
+
+
         initListener()
 
         // 初始化 ViewModel 的应用列表，并订阅数据变化同步到本地 list
@@ -436,6 +475,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             if (isDestroyed) return@bindToLifecycle
             // 更新任务进度和速度
             updateItemTaskWithProgress(task, progress, speed)
+            // 更新悬浮球进度
+            updateFloatBallProgress(task, progress, speed)
         }, onTaskComplete = { task, file ->
             if (isDestroyed) return@bindToLifecycle
             updateItemTask(task)
@@ -508,6 +549,38 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     override fun onDestroy() {
         // Flow监听器会自动管理生命周期，无需手动移除
+        floatBallView?.dismiss()
+        floatBallView = null
         super.onDestroy()
+    }
+
+    private fun showFloatBall() {
+        if (floatBallView == null) {
+            floatBallView = FloatBallView(this).apply {
+                setOnFloatClickListener {
+                    // 点击悬浮球跳转到下载管理页
+                    startActivity(Intent(this@MainActivity, DownloadManagerActivity::class.java))
+                }
+                setOnDismissListener {
+                    // 悬浮球被拖入删除区域隐藏
+                    floatBallView = null
+                }
+            }
+        }
+        floatBallView?.show()
+    }
+
+    private fun updateFloatBallProgress(task: com.pichs.download.model.DownloadTask, progress: Int, speed: Long) {
+        val speedText = formatSpeed(speed)
+        val appName = list.find { it.url == task.url }?.name ?: task.fileName
+        floatBallView?.updateProgress(appName, progress, speedText)
+    }
+
+    private fun formatSpeed(bytesPerSecond: Long): String {
+        return when {
+            bytesPerSecond >= 1024 * 1024 -> String.format("%.1fMB/s", bytesPerSecond / (1024.0 * 1024.0))
+            bytesPerSecond >= 1024 -> String.format("%.0fKB/s", bytesPerSecond / 1024.0)
+            else -> "${bytesPerSecond}B/s"
+        }
     }
 }

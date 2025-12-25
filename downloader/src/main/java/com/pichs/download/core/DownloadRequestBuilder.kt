@@ -20,6 +20,7 @@ class DownloadRequestBuilder {
     private var priority: Int = 1
     private var estimatedSize: Long = 0L
     private var extras: String? = null
+    private var cellularConfirmed: Boolean = false
 
     fun url(url: String) = apply { this.url = url }
     fun path(path: String) = apply { this.path = path }
@@ -30,6 +31,8 @@ class DownloadRequestBuilder {
     fun priority(priority: Int) = apply { this.priority = priority }
     fun estimatedSize(size: Long) = apply { this.estimatedSize = size }
     fun extras(extras: String?) = apply { this.extras = extras }
+    /** 标记此任务已确认使用流量下载（前置确认后设置） */
+    fun cellularConfirmed(confirmed: Boolean) = apply { this.cellularConfirmed = confirmed }
 
     fun start(): DownloadTask {
         val targetName = fileName ?: url.substringAfterLast('/').substringBefore('?')
@@ -96,7 +99,8 @@ class DownloadRequestBuilder {
             createTime = System.currentTimeMillis(),
             updateTime = System.currentTimeMillis(),
             extras = extras,
-            estimatedSize = estimatedSize
+            estimatedSize = estimatedSize,
+            cellularConfirmed = cellularConfirmed
         )
 
         // 设置任务特定头部
@@ -122,7 +126,8 @@ class DownloadRequestBuilder {
             createTime = System.currentTimeMillis(),
             updateTime = System.currentTimeMillis(),
             extras = extras,
-            estimatedSize = estimatedSize
+            estimatedSize = estimatedSize,
+            cellularConfirmed = cellularConfirmed
         )
 
         // 设置任务特定头部

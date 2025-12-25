@@ -150,7 +150,7 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
     }
     
     private fun handleConfirm() {
-        DownloadManager.markCellularDownloadAllowed()
+        // pendingAction 已在设置时包含 cellularConfirmed=true
         lifecycleScope.launch {
             CellularConfirmViewModel.confirm()
         }

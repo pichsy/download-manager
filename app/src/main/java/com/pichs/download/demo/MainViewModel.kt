@@ -141,8 +141,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         // 未超阈值，静默下载
                         DownloadLog.d("模拟批量下载", "智能提醒：未超阈值，静默下载")
-                        DownloadManager.markCellularDownloadAllowed()
-                        startBatchDownload(appsToDownload)
+                        startBatchDownload(appsToDownload, cellularConfirmed = true)
                         _uiEvent.emit(UiEvent.ShowToast("批量下载已开始：${appsToDownload.size} 个应用"))
                     }
                 }
@@ -255,8 +254,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
                         _uiEvent.emit(UiEvent.ShowCellularConfirmDialog(listOf(item), result.estimatedSize))
                     } else {
-                        DownloadManager.markCellularDownloadAllowed()
-                        doStartDownload(item)
+                        doStartDownload(item, cellularConfirmed = true)
                     }
                 }
             }
@@ -266,7 +264,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 内部方法：实际执行下载
      */
-    private fun doStartDownload(item: DownloadItem): DownloadTask {
+    private fun doStartDownload(item: DownloadItem, cellularConfirmed: Boolean = false): DownloadTask {
         val extrasJson = buildExtrasJson(item)
         val fileName = buildFileName(item.name)
 
@@ -275,6 +273,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .fileName(fileName)
             .estimatedSize(item.size)
             .extras(extrasJson)
+            .cellularConfirmed(cellularConfirmed)
             .start()
 
         // 更新列表
@@ -285,7 +284,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * 批量下载（内部方法）
      */
-    private fun startBatchDownload(apps: List<DownloadItem>) {
+    private fun startBatchDownload(apps: List<DownloadItem>, cellularConfirmed: Boolean = false) {
         DownloadLog.d("模拟批量下载", "开始创建 ${apps.size} 个任务")
         apps.forEach { app ->
             val extrasJson = buildExtrasJson(app)
@@ -296,6 +295,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .fileName(fileName)
                 .estimatedSize(app.size)
                 .extras(extrasJson)
+                .cellularConfirmed(cellularConfirmed)
                 .start()
 
             app.task = task

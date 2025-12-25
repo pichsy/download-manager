@@ -519,33 +519,31 @@ object DownloadManager {
         networkRuleManager?.showWifiOnlyHint(task)
     }
     
-    // ==================== 会话放行控制 ====================
-    
     /**
-     * 标记本次会话允许流量下载
-     * 使用端确认后调用，后续任务不再弹窗确认
+     * 更新任务的流量确认状态
+     * @param taskId 任务ID
+     * @param confirmed 是否已确认
      */
-    fun markCellularDownloadAllowed() {
-        CellularSessionManager.allowCellularDownload()
+    fun updateTaskCellularConfirmed(taskId: String, confirmed: Boolean) {
+        val task = InMemoryTaskStore.get(taskId) ?: return
+        val updated = task.copy(cellularConfirmed = confirmed, updateTime = System.currentTimeMillis())
+        InMemoryTaskStore.put(updated)
+        repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(updated) } }
+        DownloadLog.d(TAG, "任务 $taskId cellularConfirmed 更新为 $confirmed")
     }
+    
+    // ==================== 流量下载检查 ====================
     
     /**
      * 检查当前是否允许流量下载（不弹窗，只返回结果）
-     * @return true: WiFi 可用 或 流量已放行 或 配置为不提醒
+     * 注意：这只检查全局配置，不考虑任务级别的 cellularConfirmed
+     * @return true: WiFi 可用 或 配置为不提醒
      */
     fun isCellularDownloadAllowed(): Boolean {
         if (isWifiAvailable()) return true
-        if (CellularSessionManager.isCellularDownloadAllowed()) return true
         val config = getNetworkConfig()
         if (!config.wifiOnly && config.cellularPromptMode == com.pichs.download.model.CellularPromptMode.NEVER) return true
         return false
-    }
-    
-    /**
-     * 重置流量放行状态
-     */
-    fun resetCellularSession() {
-        CellularSessionManager.reset()
     }
     
     /**
@@ -628,10 +626,14 @@ object DownloadManager {
                         DownloadLog.d(TAG, "用户选择连接WiFi，${tasks.size} 个任务保持暂停")
                     },
                     onUseCellular = {
-                        // 用户确认使用流量，标记放行并恢复所有任务
-                        CellularSessionManager.allowCellularDownload()
-                        tasks.forEach { task -> resume(task.id) }
-                        DownloadLog.d(TAG, "用户确认使用流量，${tasks.size} 个任务恢复下载")
+                        // 用户确认使用流量，标记任务已确认并恢复
+                        tasks.forEach { task ->
+                            val confirmedTask = task.copy(cellularConfirmed = true)
+                            InMemoryTaskStore.put(confirmedTask)
+                            repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(confirmedTask) } }
+                            resume(task.id)
+                        }
+                        DownloadLog.d(TAG, "用户确认使用流量，${tasks.size} 个任务标记 cellularConfirmed 并恢复")
                     }
                 ) ?: run {
                     // 未设置回调，直接放行

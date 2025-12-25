@@ -142,8 +142,7 @@ class AppDetailActivity : AppCompatActivity() {
                     if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
                         showCellularConfirmDialog(dir, result.estimatedSize)
                     } else {
-                        DownloadManager.markCellularDownloadAllowed()
-                        doStartDownload(dir)
+                        doStartDownload(dir, cellularConfirmed = true)
                     }
                 }
             }
@@ -175,13 +174,12 @@ class AppDetailActivity : AppCompatActivity() {
             size = size
         )
         CellularConfirmViewModel.pendingAction = {
-            DownloadManager.markCellularDownloadAllowed()
-            doStartDownload(dir)
+            doStartDownload(dir, cellularConfirmed = true)
         }
         CellularConfirmDialogActivity.start(this, totalSize, 1)
     }
 
-    private fun doStartDownload(dir: String) {
+    private fun doStartDownload(dir: String, cellularConfirmed: Boolean = false) {
         val storeVC = CatalogRepository.getStoreVersionCode(this, packageNameStr) ?: 0L
         val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
             mapOf(
@@ -197,6 +195,7 @@ class AppDetailActivity : AppCompatActivity() {
             .fileName(name)
             .estimatedSize(size)
             .extras(extrasJson)
+            .cellularConfirmed(cellularConfirmed)
             .start()
         bindButtonUI(task)
     }
