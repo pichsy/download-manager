@@ -27,6 +27,7 @@ import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 import java.io.File
 import android.provider.Settings
 import com.pichs.download.demo.floatwindow.FloatBallView
+import kotlinx.coroutines.delay
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
 
@@ -43,15 +44,19 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     // 统一的名称归一化工具
     private fun normalizeName(n: String): String = n.substringBeforeLast('.').lowercase()
-     val GRANT_PERMISSIONS = "com.gankao.dpc.request.GRANT_PERMISSIONS"
+    val GRANT_PERMISSIONS = "com.gankao.dpc.request.GRANT_PERMISSIONS"
 
+    /**
+     * 移除权限
+     * putExtra("packageName","")
+     */
+    val REMOVE_PERMISSIONS = "com.gankao.dpc.request.REMOVE_PERMISSIONS"
 
     override fun afterOnCreate() {
 
         binding.ivDownloadSettings.fastClick {
             startActivity(Intent(this, AppUseDataSettingsActivity::class.java))
         }
-
 
 //        XXPermissions.with(this).unchecked()
 //            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
@@ -81,65 +86,60 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 //            }
 //        }
 
+        lifecycleScope.launch {
+            sendBroadcast(Intent(GRANT_PERMISSIONS).apply {
+                putExtra("packageName", packageName)
+            })
 
-//        sendBroadcast(Intent(GRANT_PERMISSIONS))
+            delay(5000)
 
-        requestPermissions(
-            arrayOf(
-                android.Manifest.permission.ACCESS_FINE_LOCATION,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION,
-                android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-                android.Manifest.permission.READ_PHONE_STATE,
-                android.Manifest.permission.READ_PHONE_NUMBERS,
-                android.Manifest.permission.CALL_PHONE,
-                android.Manifest.permission.ANSWER_PHONE_CALLS,
-                android.Manifest.permission.READ_CALL_LOG,
-                android.Manifest.permission.WRITE_CALL_LOG,
-                android.Manifest.permission.READ_SMS,
-                android.Manifest.permission.SEND_SMS,
-                android.Manifest.permission.RECEIVE_SMS,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                android.Manifest.permission.READ_MEDIA_IMAGES,
-                android.Manifest.permission.READ_MEDIA_VIDEO,
-                android.Manifest.permission.READ_MEDIA_AUDIO,
-                android.Manifest.permission.CAMERA,
-                android.Manifest.permission.RECORD_AUDIO,
-                android.Manifest.permission.READ_CONTACTS,
-                android.Manifest.permission.WRITE_CONTACTS,
-                android.Manifest.permission.READ_CALENDAR,
-                android.Manifest.permission.WRITE_CALENDAR,
-                android.Manifest.permission.BLUETOOTH_CONNECT,
-                android.Manifest.permission.BLUETOOTH_SCAN,
-                android.Manifest.permission.BLUETOOTH_ADVERTISE,
-                android.Manifest.permission.NEARBY_WIFI_DEVICES,
-                android.Manifest.permission.POST_NOTIFICATIONS,
-                android.Manifest.permission.SYSTEM_ALERT_WINDOW,
-                "com.android.permission.GET_INSTALLED_APPS",
-            ),
-            1002
-        )
+            requestPermissions(
+                arrayOf(
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                    android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                    android.Manifest.permission.READ_PHONE_STATE,
+                    android.Manifest.permission.READ_PHONE_NUMBERS,
+                    android.Manifest.permission.CALL_PHONE,
+                    android.Manifest.permission.ANSWER_PHONE_CALLS,
+                    android.Manifest.permission.READ_CALL_LOG,
+                    android.Manifest.permission.WRITE_CALL_LOG,
+                    android.Manifest.permission.READ_SMS,
+                    android.Manifest.permission.SEND_SMS,
+                    android.Manifest.permission.RECEIVE_SMS,
+                    android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    android.Manifest.permission.READ_MEDIA_IMAGES,
+                    android.Manifest.permission.READ_MEDIA_VIDEO,
+                    android.Manifest.permission.READ_MEDIA_AUDIO,
+                    android.Manifest.permission.CAMERA,
+                    android.Manifest.permission.RECORD_AUDIO,
+                    android.Manifest.permission.READ_CONTACTS,
+                    android.Manifest.permission.WRITE_CONTACTS,
+                    android.Manifest.permission.READ_CALENDAR,
+                    android.Manifest.permission.WRITE_CALENDAR,
+                    android.Manifest.permission.BLUETOOTH_CONNECT,
+                    android.Manifest.permission.BLUETOOTH_SCAN,
+                    android.Manifest.permission.BLUETOOTH_ADVERTISE,
+                    android.Manifest.permission.NEARBY_WIFI_DEVICES,
+                    android.Manifest.permission.POST_NOTIFICATIONS,
+                    android.Manifest.permission.SYSTEM_ALERT_WINDOW,
+                    "com.android.permission.GET_INSTALLED_APPS",
+                ), 1002
+            )
 
-
-        XXPermissions.with(this@MainActivity)
-            .unchecked()
-//            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
-            .permission(Permission.SYSTEM_ALERT_WINDOW)
-//            .permission(Permission.WRITE_EXTERNAL_STORAGE)
-//            .permission(Permission.READ_EXTERNAL_STORAGE)
-//            .permission(Permission.CALL_PHONE)
-//            .permission(Permission.READ_CALL_LOG)
-//            .permission(Permission.WRITE_CALL_LOG)
-//            .permission(Permission.READ_CONTACTS)
-//            .permission(Permission.WRITE_CONTACTS)
-//            .permission(Permission.READ_SMS)
-            .request { grantedList, deniedList ->
-                // 悬浮窗权限申请后，显示悬浮球
-                if (Settings.canDrawOverlays(this)) {
-                    showFloatBall()
-                }
+            if (Settings.canDrawOverlays(this@MainActivity)) {
+                showFloatBall()
+                delay(3000)
+                sendBroadcast(Intent(REMOVE_PERMISSIONS).apply {
+                    putExtra("packageName", packageName)
+                })
+            } else {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                intent.data = Uri.parse("package:$packageName")
+                startActivity(intent)
             }
-
+        }
 
 
         initListener()
@@ -157,8 +157,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         initRecyclerView()
         // 绑定全局监听（新方式）
         bindFlowListener()
-
-
     }
 
 
@@ -509,12 +507,18 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private val progressUpdateInterval = 300L // 300ms防抖间隔
 
     private fun updateItemTaskWithProgress(task: DownloadTask, progress: Int, speed: Long) {
-        val now = System.currentTimeMillis()
-        val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
-        if (now - lastUpdateTime < progressUpdateInterval) {
-            return // 防抖：跳过过于频繁的更新
+        // progress >= 100 或已完成状态不做防抖，确保最终状态一定更新到 UI
+        if (progress < 100 && task.status != DownloadStatus.COMPLETED) {
+            val now = System.currentTimeMillis()
+            val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
+            if (now - lastUpdateTime < progressUpdateInterval) {
+                return // 防抖：跳过过于频繁的更新
+            }
+            lastProgressUpdateTimeMap[task.id] = now
+        } else {
+            // 清理防抖记录
+            lastProgressUpdateTimeMap.remove(task.id)
         }
-        lastProgressUpdateTimeMap[task.id] = now
 
         val idx = list.indexOfFirst { it.url == task.url }
         if (idx >= 0) {

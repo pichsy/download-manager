@@ -75,6 +75,7 @@ internal class DownloadScheduler(
     // 公开调度方法供 Manager 调用
     // 使用 UNDISPATCHED 确保立即开始执行，不等待调度器
     fun trySchedule() {
+        com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "trySchedule() called")
         scope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
             scheduleNextInternal()
         }
@@ -83,12 +84,20 @@ internal class DownloadScheduler(
     private suspend fun scheduleNextInternal() {
         val currentLimit = dispatcher.getCurrentConcurrencyLimit()
         val runningCount = dispatcher.getRunningTasks().size
+        val waitingCount = dispatcher.getWaitingTasks().size
+        
+        com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "scheduleNextInternal: limit=$currentLimit, running=$runningCount, waiting=$waitingCount")
         
         if (runningCount < currentLimit) {
             val nextTask = dispatcher.dequeueWithPreemption()
             if (nextTask != null) {
+                com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "Starting task: ${nextTask.fileName}")
                 startTask(nextTask)
+            } else {
+                com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "No task to dequeue")
             }
+        } else {
+            com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "Concurrent limit reached, not scheduling")
         }
     }
     
