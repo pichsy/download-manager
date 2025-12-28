@@ -27,6 +27,7 @@ import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 import java.io.File
 import android.provider.Settings
 import com.pichs.download.demo.floatwindow.FloatBallView
+import com.pichs.download.demo.ui.AppStoreActivity
 import kotlinx.coroutines.delay
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
@@ -53,6 +54,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     val REMOVE_PERMISSIONS = "com.gankao.dpc.request.REMOVE_PERMISSIONS"
 
     override fun afterOnCreate() {
+
+        binding.tvTitle.fastClick {
+            startActivity(Intent(this, AppStoreActivity::class.java))
+        }
 
         binding.ivDownloadSettings.fastClick {
             startActivity(Intent(this, AppUseDataSettingsActivity::class.java))
@@ -170,9 +175,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             startActivity(Intent(this, DownloadManagerActivity::class.java))
         }
 
-        binding.ivSearch.fastClick {
-            viewModel.simulateBatchDownload()
-        }
+//        binding.ivSearch.fastClick {
+//            viewModel.simulateBatchDownload()
+//        }
 
         // 订阅 ViewModel 的 UI 事件
         lifecycleScope.launch {

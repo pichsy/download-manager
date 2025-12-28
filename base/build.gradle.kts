@@ -118,4 +118,5 @@ dependencies {
     // kotlin的序列化 protobuf
     api(libs.kotlinx.serialization.json)
     api(libs.kotlinx.serialization.protobuf)
+    api(project(":downloader"))
 }

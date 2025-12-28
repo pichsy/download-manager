@@ -20,7 +20,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.CALL_PHONE"
+    <uses-permission
+        android:name="android.permission.CALL_PHONE"
         tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
@@ -118,15 +119,6 @@
     <uses-feature android:name="android.hardware.location" />
     <uses-feature android:name="android.hardware.location.gps" />
 
-    <queries>
-        <provider android:authorities="com.gankao.dpcmanager.provider" />
-        <provider android:authorities="com.gankao.gkappstore.provider" />
-
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-        </intent>
-    </queries>
-
     <application
         android:name="com.pichs.download.demo.App"
         android:allowBackup="true"
@@ -192,6 +184,12 @@
 
         <activity
             android:name="com.pichs.download.demo.AppUseDataSettingsActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|fontScale|density|colorMode|navigation|layoutDirection|uiMode|screenLayout|smallestScreenSize"
+            android:exported="true"
+            android:launchMode="standard" />
+
+        <activity
+            android:name="com.pichs.download.demo.ui.AppStoreActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|fontScale|density|colorMode|navigation|layoutDirection|uiMode|screenLayout|smallestScreenSize"
             android:exported="true"
             android:launchMode="standard" />

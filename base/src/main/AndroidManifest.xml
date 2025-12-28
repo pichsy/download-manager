@@ -5,12 +5,38 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <queries>
+        <provider android:authorities="com.gankaos.ai.dpc.provider" />
+
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.CALL" />
+            <data android:scheme="tel" />
+        </intent>
+    </queries>
+
     <application>
+        <meta-data
+            android:name="android.notch_support"
+            android:value="true" />
 
         <!-- 告知 XXPermissions 当前项目已经适配了分区存储特性 -->
         <meta-data
             android:name="ScopedStorage"
             android:value="true" />
+
+<!--        <provider-->
+<!--            android:name="androidx.core.content.FileProvider"-->
+<!--            android:authorities="${applicationId}.fileprovider"-->
+<!--            android:exported="false"-->
+<!--            android:grantUriPermissions="true">-->
+<!--            <meta-data-->
+<!--                android:name="android.support.FILE_PROVIDER_PATHS"-->
+<!--                android:resource="@xml/file_provider" />-->
+<!--        </provider>-->
 
         <provider
             android:name="com.pichs.shanhai.base.provider.ShanhaiProvider"

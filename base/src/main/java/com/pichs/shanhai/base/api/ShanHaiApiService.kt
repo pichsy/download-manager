@@ -1,10 +1,14 @@
 package com.pichs.shanhai.base.api
 
+import androidx.annotation.Keep
 import com.pichs.shanhai.base.api.entity.BaseData
+import com.pichs.shanhai.base.api.entity.BaseResponse
+import com.pichs.shanhai.base.api.entity.UpdateAppInfo
 import com.pichs.shanhai.base.api.entity.UserInfo
 import retrofit2.http.Body
 import retrofit2.http.POST
 
+@Keep
 interface ShanHaiApiService {
 
     @POST(ShanHaiApi.LOGIN)
@@ -16,8 +20,17 @@ interface ShanHaiApiService {
     @POST(ShanHaiApi.DESTROY_ACCOUNT)
     suspend fun destroyAccount(): BaseData<Any>?
 
+    @POST(ShanHaiApi.LOAD_UPDATE_APP_LIST)
+    suspend fun loadUpdateAppList(@Body body: UpdateAppBody): BaseResponse<MutableList<UpdateAppInfo>>?
+
 }
 
+@Keep
+data class UpdateAppBody(
+    var type: Int = 0,
+    var category_type: String = "1,3",
+)
+@Keep
 data class LoginBody(
     var account: String? = null,
     var password: String? = null

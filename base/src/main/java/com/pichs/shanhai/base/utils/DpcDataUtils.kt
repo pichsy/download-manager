@@ -3,15 +3,10 @@ package com.pichs.shanhai.base.utils
 import android.annotation.SuppressLint
 import android.content.Context
 import android.database.Cursor
-import android.net.Uri
-import com.pichs.xbase.utils.MD5
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.core.net.toUri
 
-
-/**
- * 获取DPC应用的参数
- */
 object DpcDataUtils {
 
     @SuppressLint("Range")
@@ -20,7 +15,7 @@ object DpcDataUtils {
             var cursor: Cursor? = null
             try {
                 if (key.isEmpty()) return@withContext defaultValue
-                val uri = Uri.parse("content://com.gankao.dpcmanager.provider/cache")
+                val uri = "content://com.gankaos.ai.dpc.provider/cache".toUri()
                 cursor = context.contentResolver.query(uri, arrayOf("key", "value"), "key = ?", arrayOf(key), null)
                 if (cursor?.moveToNext() == true) {
                     return@withContext cursor.getString(cursor.getColumnIndex(key)) ?: defaultValue
@@ -38,6 +33,31 @@ object DpcDataUtils {
         }
     }
 
+    @SuppressLint("Range")
+    fun getStringASync(context: Context, key: String, defaultValue: String? = null): String? {
+        return run {
+            var cursor: Cursor? = null
+            try {
+                if (key.isEmpty()) return@run defaultValue
+                val uri = "content://com.gankaos.ai.dpc.provider/cache".toUri()
+                cursor = context.contentResolver.query(uri, arrayOf("key", "value"), "key = ?", arrayOf(key), null)
+                if (cursor?.moveToNext() == true) {
+                    return@run cursor.getString(cursor.getColumnIndex(key)) ?: defaultValue
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                try {
+                    cursor?.close()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            defaultValue
+        }
+    }
+
+
     /**
      * 获取用户 sn号
      */
@@ -45,112 +65,181 @@ object DpcDataUtils {
         return getString(context, "dpc_device_sn")
     }
 
-    /**
-     * 获取设备Id gk生成
-     */
-    suspend fun getDeviceId(context: Context): String? {
-        return getString(context, "dpc_device_id")
-    }
 
     /**
-     * 获取区域Id
+     * 获取用户 sn号
      */
-    suspend fun getAreaId(context: Context): String? {
-        return getString(context, "dpc_area_id")
-    }
-
-    /**
-     * 获取公司Id
-     */
-    suspend fun getCompanyId(context: Context): String? {
-        return getString(context, "dpc_company_id")
-    }
-
-    /**
-     * 获取黑名单列表
-     */
-    suspend fun getBlackAppList(context: Context): String? {
-        return getString(context, "dpc_black_app_list")
-    }
-
-    suspend fun getWhiteAppList(context: Context): String? {
-        return getString(context, "dpc_white_app_list")
-    }
-
-    /**
-     * "1", 非白即黑
-     * "0", 非黑即白
-     */
-    suspend fun getEtherWhiteOrBlackStrategy(context: Context): String? {
-        return getString(context, "dpc_app_either_white_or_black")
-    }
-
-    /**
-     * 进入家长模式是否 禁用
-     */
-    suspend fun isEnterParentModeDisabled(context: Context): Boolean {
-        return getString(context, "dpc_enter_parent_mode_disable", "0") == "1"
-    }
-
-    /**
-     * 是否进入了家长模式
-     */
-    suspend fun isEnterParentMode(context: Context): Boolean {
-        return getString(context, "dpc_enter_parent_mode", "0") == "1"
-    }
-
-    /**
-     * 是否 锁屏
-     * 1: true
-     * 0: false
-     */
-    suspend fun isScreenLocked(context: Context): Boolean {
-        return getString(context, "dpc_is_screen_locked", "0") == "1"
-    }
-
-    /**
-     * 是否 锁屏
-     * "1" 禁用锁屏
-     * "0" 不禁用锁屏
-     */
-    suspend fun isGesturePasswordDisabled(context: Context): Boolean {
-        return getString(context, "dpc_gesture_password_disabled", "0") == "1"
-    }
-
-    /**
-     * 获取最终 黑名单列表
-     */
-    suspend fun getFinalBlackAppList(context: Context): String? {
-        return getString(context, "dpc_final_black_app_list")
-    }
-
-    /**
-     * 是否是 Harmony os
-     */
-    suspend fun isHarmonyOs(context: Context): Boolean {
-        return getString(context, "dpc_is_harmony_os", "0") == "1"
-    }
-
-    /**
-     * Harmony os Version
-     */
-    suspend fun getHarmonyOsVersion(context: Context): String? {
-        return getString(context, "dpc_harmony_os_version")
-    }
-
-    /**
-     * 获取 ota 版本
-     */
-    suspend fun getOtaVersion(context: Context): String? {
-        return getString(context, "dpc_ota_version")
+    fun getDeviceSnASync(context: Context): String {
+        return getStringASync(context, "dpc_device_sn") ?: ""
     }
 
 
     /**
-     * isKeepAlive
+     * 获取 剪流的 token
      */
-    suspend fun isKeepAlive(context: Context): Boolean {
-        return getString(context, "is_keep_alive") == "1"
+    suspend fun getJianLiuToken(context: Context): String? {
+        return getString(context, "app_jian_liu_token")
     }
+
+
+    /**
+     * 获取 剪流的 token
+     */
+    suspend fun getJianLiuTokenExpireTime(context: Context): Long {
+        return try {
+            getString(context, "app_jian_liu_token_expire_timestamp")?.toLongOrNull() ?: 0L
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    /**
+     * 获取 云销售的 token
+     */
+    suspend fun getSalesToken(context: Context): String? {
+        return getString(context, "app_sales_app_token")
+    }
+
+    suspend fun getSalesTokenExpireTime(context: Context): Long {
+        return try {
+            getString(context, "app_sales_app_token_expire_timestamp")?.toLongOrNull() ?: 0L
+        } catch (e: Exception) {
+            0L
+        }
+    }
+
+    /**
+     * 获取 赶考系 token
+     */
+    suspend fun getGankaoToken(context: Context): String? {
+        return getString(context, "app_gankao_app_token")
+    }
+
+    /**
+     * 获取 赶考系 cookie
+     */
+    suspend fun getGankaoCookie(context: Context): String? {
+        return getString(context, "app_gankao_app_cookies")
+    }
+
+    /**
+     * 获取 赶考系 用户信息
+     * data class LoginV3UserInfo(
+     *     val id:Long?=0L,
+     *     val user_id: Long? = 0L,
+     *     val mobile: String? = null,
+     *     val real_name: String? = null,
+     *     val mystudent_name: String? = null,
+     *     val nick_name: String? = null,
+     *     val logo: String? = null,
+     *     val user_type: String? = null,
+     *     val grade_id: Int? = 0,
+     *     val gradename: String? = null,
+     *     val isTrueTeacher: Boolean? = false,
+     *     val user_channel_type: String? = null,
+     *     val partner_id: String? = null,
+     *     val login_day: Int? = 0,
+     *     val login_day_continuity: Int? = 0,
+     *     val cookieStudent: String? = null,
+     * ): Serializable{
+     *     fun getUserId(): Long{
+     *         if (user_id==null||user_id == 0L){
+     *             return id ?: 0L
+     *         }
+     *         return user_id
+     *     }
+     * }
+     */
+    suspend fun getGankaoUserInfo(context: Context): String? {
+        return getString(context, "app_gankao_app_user_info")
+    }
+
+    /**
+     * 获取 赶考系 用户id
+     * String:  user_id
+     */
+    suspend fun getGankaoUserId(context: Context): String? {
+        return getString(context, "app_gankao_app_user_id")
+    }
+
+    /**
+     * json字符串
+     * data class V6BindInfoData(
+     *     val isBind: Boolean = false,
+     *     val bindInfo: V6BindInfoDetail? = null,
+     * )
+     *
+     * data class V6BindInfoDetail(
+     *     val enterpriseId: String? = null,
+     *     val enterpriseName: String? = null,
+     *     val userId: String? = null,
+     *     val userName: String? = null
+     * )
+     */
+    suspend fun getSalesBindInfo(context: Context): String? {
+        return getString(context, "app_sales_bind_info")
+    }
+
+    /**
+     * release / preview / test
+     * 获取不到，自行处理默认环境
+     */
+    suspend fun getEnv(context: Context): String? {
+        return getString(context, "gk_dpc_env")
+    }
+
+    /**
+     * 是否 ： 是 "true" 。 否：null/empty/false。
+     */
+    suspend fun isAiPhone(context: Context): Boolean {
+        return getString(context, "isAiPhone") == "true"
+    }
+
+    /**
+     * 是否 ： 是 "true" 。 否：null/empty/false。
+     */
+    fun isAiPhoneASync(context: Context): Boolean {
+        return getStringASync(context, "isAiPhone") == "true"
+    }
+
+    /**
+     * 设备是否绑定 ： 是 "1" 。 否："0"。
+     */
+    fun isBindASync(context: Context): Boolean {
+        return getStringASync(context, "dpc_bind_state") == "1"
+    }
+
+    /**
+     * 设备是否绑定 ： 是 "1" 。 否："0"。
+     */
+    suspend fun isBind(context: Context): Boolean {
+        return getString(context, "dpc_bind_state") == "1"
+    }
+
+    /**
+     *  获取上传流量限制
+     *  20, 50, 100, 200, 500, 1000
+     *  单位 MB 数值：[20,50,100,200,500,1000]
+     */
+    suspend fun getUploadDataUseSmartLimit(context: Context): Int {
+        return getString(context, "dpc_upload_data_use_smart_limit")?.toIntOrNull() ?: 0
+    }
+
+    /**
+     *   获取上传 流量限制提醒类型
+     *   0， 每次都提醒，1，不提醒，2，智能提醒
+     */
+    suspend fun getUploadDataUseTipsType(context: Context): Int {
+        return getString(context, "dpc_upload_data_use_tips_type")?.toIntOrNull() ?: 0
+    }
+
+    /**
+     *   获取上传 流量限制提醒类型
+     *   0， 每次都提醒，1，不提醒，2，智能提醒
+     */
+    suspend fun isUploadWifiOnly(context: Context): Boolean {
+        return getString(context, "dpc_wifi_upload_only_sync") == "1"
+    }
+
 
 }

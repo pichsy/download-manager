@@ -1,23 +1,28 @@
 package com.pichs.shanhai.base.api
 
 import com.pichs.shanhai.base.http.BaseApi
-import com.pichs.shanhai.base.http.interceptor.TokenInterceptor
+import com.pichs.shanhai.base.api.TokenInterceptor
 import okhttp3.Interceptor
 
 object ShanHaiApi : BaseApi<ShanHaiApiService>() {
 
-    private const val BASE_URL_TEST = "http://172.16.100.17:8080/"
+//    private const val BASE_URL_TEST = "http://172.16.100.17:8080/"
+    private const val BASE_URL_RELEASE = "https://api.gankao.com/"
+
+
+    // 加载更新的设备信息
+     const val LOAD_UPDATE_APP_LIST = "api-mdm/dpc/loadUpdateAppListForAiPhone"
 
     override fun getReleaseBaseUrl(): String {
-        return BASE_URL_TEST
+        return BASE_URL_RELEASE
     }
 
     override fun getPreviewBaseUrl(): String {
-        return BASE_URL_TEST
+        return BASE_URL_RELEASE
     }
 
     override fun getTestBaseUrl(): String {
-        return BASE_URL_TEST
+        return BASE_URL_RELEASE
     }
 
     override fun customInterceptor(): Interceptor? {
