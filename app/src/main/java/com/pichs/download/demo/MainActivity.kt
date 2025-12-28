@@ -456,6 +456,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         openApkFile(file)
     }
 
+
     private fun openApkFile(file: File) {
         if (!file.exists()) return
         val uri: Uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
