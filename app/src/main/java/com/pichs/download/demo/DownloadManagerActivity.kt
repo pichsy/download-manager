@@ -11,6 +11,7 @@ import com.pichs.download.demo.databinding.ActivityDownloadManagerBinding
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.shanhai.base.base.BaseActivity
+import com.pichs.shanhai.base.api.entity.qiniuHostUrl
 import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 
 class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
@@ -331,20 +332,10 @@ private class SimpleTaskVH(
         currentTask = task
         
         // 从 extras(JSON) 读取应用信息
-        data class ExtraMeta(
-            val name: String? = null,
-            val packageName: String? = null,
-            val versionCode: Long? = null,
-            val icon: String? = null,
-            val size: Long? = null
-        )
-        val meta: ExtraMeta? = runCatching {
-            val raw = task.extras
-            if (!raw.isNullOrBlank()) com.pichs.xbase.utils.GsonUtils.fromJson(raw, ExtraMeta::class.java) else null
-        }.getOrNull()
+        val meta = ExtraMeta.fromJson(task.extras)
         
         val ctx = itemView.context
-        val iconUrl = meta?.icon
+        val iconUrl = meta?.icon?.qiniuHostUrl
         if (!iconUrl.isNullOrBlank()) {
             Glide.with(ivCover).load(iconUrl).into(ivCover)
         } else {

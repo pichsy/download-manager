@@ -126,7 +126,7 @@ class ProgressButton @JvmOverloads constructor(
             try {
                 backgroundColor = getColor(R.styleable.ProgressButton_pb_backgroundColor, backgroundColor)
                 progressColor = getColor(R.styleable.ProgressButton_pb_progressColor, progressColor)
-                cornerRadius = getDimension(R.styleable.ProgressButton_xp_radius, cornerRadius)
+                cornerRadius = getDimension(R.styleable.ProgressButton_pb_radius, cornerRadius)
                 buttonText = getString(R.styleable.ProgressButton_android_text) ?: buttonText
                 textColor = getColor(R.styleable.ProgressButton_android_textColor, textColor)
                 textSize = getDimension(R.styleable.ProgressButton_android_textSize, textSize)

@@ -67,6 +67,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:pb_backgroundColor="#1A1A1A"
         app:pb_progressColor="#6161FF"
-        app:xp_radius="16dp" />
+        app:pb_radius="16dp" />
 
 </com.pichs.xwidget.cardview.XCardConstraintLayout>

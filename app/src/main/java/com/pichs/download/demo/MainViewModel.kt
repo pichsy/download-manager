@@ -342,15 +342,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun buildExtrasJson(item: DownloadItem): String {
-        return GsonUtils.toJson(
-            mapOf(
-                "name" to item.name,
-                "packageName" to (item.packageName ?: ""),
-                "versionCode" to (item.versionCode ?: 0L),
-                "icon" to (item.icon ?: ""),
-                "size" to item.size
-            )
-        )
+        return ExtraMeta(
+            name = item.name,
+            packageName = item.packageName,
+            versionCode = item.versionCode,
+            icon = item.icon,
+            size = item.size
+        ).toJson()
     }
 
     private fun buildFileName(name: String): String {
