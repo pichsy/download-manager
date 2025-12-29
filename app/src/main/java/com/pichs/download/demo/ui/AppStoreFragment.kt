@@ -328,7 +328,7 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
             val storeVC = appInfo.version_code ?: 0L
 
             // 版本
-            tvAppVersion.text = "版本:${appInfo.version_code ?: "0"} ，本地版本:${SysOsUtils.getVersionCode(UiKit.getApplication(), pkg)}"
+            tvAppVersion.text = "版本:${appInfo.version_name ?: "1.0.0"}"
 
             // 获取本地版本号（0 表示未安装）
             val localVC = SysOsUtils.getVersionCode(UiKit.getApplication(), pkg)
