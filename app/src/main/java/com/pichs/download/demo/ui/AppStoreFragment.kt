@@ -32,6 +32,9 @@ import com.pichs.xbase.utils.UiKit
 import com.pichs.xwidget.cardview.XCardImageView
 import com.pichs.xwidget.utils.XColorHelper
 import com.pichs.xwidget.view.XTextView
+import com.pichs.download.demo.install.InstallManager
+import com.pichs.download.demo.install.InstallStatus
+import com.pichs.download.demo.install.InstallTask
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.File
@@ -69,6 +72,7 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
         initDataFlow()
         bindFlowListener()
         bindUiEvent()
+        bindInstallListener()
 
         viewModel.loadUpdateAppList(type)
     }
@@ -98,6 +102,8 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
             },
             onTaskComplete = { task, file ->
                 updateTask(task)
+                // 下载完成，自动加入安装队列
+                addToInstallQueue(task)
             },
             onTaskError = { task, error ->
                 updateTask(task)
@@ -112,6 +118,27 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                 updateTask(task)
             }
         )
+    }
+
+    private val installListener = object : InstallManager.InstallListener {
+        override fun onInstallStatusChanged(packageName: String, status: InstallStatus) {
+            // 更新对应包名的 UI
+            val index = appList.indexOfFirst { it.package_name == packageName }
+            if (index >= 0) {
+                binding.recyclerView.post {
+                    adapter.notifyItemChanged(index)
+                }
+            }
+        }
+    }
+
+    private fun bindInstallListener() {
+        InstallManager.addListener(installListener)
+    }
+
+    override fun onDestroyView() {
+        InstallManager.removeListener(installListener)
+        super.onDestroyView()
     }
 
     private fun bindUiEvent() {
@@ -236,26 +263,75 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
             }
 
             DownloadStatus.COMPLETED -> {
-                openApk(task)
+                // 检查安装状态
+                val pkg = appInfo.package_name ?: ""
+                val installStatus = InstallManager.getInstallStatus(pkg)
+                
+                when (installStatus) {
+                    InstallStatus.INSTALLING, InstallStatus.PENDING -> {
+                        // 正在安装或等待安装，不处理点击
+                    }
+                    else -> {
+                        // 已安装成功或不在队列中
+                        if (ApkInstallUtils.checkAppInstalled(ctx, pkg)) {
+                            // 已安装，打开应用
+                            ctx.packageManager.getLaunchIntentForPackage(pkg)?.let { intent ->
+                                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivity(intent)
+                            }
+                        } else {
+                            // 未安装，加入安装队列进行静默安装
+                            addToInstallQueue(task)
+                            // 刷新当前 item UI
+                            val index = appList.indexOfFirst { it.package_name == pkg }
+                            if (index >= 0) {
+                                adapter.notifyItemChanged(index)
+                            }
+                        }
+                    }
+                }
             }
 
             else -> {}
         }
     }
 
-    private fun openApk(task: DownloadTask) {
-        val file = File(task.filePath, task.fileName)
-        if (!file.exists()) {
-            android.widget.Toast.makeText(requireContext(), "文件不存在", android.widget.Toast.LENGTH_SHORT).show()
-            return
+    /**
+     * 将下载完成的任务加入安装队列
+     */
+    private fun addToInstallQueue(task: DownloadTask) {
+        // 从 extras 获取包名和版本号
+        val extras = task.extras
+        if (extras.isNullOrBlank()) return
+        
+        try {
+            val meta = com.pichs.download.demo.ExtraMeta.fromJson(extras)
+            val packageName = meta?.packageName ?: return
+            val versionCode = meta.versionCode ?: 0L
+            
+            val apkFile = File(task.filePath, task.fileName)
+            if (!apkFile.exists()) return
+            
+            // 检查本地版本是否已是最新
+            val localVC = SysOsUtils.getVersionCode(requireContext(), packageName)
+            if (localVC >= versionCode) {
+                // 已是最新版本，不需要安装
+                return
+            }
+            
+            // 检查是否已在队列中
+            if (InstallManager.isInQueue(packageName)) return
+            
+            InstallManager.addToQueue(
+                InstallTask(
+                    packageName = packageName,
+                    apkPath = apkFile.absolutePath,
+                    versionCode = versionCode
+                )
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        val uri = FileProvider.getUriForFile(requireContext(), "${requireContext().packageName}.fileprovider", file)
-        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            setDataAndType(uri, "application/vnd.android.package-archive")
-        }
-        startActivity(intent)
     }
 
     // ===================== Inner Adapter =====================
@@ -411,13 +487,41 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                     DownloadStatus.COMPLETED -> {
                         btnUpdate.visibility = View.VISIBLE
                         val health = AppUtils.checkFileHealth(task)
+                        val pkg = appInfo.package_name ?: ""
+                        
                         if (health == AppUtils.FileHealth.OK) {
-                            // 下载完成，需要安装
-                            btnUpdate.setText("安装")
-                            tvTag.text = "待安装"
-                            tvTag.visibility = View.VISIBLE
-                            tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
-                            tvTag.setNormalBackgroundColor(XColorHelper.parseColor("#FFFFF4EB"))
+                            // 检查安装状态
+                            val installStatus = InstallManager.getInstallStatus(pkg)
+                            
+                            when (installStatus) {
+                                InstallStatus.INSTALLING -> {
+                                    // 正在安装
+                                    btnUpdate.setText("安装中")
+                                    btnUpdate.isEnabled = false
+                                    tvTag.text = "安装中"
+                                    tvTag.visibility = View.VISIBLE
+                                    tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
+                                    tvTag.setNormalBackgroundColor(XColorHelper.parseColor("#FFFFF4EB"))
+                                }
+                                InstallStatus.PENDING -> {
+                                    // 等待安装
+                                    btnUpdate.setText("等待安装")
+                                    btnUpdate.isEnabled = false
+                                    tvTag.text = "排队中"
+                                    tvTag.visibility = View.VISIBLE
+                                    tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
+                                    tvTag.setNormalBackgroundColor(XColorHelper.parseColor("#FFFFF4EB"))
+                                }
+                                else -> {
+                                    // 不在安装队列中，显示安装按钮（不自动加入队列）
+                                    btnUpdate.setText("安装")
+                                    btnUpdate.isEnabled = true
+                                    tvTag.text = "待安装"
+                                    tvTag.visibility = View.VISIBLE
+                                    tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
+                                    tvTag.setNormalBackgroundColor(XColorHelper.parseColor("#FFFFF4EB"))
+                                }
+                            }
                         } else {
                             // 文件损坏或缺失
                             btnUpdate.setText("下载")

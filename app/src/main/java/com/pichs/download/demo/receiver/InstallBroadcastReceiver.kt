@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
+import com.pichs.download.demo.install.InstallManager
 import com.pichs.shanhai.base.utils.LogUtils
 import com.pichs.xbase.utils.UiKit
 
@@ -46,7 +47,8 @@ class InstallBroadcastReceiver : BroadcastReceiver() {
                         // 应用新装
                         if (!isReplacing) {
                             LogUtils.d("应用安装888 ：安装事件：add===pkg=${pkg}")
-
+                            // 通知 InstallManager 安装成功
+                            InstallManager.onInstallSuccess(pkg)
                         } else {
                             LogUtils.d("应用安装888 ：安装事件：add===pkg=${pkg}，正在被替换安装，不处理")
                         }
@@ -57,8 +59,8 @@ class InstallBroadcastReceiver : BroadcastReceiver() {
                     LogUtils.d("应用安装888 ：替换安装事件：replace")
                     intent.dataString?.replace("package:", "")?.let { pkg ->
                         LogUtils.d("应用安装888 ：替换安装事件：replace===pkg=${pkg}")
-
-
+                        // 通知 InstallManager 安装成功（替换安装也算成功）
+                        InstallManager.onInstallSuccess(pkg)
                     }
                 }
 
@@ -69,7 +71,6 @@ class InstallBroadcastReceiver : BroadcastReceiver() {
                     if (!isReplacing) {
                         intent.dataString?.replace("package:", "")?.let { pkg ->
                             LogUtils.d("应用安装888 ：卸载事件：remove===pkg=${pkg}")
-
                         }
                     } else {
                         LogUtils.d("应用安装888 ：卸载事件：remove===正在被替换安装，不处理")
