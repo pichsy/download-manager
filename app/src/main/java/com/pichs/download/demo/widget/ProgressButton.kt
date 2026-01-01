@@ -173,6 +173,18 @@ class ProgressButton @JvmOverloads constructor(
         invalidate()
     }
 
+    fun setProgressColor(color: Int) {
+        progressColor = color
+        progressPaint.color = color
+        invalidate()
+    }
+
+    fun setTextColor(color: Int) {
+        textColor = color
+        textPaint.color = color
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 

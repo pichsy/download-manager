@@ -453,10 +453,8 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
 
             // 按钮和标签状态 - 优先判断版本号
             if (isLatestVersion) {
-                // 已是最新版本，直接显示打开（不管 task 状态）
-                btnUpdate.visibility = View.VISIBLE
-                btnUpdate.setText("打开")
-                btnUpdate.setProgress(100)
+                // 已是最新版本，隐藏按钮
+                btnUpdate.visibility = View.GONE
                 tvTag.text = "已是最新版本"
                 tvTag.visibility = View.VISIBLE
                 tvTag.setTextColor(XColorHelper.parseColor("#FF06BB8D"))
@@ -471,19 +469,14 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                             btnUpdate.visibility = View.VISIBLE
                             btnUpdate.setText("更新")
                             btnUpdate.setProgress(0)
-                            tvTag.text = "有新版本"
-                            tvTag.visibility = View.VISIBLE
-                            tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
-                            tvTag.setNormalBackgroundColor(XColorHelper.parseColor("#FFFFF4EB"))
+                            tvTag.visibility = View.GONE
                         } else {
                             // 未安装
                             btnUpdate.visibility = View.VISIBLE
-                            btnUpdate.setText("下载")
+                            btnUpdate.setText("安装")
                             btnUpdate.setProgress(0)
-                            tvTag.text = "未安装"
-                            tvTag.visibility = View.VISIBLE
-                            tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
-                            tvTag.setNormalBackgroundColor(XColorHelper.parseColor("#FFFFF4EB"))
+                            btnUpdate.setTextColor(android.graphics.Color.parseColor("#054AFF"))
+                            tvTag.visibility = View.GONE
                         }
                         tvAppSize.text = originalSize
                     }
@@ -492,6 +485,7 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                         btnUpdate.visibility = View.VISIBLE
                         btnUpdate.setText("${task.progress}%")
                         btnUpdate.setProgress(task.progress)
+                        btnUpdate.setTextColor(android.graphics.Color.BLACK)
                         tvAppSize.text = SpeedUtils.formatDownloadSpeed(task.speed)
                         tvTag.visibility = View.GONE
                     }
@@ -509,8 +503,7 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                         btnUpdate.setText("等待中")
                         btnUpdate.setProgress(task.progress)
                         tvAppSize.text = originalSize
-                        tvTag.text = "排队中"
-                        tvTag.visibility = View.VISIBLE
+                        tvTag.visibility = View.GONE
                     }
 
                     DownloadStatus.FAILED -> {
@@ -518,12 +511,13 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                         btnUpdate.setText("重试")
                         btnUpdate.setProgress(task.progress)
                         tvAppSize.text = originalSize
-                        tvTag.text = "失败"
-                        tvTag.visibility = View.VISIBLE
+                        tvTag.visibility = View.GONE
                     }
 
                     DownloadStatus.COMPLETED -> {
                         btnUpdate.visibility = View.VISIBLE
+                        btnUpdate.setProgressColor(android.graphics.Color.TRANSPARENT)
+                        btnUpdate.setTextColor(android.graphics.Color.parseColor("#054AFF"))
                         val health = AppUtils.checkFileHealth(task)
                         val pkg = appInfo.package_name ?: ""
                         
@@ -536,33 +530,24 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                                     // 正在安装
                                     btnUpdate.setText("安装中")
                                     btnUpdate.isEnabled = false
-                                    tvTag.text = "安装中"
-                                    tvTag.visibility = View.VISIBLE
-                                    tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
-                                    tvTag.setNormalBackgroundColor(XColorHelper.parseColor("#FFFFF4EB"))
+                                    tvTag.visibility = View.GONE
                                 }
                                 InstallStatus.PENDING -> {
                                     // 等待安装
                                     btnUpdate.setText("等待安装")
                                     btnUpdate.isEnabled = false
-                                    tvTag.text = "排队中"
-                                    tvTag.visibility = View.VISIBLE
-                                    tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
-                                    tvTag.setNormalBackgroundColor(XColorHelper.parseColor("#FFFFF4EB"))
+                                    tvTag.visibility = View.GONE
                                 }
                                 else -> {
-                                    // 不在安装队列中，显示安装按钮（不自动加入队列）
+                                    // 不在安装队列中，显示安装按钮
                                     btnUpdate.setText("安装")
                                     btnUpdate.isEnabled = true
-                                    tvTag.text = "待安装"
-                                    tvTag.visibility = View.VISIBLE
-                                    tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
-                                    tvTag.setNormalBackgroundColor(XColorHelper.parseColor("#FFFFF4EB"))
+                                    tvTag.visibility = View.GONE
                                 }
                             }
                         } else {
                             // 文件损坏或缺失
-                            btnUpdate.setText("下载")
+                            btnUpdate.setText("安装")
                             tvTag.text = "待更新"
                             tvTag.visibility = View.VISIBLE
                             tvTag.setTextColor(XColorHelper.parseColor("#FFFF9337"))
@@ -574,8 +559,9 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
 
                     else -> {
                         btnUpdate.visibility = View.VISIBLE
-                        btnUpdate.setText("下载")
+                        btnUpdate.setText("安装")
                         btnUpdate.setProgress(0)
+                        btnUpdate.setTextColor(android.graphics.Color.parseColor("#054AFF"))
                         tvAppSize.text = originalSize
                         tvTag.text = "待更新"
                         tvTag.visibility = View.VISIBLE
@@ -591,6 +577,7 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
             // 更新按钮进度
             btnUpdate.setProgress(task.progress)
             btnUpdate.setText("${task.progress}%")
+            btnUpdate.setTextColor(android.graphics.Color.BLACK)
             // 大小控件显示网速
             tvAppSize.text = SpeedUtils.formatDownloadSpeed(task.speed)
             tvTag.visibility = View.GONE
