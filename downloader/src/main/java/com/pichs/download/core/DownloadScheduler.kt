@@ -134,48 +134,27 @@ internal class DownloadScheduler(
     }
     
     private fun onNetworkChanged(networkType: NetworkType) {
+        // 网络变化时不自动修改并发数，由用户自己控制
         when (networkType) {
-            NetworkType.WIFI -> {
-                // WiFi网络，可以增加并发数
-                dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnWifi)
-            }
-            NetworkType.CELLULAR_4G, NetworkType.CELLULAR_5G -> {
-                // 4G/5G网络，中等并发数
-                dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnCellular)
-            }
-            NetworkType.CELLULAR_3G, NetworkType.CELLULAR_2G -> {
-                // 3G/2G网络，降低并发数
-                dispatcher.setMaxConcurrentTasks(1)
-            }
-            NetworkType.ETHERNET -> {
-                // 以太网，高并发数
-                dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnWifi)
-            }
             NetworkType.UNKNOWN -> {
                 // 无网络，暂停所有任务
                 pauseAllTasks()
+            }
+            else -> {
+                // 有网络，触发一次调度
+                trySchedule()
             }
         }
     }
     
     private fun onBatteryChanged(isLowBattery: Boolean) {
+        // 电量变化时不自动修改并发数，由用户自己控制
+        // 低电量时可以暂停后台任务，但不修改并发数
         if (isLowBattery) {
-            // 低电量，降低并发数并暂停后台任务
-            dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnLowBattery)
-            // dispatcher.pauseLowPriorityTasks() // Dispatcher 无法直接暂停，逻辑移到此处
             dispatcher.getBackgroundTasks().forEach { task ->
                 engine.pause(task.id)
             }
         } else {
-            // 电量充足，恢复正常并发数
-            val networkType = networkMonitor.getCurrentNetworkType()
-            when (networkType) {
-                NetworkType.WIFI -> dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnWifi)
-                NetworkType.CELLULAR_4G, NetworkType.CELLULAR_5G -> dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnCellular)
-                else -> dispatcher.setMaxConcurrentTasks(config.maxConcurrentTasks)
-            }
-            // dispatcher.resumeLowPriorityTasks()
-            // 恢复逻辑：将后台任务重新入队或恢复状态，由 scheduleNextInternal 自动调度
             dispatcher.getBackgroundTasks().forEach { task ->
                 engine.resume(task.id)
             }
