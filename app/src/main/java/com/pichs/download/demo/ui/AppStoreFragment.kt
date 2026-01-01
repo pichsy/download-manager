@@ -80,6 +80,10 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
     private fun initDataFlow() {
         lifecycleScope.launch {
             viewModel.appListFlow.collectLatest { list ->
+                android.util.Log.d("AppStore", "initDataFlow 收到更新: size=${list.size}")
+                list.forEachIndexed { index, item ->
+                    android.util.Log.d("AppStore", "  [$index] ${item.app_name} -> task.status=${item.task?.status}")
+                }
                 appList.clear()
                 appList.addAll(list)
                 adapter.notifyDataSetChanged()
@@ -138,17 +142,22 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                 updateTask(task)
             },
             onTaskResumed = { task ->
+                android.util.Log.d("AppStore", "onTaskResumed 收到回调: taskId=${task.id}, status=${task.status}, url=${task.url}")
                 // 过滤：找不到匹配的 appInfo 则忽略
                 val existing = appList.find { it.task?.id == task.id || it.apk_url?.qiniuHostUrl == task.url }
+                android.util.Log.d("AppStore", "  existing=${existing?.app_name}, existing.task?.status=${existing?.task?.status}")
                 if (existing == null) {
+                    android.util.Log.d("AppStore", "  -> 找不到匹配项，忽略")
                     return@bindToLifecycle
                 }
                 // 只有当 UI 中已经是 WAITING 或 PENDING 状态时才忽略
                 // 注意：existing.task == null 表示是新任务，需要更新 UI！
                 val currentStatus = existing.task?.status
                 if (currentStatus == DownloadStatus.WAITING || currentStatus == DownloadStatus.PENDING) {
+                    android.util.Log.d("AppStore", "  -> 已是 WAITING/PENDING，忽略")
                     return@bindToLifecycle
                 }
+                android.util.Log.d("AppStore", "  -> 执行 updateTask")
                 updateTask(task)
             },
             onTaskCancelled = { task ->

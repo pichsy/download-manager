@@ -130,7 +130,7 @@ class AppStoreViewModel : ViewModel() {
             .start()
 
         // 更新列表中的任务
-        updateTaskInList(appInfo.apk_url, task)
+        updateTaskInList(appInfo.apk_url?.qiniuHostUrl, task)
         return task
     }
 
@@ -233,12 +233,23 @@ class AppStoreViewModel : ViewModel() {
      * 更新列表中指定 URL 的任务
      */
     fun updateTaskInList(url: String?, task: DownloadTask) {
-        if (url.isNullOrBlank()) return
+        android.util.Log.d("AppStore", "updateTaskInList: url=$url, task.status=${task.status}")
+        if (url.isNullOrBlank()) {
+            android.util.Log.d("AppStore", "  -> url 为空，返回")
+            return
+        }
         val list = _appListInfoFlow.value.toMutableList()
-        val index = list.indexOfFirst { it.apk_url == url }
+        val index = list.indexOfFirst { it.apk_url?.qiniuHostUrl == url }
+        android.util.Log.d("AppStore", "  匹配 index=$index")
         if (index >= 0) {
-            list[index].task = task  // 直接修改，与 MainActivity 保持一致
+            // 创建新对象确保 StateFlow 能检测到变化
+            val oldItem = list[index]
+            val newItem = oldItem.copy(task = task)
+            list[index] = newItem
             _appListInfoFlow.value = list
+            android.util.Log.d("AppStore", "  -> 更新成功, newItem.task.status=${newItem.task?.status}")
+        } else {
+            android.util.Log.d("AppStore", "  -> 找不到匹配项")
         }
     }
 
