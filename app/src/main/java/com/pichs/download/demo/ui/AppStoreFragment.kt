@@ -138,10 +138,15 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                 updateTask(task)
             },
             onTaskResumed = { task ->
-                // 过滤：找不到匹配项或已是 WAITING/PENDING 状态，忽略
+                // 过滤：找不到匹配的 appInfo 则忽略
                 val existing = appList.find { it.task?.id == task.id || it.apk_url?.qiniuHostUrl == task.url }
-                val currentStatus = existing?.task?.status
-                if (existing == null || currentStatus == DownloadStatus.WAITING || currentStatus == DownloadStatus.PENDING) {
+                if (existing == null) {
+                    return@bindToLifecycle
+                }
+                // 只有当 UI 中已经是 WAITING 或 PENDING 状态时才忽略
+                // 注意：existing.task == null 表示是新任务，需要更新 UI！
+                val currentStatus = existing.task?.status
+                if (currentStatus == DownloadStatus.WAITING || currentStatus == DownloadStatus.PENDING) {
                     return@bindToLifecycle
                 }
                 updateTask(task)

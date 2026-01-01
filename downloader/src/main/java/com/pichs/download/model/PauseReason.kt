@@ -1,9 +1,12 @@
 package com.pichs.download.model
 
+import androidx.annotation.Keep
+
 /**
  * 下载暂停原因枚举
  * 用于区分不同的暂停情况，实现智能的自动恢复机制
  */
+@Keep
 enum class PauseReason {
     /**
      * 用户手动暂停

@@ -103,6 +103,8 @@ class FlowDownloadListener {
                             onTaskResumed(task)
                         }
                         com.pichs.download.model.DownloadStatus.DOWNLOADING -> {
+                            // 立即触发一次进度回调，确保 UI 马上更新
+                            onTaskProgress(task, task.progress, task.speed)
                             // 为下载中的任务启动进度监听
                             if (!activeProgressListeners.contains(task.id)) {
                                 activeProgressListeners.add(task.id)
@@ -162,6 +164,8 @@ class FlowDownloadListener {
                             onTaskResumed(task)
                         }
                         com.pichs.download.model.DownloadStatus.DOWNLOADING -> {
+                            // 立即触发一次进度回调，确保 UI 马上更新
+                            onTaskProgress(task, task.progress, task.speed)
                             if (!activeProgressListeners.contains(task.id)) {
                                 activeProgressListeners.add(task.id)
                                 launch {

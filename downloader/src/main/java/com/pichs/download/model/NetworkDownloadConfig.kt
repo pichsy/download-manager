@@ -1,8 +1,11 @@
 package com.pichs.download.model
 
+import androidx.annotation.Keep
+
 /**
  * 流量提醒模式
  */
+@Keep
 enum class CellularPromptMode {
     /** 每次提醒（框架通过回调弹窗） */
     ALWAYS,
@@ -15,6 +18,7 @@ enum class CellularPromptMode {
 /**
  * 网络下载配置
  */
+@Keep
 data class NetworkDownloadConfig(
     /** 是否仅 WiFi 下载 */
     val wifiOnly: Boolean = false,

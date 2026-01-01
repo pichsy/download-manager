@@ -1,8 +1,10 @@
 package com.pichs.download.model
 
 import android.os.Parcelable
+import androidx.annotation.Keep
 import kotlinx.parcelize.Parcelize
 
+@Keep
 @Parcelize
 data class DownloadTask(
     val id: String,

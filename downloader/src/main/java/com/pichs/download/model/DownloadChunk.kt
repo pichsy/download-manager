@@ -1,9 +1,11 @@
 package com.pichs.download.model
 
 import android.os.Parcelable
+import androidx.annotation.Keep
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
+@Keep
 data class DownloadChunk(
     val taskId: String,
     val index: Int,
@@ -14,6 +16,7 @@ data class DownloadChunk(
     val updateTime: Long
 ) : Parcelable
 
+@Keep
 enum class ChunkStatus {
     PENDING,    // 等待下载
     DOWNLOADING, // 下载中

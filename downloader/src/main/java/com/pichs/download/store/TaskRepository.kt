@@ -1,10 +1,11 @@
 package com.pichs.download.store
 
 import android.content.Context
+import androidx.annotation.Keep
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.store.db.DownloadDatabase
 import com.pichs.download.store.db.DownloadEntity
-
+@Keep
 internal class TaskRepository(context: Context) {
     private val dao = DownloadDatabase.get(context).dao()
     private val chunkDao = DownloadDatabase.get(context).chunkDao()

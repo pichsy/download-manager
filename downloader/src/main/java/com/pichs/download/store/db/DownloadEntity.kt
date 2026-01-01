@@ -1,11 +1,12 @@
 package com.pichs.download.store.db
 
+import androidx.annotation.Keep
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.model.PauseReason
-
+@Keep
 @Entity(tableName = "downloads")
 internal data class DownloadEntity(
     @PrimaryKey val id: String,

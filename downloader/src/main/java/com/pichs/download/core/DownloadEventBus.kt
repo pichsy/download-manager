@@ -1,5 +1,6 @@
 package com.pichs.download.core
 
+import androidx.annotation.Keep
 import com.pichs.download.model.DownloadTask
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -40,7 +41,7 @@ internal object DownloadEventBus {
         _systemEvents.tryEmit(event)
     }
 }
-
+@Keep
 sealed class TaskEvent {
     data class TaskCreated(val task: DownloadTask) : TaskEvent()
     data class TaskStarted(val task: DownloadTask) : TaskEvent()
@@ -50,18 +51,18 @@ sealed class TaskEvent {
     data class TaskCancelled(val task: DownloadTask) : TaskEvent()
     data class TaskRemoved(val taskId: String) : TaskEvent()
 }
-
+@Keep
 sealed class ProgressEvent {
     data class ProgressUpdated(val taskId: String, val progress: Int, val speed: Long) : ProgressEvent()
     data class ChunkProgressUpdated(val taskId: String, val chunkIndex: Int, val progress: Int) : ProgressEvent()
 }
-
+@Keep
 sealed class ErrorEvent {
     data class TaskError(val context: ErrorContext) : ErrorEvent()
     data class ChunkError(val context: ErrorContext) : ErrorEvent()
     data class SystemError(val context: ErrorContext) : ErrorEvent()
 }
-
+@Keep
 sealed class SystemEvent {
     data class NetworkChanged(val networkType: NetworkType) : SystemEvent()
     data class BatteryChanged(val isLowBattery: Boolean, val level: Int) : SystemEvent()

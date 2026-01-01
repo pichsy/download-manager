@@ -1,10 +1,12 @@
 package com.pichs.download.store.db
 
 import android.content.Context
+import androidx.annotation.Keep
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+@Keep
 @Database(entities = [DownloadEntity::class, DownloadChunkEntity::class], version = 5, exportSchema = true)
 @TypeConverters(Converters::class)
 internal abstract class DownloadDatabase : RoomDatabase() {
