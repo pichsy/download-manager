@@ -4,19 +4,21 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/cl_root"
     android:layout_width="match_parent"
-    android:layout_height="90dp"
+    android:layout_height="wrap_content"
     android:layout_marginStart="15dp"
     android:layout_marginTop="2.5dp"
     android:layout_marginEnd="15dp"
     android:layout_marginBottom="2.5dp"
     android:background="#fff"
-    app:xp_radius="6dp">
+    app:xp_radius="16dp">
 
     <com.pichs.xwidget.cardview.XCardImageView
         android:id="@+id/iv_icon"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginStart="15dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -75,25 +77,25 @@
         android:paddingBottom="3dp"
         android:text="待更新"
         android:textColor="#FF9337"
-        android:textSize="9dp"
+        android:textSize="7dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:xp_radiusBottomLeft="6dp"
-        app:xp_radiusTopRight="6dp" />
+        app:xp_radiusBottomLeft="10dp"
+        app:xp_radiusTopRight="10dp" />
 
     <com.pichs.download.demo.widget.ProgressButton
         android:id="@+id/btn_update"
-        android:layout_width="80dp"
-        android:layout_height="32dp"
+        android:layout_width="64dp"
+        android:layout_height="28dp"
         android:layout_marginEnd="15dp"
-        android:text="更新"
-        android:textColor="@color/color_white"
-        android:textSize="13dp"
+        android:text="安装"
+        android:textColor="#054AFF"
+        android:textSize="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:pb_backgroundColor="#1A1A1A"
-        app:pb_progressColor="#6161FF"
+        app:pb_backgroundColor="#E0E0E0"
+        app:pb_progressColor="#40054AFF"
         app:pb_radius="15dp" />
 
 </com.pichs.xwidget.cardview.XCardConstraintLayout>

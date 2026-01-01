@@ -101,20 +101,57 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                 updateTaskWithProgress(task, progress, speed)
             },
             onTaskComplete = { task, file ->
+                // 过滤重复事件
+                val existing = appList.find { it.task?.id == task.id || it.apk_url?.qiniuHostUrl == task.url }
+                android.util.Log.d("AppStore", "onTaskComplete 收到回调: taskId=${task.id}, taskUrl=${task.url}")
+                android.util.Log.d("AppStore", "  existing=${existing?.app_name}, existing?.task?.status=${existing?.task?.status}")
+                
+                // 如果找不到匹配项，说明 appList 还没加载，忽略
+                if (existing == null) {
+                    android.util.Log.d("AppStore", "  -> appList 中找不到匹配项，忽略")
+                    return@bindToLifecycle
+                }
+                // 如果 UI 中该任务已经是 COMPLETED 状态，忽略
+                if (existing.task?.status == DownloadStatus.COMPLETED) {
+                    android.util.Log.d("AppStore", "  -> 已是 COMPLETED，忽略此回调")
+                    return@bindToLifecycle
+                }
+                android.util.Log.d("AppStore", "  -> 状态变化，执行 updateTask 和 addToInstallQueue")
                 updateTask(task)
                 // 下载完成，自动加入安装队列
                 addToInstallQueue(task)
             },
             onTaskError = { task, error ->
+                // 过滤：找不到匹配项或已是 FAILED 状态，忽略
+                val existing = appList.find { it.task?.id == task.id || it.apk_url?.qiniuHostUrl == task.url }
+                if (existing == null || existing.task?.status == DownloadStatus.FAILED) {
+                    return@bindToLifecycle
+                }
                 updateTask(task)
             },
             onTaskPaused = { task ->
+                // 过滤：找不到匹配项或已是 PAUSED 状态，忽略
+                val existing = appList.find { it.task?.id == task.id || it.apk_url?.qiniuHostUrl == task.url }
+                if (existing == null || existing.task?.status == DownloadStatus.PAUSED) {
+                    return@bindToLifecycle
+                }
                 updateTask(task)
             },
             onTaskResumed = { task ->
+                // 过滤：找不到匹配项或已是 WAITING/PENDING 状态，忽略
+                val existing = appList.find { it.task?.id == task.id || it.apk_url?.qiniuHostUrl == task.url }
+                val currentStatus = existing?.task?.status
+                if (existing == null || currentStatus == DownloadStatus.WAITING || currentStatus == DownloadStatus.PENDING) {
+                    return@bindToLifecycle
+                }
                 updateTask(task)
             },
             onTaskCancelled = { task ->
+                // 过滤：找不到匹配项或已是 CANCELLED 状态，忽略
+                val existing = appList.find { it.task?.id == task.id || it.apk_url?.qiniuHostUrl == task.url }
+                if (existing == null || existing.task?.status == DownloadStatus.CANCELLED) {
+                    return@bindToLifecycle
+                }
                 updateTask(task)
             }
         )
@@ -356,6 +393,7 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                 super.onBindViewHolder(holder, position, payloads)
             }
         }
+
     }
 
     private inner class AppStoreVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
