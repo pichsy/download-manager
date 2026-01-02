@@ -6,8 +6,6 @@ import android.os.Bundle
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
-import android.provider.Settings
-import android.net.Uri
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.AppUseDataSettingsActivity
 import com.pichs.download.demo.MyCheckAfterCallback
@@ -34,15 +32,15 @@ class AppStoreActivity : BaseActivity<ActivityAppStoreBinding>() {
         DownloadManager.setCheckAfterCallback(MyCheckAfterCallback(this))
 
         // 绑定生命周期并显示悬浮球
-        floatBallHelper.bind(this)
-        if (Settings.canDrawOverlays(this)) {
-            floatBallHelper.show()
-        } else {
-            // 无悬浮窗权限，跳转设置页
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-            intent.data = Uri.parse("package:$packageName")
-            startActivity(intent)
-        }
+//        floatBallHelper.bind(this)
+//        if (Settings.canDrawOverlays(this)) {
+//            floatBallHelper.show()
+//        } else {
+//            // 无悬浮窗权限，跳转设置页
+//            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+//            intent.data = Uri.parse("package:$packageName")
+//            startActivity(intent)
+//        }
 
         iniView()
     }
