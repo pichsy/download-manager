@@ -30,10 +30,10 @@
             android:layout_marginStart="10dp"
             android:padding="3dp"
             android:src="@drawable/ic_home_back"
-            app:xp_pressedAlpha="0.82"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/status_bar" />
+            app:layout_constraintTop_toBottomOf="@+id/status_bar"
+            app:xp_pressedAlpha="0.82" />
 
         <com.pichs.xwidget.view.XImageView
             android:id="@+id/iv_settings"

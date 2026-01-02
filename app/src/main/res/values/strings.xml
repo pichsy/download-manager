@@ -8,7 +8,25 @@
         <attr name="android:text" format="string" />
         <attr name="android:textColor" format="color" />
         <attr name="android:textSize" format="dimension" />
+        <!-- 自动调整字体大小 -->
+        <attr name="pb_autoSizeMinTextSize" format="dimension" />
+        <attr name="pb_autoSizeMaxTextSize" format="dimension" />
+        <attr name="pb_horizontalPadding" format="dimension" />
     </declare-styleable>
+
+
+
+<!--    <declare-styleable name="ProgressButton">-->
+<!--        <attr name="pb_backgroundColor" format="color" />-->
+<!--        <attr name="pb_progressColor" format="color" />-->
+<!--        <attr name="pb_radius" format="dimension" />-->
+<!--        <attr name="android:text" format="string" />-->
+<!--        <attr name="android:textColor" format="color" />-->
+<!--        <attr name="android:textSize" format="dimension" />-->
+<!--    </declare-styleable>-->
+
+
+
     <declare-styleable name="CurvedShapeView">
         <attr name="arcDepth" format="dimension" />
     </declare-styleable>

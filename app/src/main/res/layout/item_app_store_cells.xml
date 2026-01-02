@@ -23,7 +23,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:xp_radius="10dp"
-        tools:background="#99f" />
+        tools:background="#489999FF" />
 
     <com.pichs.xwidget.view.XTextView
         android:id="@+id/tv_app_name"
@@ -78,6 +78,7 @@
         android:text="待更新"
         android:textColor="#FF9337"
         android:textSize="7dp"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:xp_radiusBottomLeft="10dp"
@@ -90,12 +91,13 @@
         android:layout_marginEnd="15dp"
         android:text="安装"
         android:textColor="#054AFF"
-        android:textSize="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:pb_autoSizeMaxTextSize="12dp"
+        app:pb_autoSizeMinTextSize="4dp"
         app:pb_backgroundColor="#E0E0E0"
-        app:pb_progressColor="#30054AFF"
+        app:pb_progressColor="#7E9CFD"
         app:pb_radius="15dp" />
 
 </com.pichs.xwidget.cardview.XCardConstraintLayout>

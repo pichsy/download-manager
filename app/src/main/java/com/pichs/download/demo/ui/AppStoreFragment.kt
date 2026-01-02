@@ -432,7 +432,6 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
 
         fun bind(appInfo: UpdateAppInfo, position: Int) {
             currentPosition = position
-            val ctx = itemView.context
             val task = appInfo.task
 
             // 图标
@@ -449,7 +448,6 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
             // 大小 (保存原始大小用于恢复)
             originalSize = "大小:${FormatUtils.formatFileSize(appInfo.size ?: 0L)}"
             tvAppSize.text = originalSize
-
 
             // 检查本地安装情况
             val pkg = appInfo.package_name ?: ""
@@ -514,7 +512,7 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
 
                     DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                         btnUpdate.visibility = View.VISIBLE
-                        btnUpdate.setText("等待中")
+                        btnUpdate.setText("等待下载")
                         btnUpdate.setProgress(task.progress)
                         tvAppSize.text = originalSize
                         tvTag.visibility = View.GONE
