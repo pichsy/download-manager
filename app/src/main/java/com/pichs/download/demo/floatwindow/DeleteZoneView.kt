@@ -21,8 +21,8 @@ import com.pichs.xbase.kotlinext.dp2px
 class DeleteZoneView(context: Context) : View(context) {
 
     companion object {
-        const val ZONE_WIDTH = 80  // dp
-        const val ZONE_HEIGHT = 80 // dp
+        const val ZONE_WIDTH = 60  // dp
+        const val ZONE_HEIGHT = 60 // dp
     }
 
     private val zoneWidth = ZONE_WIDTH.toFloat().dp2px.toInt()

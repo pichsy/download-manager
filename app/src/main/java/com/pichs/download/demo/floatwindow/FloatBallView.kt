@@ -29,7 +29,7 @@ class FloatBallView(context: Context) : XCardConstraintLayout(context) {
         private const val LONG_PRESS_TIMEOUT = 500L // 长按超时时间
     }
 
-    private val ballSize = 72.dp // 增大尺寸以容纳更多内容
+    private val ballSize = 48.dp // 紧凑尺寸
     private val touchSlop = 8f.dp2px
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -60,7 +60,6 @@ class FloatBallView(context: Context) : XCardConstraintLayout(context) {
     private lateinit var tvSpeed: TextView
     private lateinit var tvAppName: TextView
     private lateinit var tvProgress: TextView
-    private lateinit var ivIcon: ImageView
 
     // 点击监听
     private var onClickListener: (() -> Unit)? = null
@@ -70,13 +69,13 @@ class FloatBallView(context: Context) : XCardConstraintLayout(context) {
 
     init {
         setNormalBackgroundColor(Color.parseColor("#E6222222")) // 深色半透明背景
-        setRadiusAndShadow(ballSize / 2, 6f.dp2px.toInt(), 0.5f)
+        setRadiusAndShadow(30.dp, 4f.dp2px.toInt(), 0.4f)
 
         setupViews()
 
         wmLayoutParams = WindowManager.LayoutParams().apply {
-            width = ballSize + 12.dp // 阴影空间
-            height = ballSize + 12.dp
+            width = ballSize + 8.dp // 阴影空间
+            height = ballSize + 8.dp
             type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -93,7 +92,7 @@ class FloatBallView(context: Context) : XCardConstraintLayout(context) {
     }
 
     private fun setupViews() {
-        // 圆形进度条
+        // 圆形进度条（全屏覆盖）
         progressView = CircularProgressView(context).apply {
             id = generateViewId()
         }
@@ -102,69 +101,58 @@ class FloatBallView(context: Context) : XCardConstraintLayout(context) {
             bottomToBottom = LayoutParams.PARENT_ID
             startToStart = LayoutParams.PARENT_ID
             endToEnd = LayoutParams.PARENT_ID
-            setMargins(4.dp, 4.dp, 4.dp, 4.dp)
+            setMargins(1.dp, 1.dp, 1.dp, 1.dp)
         })
 
-        // 下载图标
-        ivIcon = ImageView(context).apply {
-            id = generateViewId()
-            setImageResource(android.R.drawable.stat_sys_download)
-            setColorFilter(Color.WHITE)
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
-        }
-        addView(ivIcon, LayoutParams(16.dp, 16.dp).apply {
-            topToTop = LayoutParams.PARENT_ID
-            startToStart = LayoutParams.PARENT_ID
-            endToEnd = LayoutParams.PARENT_ID
-            topMargin = 10.dp
-        })
-
-        // 网速
+        // 网速（顶部居中）
         tvSpeed = TextView(context).apply {
             id = generateViewId()
-            setTextColor(Color.parseColor("#00BFFF")) // 蓝色
-            textSize = 9f
+            setTextColor(Color.parseColor("#00BFFF"))
+            textSize = 8f
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             text = "0KB/s"
         }
         addView(tvSpeed, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-            topToBottom = ivIcon.id
+            topToTop = LayoutParams.PARENT_ID
             startToStart = LayoutParams.PARENT_ID
             endToEnd = LayoutParams.PARENT_ID
-            topMargin = 2.dp
+            topMargin = 8.dp
         })
 
-        // 应用名
+        // 应用名（整体居中）
         tvAppName = TextView(context).apply {
             id = generateViewId()
-            setTextColor(Color.parseColor("#00BFFF"))
-            textSize = 8f
+            setTextColor(Color.WHITE)
+            textSize = 9f
+            typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
+            setPadding(8.dp, 0, 8.dp, 0)
             maxLines = 1
-            text = ""
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            text = "下载中..."
         }
-        addView(tvAppName, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-            topToBottom = tvSpeed.id
+        addView(tvAppName, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            topToTop = LayoutParams.PARENT_ID
+            bottomToBottom = LayoutParams.PARENT_ID
             startToStart = LayoutParams.PARENT_ID
             endToEnd = LayoutParams.PARENT_ID
-            topMargin = 1.dp
         })
 
-        // 进度百分比
+        // 进度展示（底部居中）
         tvProgress = TextView(context).apply {
             id = generateViewId()
             setTextColor(Color.parseColor("#00BFFF"))
-            textSize = 10f
+            textSize = 8f
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             text = "0%"
         }
         addView(tvProgress, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-            topToBottom = tvAppName.id
+            bottomToBottom = LayoutParams.PARENT_ID
             startToStart = LayoutParams.PARENT_ID
             endToEnd = LayoutParams.PARENT_ID
-            topMargin = 1.dp
+            bottomMargin = 8.dp
         })
     }
 
@@ -173,8 +161,8 @@ class FloatBallView(context: Context) : XCardConstraintLayout(context) {
      */
     fun updateProgress(appName: String, progress: Int, speed: String) {
         tvAppName.text = appName
-        tvProgress.text = "${progress}%"
         tvSpeed.text = speed
+        tvProgress.text = "${progress}%"
         progressView.setProgress(progress)
     }
 

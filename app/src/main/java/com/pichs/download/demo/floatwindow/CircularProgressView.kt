@@ -24,7 +24,7 @@ class CircularProgressView @JvmOverloads constructor(
     private var progress: Int = 0
 
     // 进度条宽度
-    private val strokeWidth = 3f.dp2px
+    private val strokeWidth = 2f.dp2px
 
     // 背景环画笔
     private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

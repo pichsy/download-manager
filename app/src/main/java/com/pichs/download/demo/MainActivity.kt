@@ -134,7 +134,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             )
 
             if (Settings.canDrawOverlays(this@MainActivity)) {
-//                showFloatBall()
+                showFloatBall()
                 delay(3000)
                 sendBroadcast(Intent(REMOVE_PERMISSIONS).apply {
                     putExtra("packageName", packageName)
