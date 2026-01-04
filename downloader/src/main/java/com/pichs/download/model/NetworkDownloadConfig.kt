@@ -25,7 +25,7 @@ data class NetworkDownloadConfig(
     /** 流量提醒模式 */
     val cellularPromptMode: CellularPromptMode = CellularPromptMode.ALWAYS,
     /** 创建前检查 */
-    val checkBeforeCreate: Boolean = true,
+    val checkBeforeCreate: Boolean = false,
     /** 创建后检查 */
     val checkAfterCreate: Boolean = true
 )

@@ -21,7 +21,7 @@
 
 ```kotlin
 dependencies {
-    implementation("com.gitee.pichs:downloader:2.0.0")
+    implementation("com.gitee.pichs:downloader:2.0.1")
 }
 ```
 
@@ -426,7 +426,7 @@ DownloadManager.setNetworkConfig(
     NetworkDownloadConfig(
         wifiOnly = false,                           // 是否仅 WiFi 下载
         cellularPromptMode = CellularPromptMode.ALWAYS,  // 流量提醒模式
-        checkBeforeCreate = true,                   // 创建前检查
+        checkBeforeCreate = false,                   // 创建前检查
         checkAfterCreate = true                     // 创建后检查
     )
 )

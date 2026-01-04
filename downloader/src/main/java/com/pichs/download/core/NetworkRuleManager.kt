@@ -25,8 +25,7 @@ class NetworkRuleManager(
         private const val KEY_CHECK_BEFORE_CREATE = "check_before_create"
     }
     
-    private val prefs: SharedPreferences = 
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = context.createDeviceProtectedStorageContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     
     private val mainHandler = Handler(Looper.getMainLooper())
     
