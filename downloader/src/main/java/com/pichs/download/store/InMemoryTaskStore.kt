@@ -1,8 +1,9 @@
 package com.pichs.download.store
 
+import androidx.annotation.Keep
 import com.pichs.download.model.DownloadTask
 import java.util.concurrent.ConcurrentHashMap
-
+@Keep
 internal object InMemoryTaskStore {
     private val tasks = ConcurrentHashMap<String, DownloadTask>()
 

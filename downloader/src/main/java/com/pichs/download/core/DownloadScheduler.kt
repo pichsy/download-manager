@@ -17,7 +17,7 @@ internal class DownloadScheduler(
     private val networkMonitor = NetworkMonitor(context)
     private val runningJobs = ConcurrentHashMap<String, Job>()
     
-    private val config = SchedulerConfig()
+    private var config = com.pichs.download.config.DownloadConfig()
     
     fun start() {
         networkMonitor.startMonitoring()
@@ -36,13 +36,11 @@ internal class DownloadScheduler(
             }
         }
         
-        // 启动调度循环
-        scope.launch {
-            while (isActive) {
-                scheduleNext()
-                delay(1000) // 每秒检查一次
-            }
-        }
+        // 不需要轮询循环：调度由事件驱动
+        // - 任务完成/失败/暂停 → updateTaskInternal() 调用 scheduleNext()
+        // - 任务恢复 → resume() 调用 scheduleNext()
+        // - 新任务入队 → enqueue() 调用 scheduleNext()
+        // - 网络/电池变化 → 上面的 collect 处理
     }
     
     fun stop() {
@@ -74,15 +72,32 @@ internal class DownloadScheduler(
         }
     }
     
-    private suspend fun scheduleNext() {
+    // 公开调度方法供 Manager 调用
+    // 使用 UNDISPATCHED 确保立即开始执行，不等待调度器
+    fun trySchedule() {
+        com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "trySchedule() called")
+        scope.launch(start = kotlinx.coroutines.CoroutineStart.UNDISPATCHED) {
+            scheduleNextInternal()
+        }
+    }
+
+    private suspend fun scheduleNextInternal() {
         val currentLimit = dispatcher.getCurrentConcurrencyLimit()
         val runningCount = dispatcher.getRunningTasks().size
+        val waitingCount = dispatcher.getWaitingTasks().size
+        
+        com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "scheduleNextInternal: limit=$currentLimit, running=$runningCount, waiting=$waitingCount")
         
         if (runningCount < currentLimit) {
             val nextTask = dispatcher.dequeueWithPreemption()
             if (nextTask != null) {
+                com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "Starting task: ${nextTask.fileName}")
                 startTask(nextTask)
+            } else {
+                com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "No task to dequeue")
             }
+        } else {
+            com.pichs.download.utils.DownloadLog.d("DownloadScheduler", "Concurrent limit reached, not scheduling")
         }
     }
     
@@ -119,44 +134,30 @@ internal class DownloadScheduler(
     }
     
     private fun onNetworkChanged(networkType: NetworkType) {
+        // 网络变化时不自动修改并发数，由用户自己控制
         when (networkType) {
-            NetworkType.WIFI -> {
-                // WiFi网络，可以增加并发数
-                dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnWifi)
-            }
-            NetworkType.CELLULAR_4G, NetworkType.CELLULAR_5G -> {
-                // 4G/5G网络，中等并发数
-                dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnCellular)
-            }
-            NetworkType.CELLULAR_3G, NetworkType.CELLULAR_2G -> {
-                // 3G/2G网络，降低并发数
-                dispatcher.setMaxConcurrentTasks(1)
-            }
-            NetworkType.ETHERNET -> {
-                // 以太网，高并发数
-                dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnWifi)
-            }
             NetworkType.UNKNOWN -> {
                 // 无网络，暂停所有任务
                 pauseAllTasks()
+            }
+            else -> {
+                // 有网络，触发一次调度
+                trySchedule()
             }
         }
     }
     
     private fun onBatteryChanged(isLowBattery: Boolean) {
+        // 电量变化时不自动修改并发数，由用户自己控制
+        // 低电量时可以暂停后台任务，但不修改并发数
         if (isLowBattery) {
-            // 低电量，降低并发数并暂停后台任务
-            dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnLowBattery)
-            dispatcher.pauseLowPriorityTasks()
-        } else {
-            // 电量充足，恢复正常并发数
-            val networkType = networkMonitor.getCurrentNetworkType()
-            when (networkType) {
-                NetworkType.WIFI -> dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnWifi)
-                NetworkType.CELLULAR_4G, NetworkType.CELLULAR_5G -> dispatcher.setMaxConcurrentTasks(config.maxConcurrentOnCellular)
-                else -> dispatcher.setMaxConcurrentTasks(config.maxConcurrentTasks)
+            dispatcher.getBackgroundTasks().forEach { task ->
+                engine.pause(task.id)
             }
-            dispatcher.resumeLowPriorityTasks()
+        } else {
+            dispatcher.getBackgroundTasks().forEach { task ->
+                engine.resume(task.id)
+            }
         }
     }
     
@@ -171,7 +172,10 @@ internal class DownloadScheduler(
     fun getNormalTasks(): List<DownloadTask> = dispatcher.getNormalTasks()
     fun getBackgroundTasks(): List<DownloadTask> = dispatcher.getBackgroundTasks()
     
-    fun updateConfig(newConfig: SchedulerConfig) {
-        dispatcher.updateConfig(newConfig)
+    fun updateConfig(newConfig: com.pichs.download.config.DownloadConfig) {
+        this.config = newConfig
+        dispatcher.setMaxConcurrentTasks(newConfig.maxConcurrentTasks)
+        // 触发一次调度以应用新配置
+        trySchedule()
     }
 }

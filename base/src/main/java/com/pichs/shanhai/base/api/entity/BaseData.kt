@@ -7,4 +7,21 @@ data class BaseData<T>(
     var message: String = "",
     var data: T? = null,
     var code: Int = 0
-): HttpResultInterface<T>
+) : HttpResultInterface<T>
+
+data class BaseResponse<T>(
+    var err: BaseResponseError? = null,
+    var result: BaseResponseData<T>?,
+)
+
+data class BaseResponseData<T>(
+    var data: T? = null,
+    var msg: String? = null,
+    var status: Int = 0,
+)
+
+data class BaseResponseError(
+    var message: String? = null,
+    var stack: String? = null,
+    var code: Int? = 0,
+)

@@ -1,8 +1,10 @@
 package com.pichs.download.store.db
 
+import androidx.annotation.Keep
 import androidx.room.TypeConverter
 import com.pichs.download.model.DownloadStatus
 
+@Keep
 internal object Converters {
     @TypeConverter
     @JvmStatic

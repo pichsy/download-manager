@@ -18,6 +18,9 @@ class DownloadRequestBuilder {
     private var checksum: Checksum? = null
     private var lifecycleOwner: LifecycleOwner? = null
     private var priority: Int = 1
+    private var estimatedSize: Long = 0L
+    private var extras: String? = null
+    private var cellularConfirmed: Boolean = false
 
     fun url(url: String) = apply { this.url = url }
     fun path(path: String) = apply { this.path = path }
@@ -26,6 +29,10 @@ class DownloadRequestBuilder {
     fun checksum(checksum: Checksum?) = apply { this.checksum = checksum }
     fun lifecycleOwner(lifecycleOwner: LifecycleOwner?) = apply { this.lifecycleOwner = lifecycleOwner }
     fun priority(priority: Int) = apply { this.priority = priority }
+    fun estimatedSize(size: Long) = apply { this.estimatedSize = size }
+    fun extras(extras: String?) = apply { this.extras = extras }
+    /** 标记此任务已确认使用流量下载（前置确认后设置） */
+    fun cellularConfirmed(confirmed: Boolean) = apply { this.cellularConfirmed = confirmed }
 
     fun start(): DownloadTask {
         val targetName = fileName ?: url.substringAfterLast('/').substringBefore('?')
@@ -70,6 +77,39 @@ class DownloadRequestBuilder {
         
         return createNewTask(targetName)
     }
+    
+    /**
+     * 只创建任务对象，不触发后续检查（供批量下载使用）
+     */
+    fun buildTask(): DownloadTask {
+        require(url.isNotBlank()) { "[DownloadRequestBuilder] url is blank" }
+        val targetName = fileName ?: url.substringAfterLast('/').substringBefore('?')
+        
+        val task = DownloadTask(
+            id = UUID.randomUUID().toString(),
+            url = url,
+            fileName = targetName,
+            filePath = path,
+            totalSize = 0L,
+            currentSize = 0L,
+            progress = 0,
+            speed = 0L,
+            status = DownloadStatus.PENDING,
+            priority = priority,
+            createTime = System.currentTimeMillis(),
+            updateTime = System.currentTimeMillis(),
+            extras = extras,
+            estimatedSize = estimatedSize,
+            cellularConfirmed = cellularConfirmed
+        )
+
+        // 设置任务特定头部
+        if (headers.isNotEmpty()) {
+            DownloadManager.setTaskHeaders(task.id, headers)
+        }
+        
+        return task
+    }
 
     private fun createNewTask(targetName: String): DownloadTask {
         val task = DownloadTask(
@@ -85,7 +125,9 @@ class DownloadRequestBuilder {
             priority = priority,
             createTime = System.currentTimeMillis(),
             updateTime = System.currentTimeMillis(),
-            extras = null
+            extras = extras,
+            estimatedSize = estimatedSize,
+            cellularConfirmed = cellularConfirmed
         )
 
         // 设置任务特定头部
@@ -94,7 +136,7 @@ class DownloadRequestBuilder {
         }
 
         // 创建任务
-        DownloadManager.onTaskCreated(task)
+        DownloadManager.checkAfterCreate(task)
         return task
     }
 

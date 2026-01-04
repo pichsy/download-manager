@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "bef7e2175fc26b424132ab791f827162",
+    "identityHash": "973eb36cdb5f41e2359a7c2bdb003ddd",
     "entities": [
       {
         "tableName": "downloads",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `url` TEXT NOT NULL, `fileName` TEXT NOT NULL, `filePath` TEXT NOT NULL, `status` TEXT NOT NULL, `progress` INTEGER NOT NULL, `totalSize` INTEGER NOT NULL, `currentSize` INTEGER NOT NULL, `speed` INTEGER NOT NULL, `priority` INTEGER NOT NULL, `createTime` INTEGER NOT NULL, `updateTime` INTEGER NOT NULL, `packageName` TEXT, `storeVersionCode` INTEGER, `extras` TEXT, `pauseReason` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `url` TEXT NOT NULL, `fileName` TEXT NOT NULL, `filePath` TEXT NOT NULL, `status` TEXT NOT NULL, `progress` INTEGER NOT NULL, `totalSize` INTEGER NOT NULL, `currentSize` INTEGER NOT NULL, `speed` INTEGER NOT NULL, `priority` INTEGER NOT NULL, `createTime` INTEGER NOT NULL, `updateTime` INTEGER NOT NULL, `packageName` TEXT, `storeVersionCode` INTEGER, `extras` TEXT, `pauseReason` TEXT, `estimatedSize` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -103,6 +103,12 @@
             "columnName": "pauseReason",
             "affinity": "TEXT",
             "notNull": false
+          },
+          {
+            "fieldPath": "estimatedSize",
+            "columnName": "estimatedSize",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -191,7 +197,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bef7e2175fc26b424132ab791f827162')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '973eb36cdb5f41e2359a7c2bdb003ddd')"
     ]
   }
 }

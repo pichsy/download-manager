@@ -6,86 +6,67 @@
     android:layout_margin="8dp"
     android:background="@color/content_background_color"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="12dp"
     app:xp_radius="12dp">
 
     <com.pichs.xwidget.cardview.XCardImageView
         android:id="@+id/iv_cover"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:src="#DFDFFB"
-        app:xp_radius="13dp" />
+        app:xp_radius="10dp" />
 
     <com.pichs.xwidget.view.XTextView
         android:id="@+id/tv_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:textColor="@color/content_text_color"
-        app:layout_constraintStart_toEndOf="@+id/iv_cover"
-        app:layout_constraintTop_toTopOf="@+id/iv_cover" />
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="26dp"
-        android:max="100"
-        android:min="0"
-        app:layout_constraintEnd_toStartOf="@+id/btn_download"
-        app:layout_constraintStart_toStartOf="@id/tv_title"
-        app:layout_constraintTop_toBottomOf="@+id/tv_title" />
-
-    <com.pichs.xwidget.view.XTextView
-        android:id="@+id/tvProgress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="0%"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:ellipsize="end"
+        android:maxLines="1"
         android:textColor="@color/content_text_color"
-        app:layout_constraintStart_toStartOf="@+id/tv_title"
-        app:layout_constraintTop_toBottomOf="@+id/progressBar" />
+        android:textSize="15sp"
+        app:layout_constraintEnd_toStartOf="@+id/btn_download"
+        app:layout_constraintStart_toEndOf="@+id/iv_cover"
+        app:layout_constraintTop_toTopOf="@+id/iv_cover" />
 
     <com.pichs.xwidget.view.XTextView
         android:id="@+id/tvSpeed"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="0KB/s"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="4dp"
+        android:text=""
         android:textColor="@color/content_text_color"
-        app:layout_constraintEnd_toEndOf="@id/progressBar"
-        app:layout_constraintTop_toBottomOf="@+id/progressBar" />
+        android:textSize="12sp"
+        app:layout_constraintStart_toEndOf="@+id/iv_cover"
+        app:layout_constraintTop_toBottomOf="@+id/tv_title" />
 
     <com.pichs.xwidget.view.XTextView
         android:id="@+id/tvHint"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginStart="8dp"
         android:textColor="#FF3B30"
         android:textSize="12sp"
         android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="@id/progressBar"
-        app:layout_constraintStart_toStartOf="@+id/tv_title"
-        app:layout_constraintTop_toBottomOf="@+id/tvSpeed" />
+        app:layout_constraintStart_toEndOf="@+id/tvSpeed"
+        app:layout_constraintTop_toTopOf="@+id/tvSpeed" />
 
-    <com.pichs.xwidget.cardview.XCardButton
+    <com.pichs.download.demo.widget.ProgressButton
         android:id="@+id/btn_download"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:layout_marginTop="8dp"
-        android:background="#0034F8"
-        android:paddingStart="26dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="26dp"
-        android:paddingBottom="8dp"
+        android:layout_width="80dp"
+        android:layout_height="32dp"
+        android:clickable="true"
+        android:focusable="true"
         android:text="下载"
         android:textColor="#fff"
+        android:textSize="13sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:xp_radius="40dp" />
+        app:pb_backgroundColor="#1A1A1A"
+        app:pb_progressColor="#6161FF"
+        app:pb_radius="16dp" />
 
 </com.pichs.xwidget.cardview.XCardConstraintLayout>

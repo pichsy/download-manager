@@ -1,7 +1,13 @@
 package com.pichs.download.config
 
+import androidx.annotation.Keep
+
+@Keep
 data class DownloadConfig(
-    var maxConcurrentTasks: Int = 3,
+    var maxConcurrentTasks: Int = 1,
+    var maxConcurrentOnWifi: Int = 1,
+    var maxConcurrentOnCellular: Int = 1,
+    var maxConcurrentOnLowBattery: Int = 1,
     var connectTimeoutSec: Long = 60,
     var readTimeoutSec: Long = 60,
     var writeTimeoutSec: Long = 60,
@@ -13,7 +19,7 @@ data class DownloadConfig(
     // 预留：保留策略（用于自动清理已完成任务）
     var retention: Retention = Retention()
 )
-
+@Keep
 data class Checksum(
     val type: Type,
     val value: String,
@@ -22,7 +28,7 @@ data class Checksum(
     enum class Type { MD5, SHA256 }
     enum class OnFail { Ignore, Fail, Retry }
 }
-
+@Keep
 data class Retention(
     // 保留天数；<=0 表示不按时间自动清理
     val keepDays: Int = 0,

@@ -51,9 +51,33 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 DownloadLog.d("MultiThreadDownloadEngine", "下载被取消: ${task.id}")
                 // ignore
             } catch (e: Throwable) {
-                DownloadLog.e("MultiThreadDownloadEngine", "下载失败: ${task.id}", e)
-                val failed = task.copy(status = DownloadStatus.FAILED, updateTime = System.currentTimeMillis())
-                DownloadManager.updateTaskInternal(failed)
+                DownloadLog.e("MultiThreadDownloadEngine", "下载异常: ${task.id}", e)
+                
+                // 根据异常类型决定任务状态
+                val pauseReason = com.pichs.download.utils.ErrorClassifier.getPauseReason(e)
+                if (pauseReason != null) {
+                    // 网络/存储异常 → 暂停，可自动恢复
+                    val paused = task.copy(
+                        status = DownloadStatus.PAUSED,
+                        pauseReason = pauseReason,
+                        speed = 0L,
+                        updateTime = System.currentTimeMillis()
+                    )
+                    DownloadManager.updateTaskInternal(paused)
+                    DownloadLog.d("MultiThreadDownloadEngine", "任务因 $pauseReason 暂停: ${task.id}")
+                } else {
+                    // 其他异常 → 真正的失败
+                    val failed = task.copy(
+                        status = DownloadStatus.FAILED,
+                        updateTime = System.currentTimeMillis()
+                    )
+                    DownloadManager.updateTaskInternal(failed)
+                    DownloadLog.d("MultiThreadDownloadEngine", "任务失败: ${task.id}")
+                }
+            } finally {
+                // 关键修复：任务结束（无论成功、失败还是取消）都必须移除 Controller，防止内存泄漏
+                controllers.remove(task.id)
+                DownloadLog.d("MultiThreadDownloadEngine", "清理任务资源: ${task.id}")
             }
         }
     }
@@ -250,33 +274,53 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             
             // 处理 416: 请求区间无效，通常是文件大小变化或断点越界 -> 重下
             if (code == 416) {
-                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, 0, ChunkStatus.PENDING)
+                ctl.chunkManager?.updateChunkProgress(task, chunk.index, 0, ChunkStatus.PENDING)
                 return
             }
             
             // 若返回 200 且有断点，说明 If-Range 校验不通过或不支持 Range -> 全量重下
             if (code == 200 && chunk.downloaded > 0L) {
-                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, 0, ChunkStatus.PENDING)
+                ctl.chunkManager?.updateChunkProgress(task, chunk.index, 0, ChunkStatus.PENDING)
                 return
             }
             
             // 维护本地累计下载量，避免依赖数据库中的旧值
             var localDownloaded = chunk.downloaded
             
-            RandomAccessFile(ctl.tempFile, "rw").use { raf ->
+            // 检查临时文件是否存在
+            val tempFile = ctl.tempFile ?: throw IllegalStateException("临时文件未初始化")
+            if (!tempFile.exists()) {
+                throw java.io.IOException("临时文件被删除: ${tempFile.absolutePath}")
+            }
+            
+            RandomAccessFile(tempFile, "rw").use { raf ->
                 raf.seek(startByte)
                 val source = body.source()
                 val buffer = okio.Buffer()
+                
+                // 用于定期检查文件存在性的计数器
+                var checkCounter = 0
+                val checkInterval = 50 // 每读取 50 次（约 400KB）检查一次文件是否存在
                 
                 while (true) {
                     if (ctl.paused.get() || ctl.cancelled.get()) break
                     val read = source.read(buffer, 8 * 1024)
                     if (read == -1L) break
+                    
+                    // 定期检查临时文件是否存在
+                    checkCounter++
+                    if (checkCounter >= checkInterval) {
+                        checkCounter = 0
+                        if (!tempFile.exists()) {
+                            throw java.io.IOException("临时文件被删除: ${tempFile.absolutePath}")
+                        }
+                    }
+                    
                     raf.channel.write(buffer.readByteArray(read).let { java.nio.ByteBuffer.wrap(it) })
                     
                     // 更新本地累计值
                     localDownloaded += read
-                    ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, localDownloaded, ChunkStatus.DOWNLOADING)
+                    ctl.chunkManager?.updateChunkProgress(task, chunk.index, localDownloaded, ChunkStatus.DOWNLOADING)
                     
                     // 使用ProgressCalculatorManager获取该任务的专用计算器
                     // 实时获取最新分片数据，而不是使用静态的ctl.chunks
@@ -290,6 +334,21 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     )
                     
                     if (shouldUpdate) {
+                        // 关键修复：防止竞态条件覆盖暂停状态
+                        if (ctl.paused.get() || ctl.cancelled.get()) {
+                             DownloadLog.d("MultiThreadDownloadEngine", "任务已暂停或取消，停止更新进度: ${task.id}")
+                             break
+                        }
+                        
+                        // 双重检查：从内存获取最新状态，如果已被主线程标记为非下载中（如PAUSED），则放弃此次更新
+                        val currentTask = DownloadManager.getTaskImmediate(task.id)
+                        if (currentTask != null && (currentTask.status == DownloadStatus.PAUSED || currentTask.status == DownloadStatus.CANCELLED)) {
+                             DownloadLog.d("MultiThreadDownloadEngine", "发现状态冲突，检测到外部暂停指令，停止更新进度: ${task.id}")
+                             // 立即响应暂停
+                             ctl.paused.set(true)
+                             break
+                        }
+
                         val finalTask = updatedTask.copy(
                             fileName = ctl.finalFile?.name ?: task.fileName
                         )
@@ -305,7 +364,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             
             if (!ctl.cancelled.get() && !ctl.paused.get()) {
                 DownloadLog.d("MultiThreadDownloadEngine", "分片下载完成: ${task.id} - 分片: ${chunk.index}, 已下载: $localDownloaded")
-                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, localDownloaded, ChunkStatus.COMPLETED)
+                ctl.chunkManager?.updateChunkProgress(task, chunk.index, localDownloaded, ChunkStatus.COMPLETED)
             } else {
                 DownloadLog.d("MultiThreadDownloadEngine", "分片下载被取消或暂停: ${task.id} - 分片: ${chunk.index}")
             }
@@ -345,7 +404,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     "任务因 ${pauseReason} 暂停，停止所有分片: ${task.id}, 当前进度: ${currentProgress}%")
             } else {
                 // 其他异常，标记分片失败
-                ctl.chunkManager?.updateChunkProgress(task.id, chunk.index, chunk.downloaded, ChunkStatus.FAILED)
+                ctl.chunkManager?.updateChunkProgress(task, chunk.index, chunk.downloaded, ChunkStatus.FAILED)
             }
         }
     }

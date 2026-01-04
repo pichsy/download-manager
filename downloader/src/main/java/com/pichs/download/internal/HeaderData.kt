@@ -1,5 +1,8 @@
 package com.pichs.download.internal
 
+import androidx.annotation.Keep
+
+@Keep
 data class HeaderData(
     var contentLength: Long = -1L,
     var contentType: String? = null,

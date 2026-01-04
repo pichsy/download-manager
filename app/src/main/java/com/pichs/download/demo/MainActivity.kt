@@ -8,49 +8,156 @@ import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
 import com.drake.brv.utils.grid
 import com.drake.brv.utils.setup
-import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
 import com.pichs.download.core.DownloadManager
-import com.pichs.download.core.DownloadPriority
-import com.pichs.download.core.FlowDownloadListener
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
+import androidx.activity.viewModels
+import com.hjq.permissions.Permission
 import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemGridDownloadBeanBinding
 import com.pichs.download.utils.DownloadLog
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.receiver.NetStateReceiver
 import com.pichs.shanhai.base.utils.toast.ToastUtils
+import com.pichs.xbase.kotlinext.fastClick
 import com.pichs.xbase.kotlinext.setItemAnimatorDisable
-import com.pichs.xbase.utils.GsonUtils
 import java.io.File
+import android.provider.Settings
+import com.pichs.download.demo.floatwindow.FloatBallView
+import com.pichs.download.demo.ui.AppStoreActivity
+import kotlinx.coroutines.delay
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     private val list = arrayListOf<DownloadItem>()
 
+    // ViewModel
+    private val viewModel: MainViewModel by viewModels()
+
     // 旧的监听器已移除，现在使用Flow监听器
     private val flowListener = DownloadManager.flowListener
 
+    // 悬浮球
+    private var floatBallView: FloatBallView? = null
+
     // 统一的名称归一化工具
     private fun normalizeName(n: String): String = n.substringBeforeLast('.').lowercase()
+    val GRANT_PERMISSIONS = "com.gankao.dpc.request.GRANT_PERMISSIONS"
+
+    /**
+     * 移除权限
+     * putExtra("packageName","")
+     */
+    val REMOVE_PERMISSIONS = "com.gankao.dpc.request.REMOVE_PERMISSIONS"
 
     override fun afterOnCreate() {
-        XXPermissions.with(this)
-            .unchecked()
-            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
-            .permission(Permission.REQUEST_INSTALL_PACKAGES)
-            .request { _, _ -> }
+
+        binding.tvTitle.fastClick {
+            startActivity(Intent(this, AppStoreActivity::class.java))
+        }
+
+        binding.ivDownloadSettings.fastClick {
+            startActivity(Intent(this, AppUseDataSettingsActivity::class.java))
+        }
+
+//        XXPermissions.with(this).unchecked()
+//            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
+//            .permission(Permission.REQUEST_INSTALL_PACKAGES)
+//            .permission(Permission.READ_CONTACTS)
+//            .permission(Permission.READ_SMS)
+//            .permission(Permission.READ_CALL_LOG)
+//            .permission(Permission.WRITE_CONTACTS)
+//            .permission(Permission.WRITE_CALL_LOG)
+//            .permission(Permission.SYSTEM_ALERT_WINDOW)
+//            .request { _, _ -> }
+
+//        XXPermissions.isGranted(
+//            this,
+//            android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+//            android.Manifest.permission.WRITE_CONTACTS,
+//            android.Manifest.permission.READ_CONTACTS,
+//            android.Manifest.permission.CALL_PHONE,
+//            android.Manifest.permission.READ_CALL_LOG,
+//            android.Manifest.permission.WRITE_CALL_LOG,
+//            android.Manifest.permission.READ_SMS,
+//        ).let { granted ->
+//            if (granted) {
+//                DownloadLog.d("所有权限已授予")
+//            } else {
+//                DownloadLog.d("缺少必要权限，正在请求...")
+//            }
+//        }
+
+        lifecycleScope.launch {
+            sendBroadcast(Intent(GRANT_PERMISSIONS).apply {
+                putExtra("packageName", packageName)
+            })
+
+            delay(5000)
+
+            requestPermissions(
+                arrayOf(
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                    android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                    android.Manifest.permission.READ_PHONE_STATE,
+                    android.Manifest.permission.READ_PHONE_NUMBERS,
+                    android.Manifest.permission.CALL_PHONE,
+                    android.Manifest.permission.ANSWER_PHONE_CALLS,
+                    android.Manifest.permission.READ_CALL_LOG,
+                    android.Manifest.permission.WRITE_CALL_LOG,
+                    android.Manifest.permission.READ_SMS,
+                    android.Manifest.permission.SEND_SMS,
+                    android.Manifest.permission.RECEIVE_SMS,
+                    android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    android.Manifest.permission.READ_MEDIA_IMAGES,
+                    android.Manifest.permission.READ_MEDIA_VIDEO,
+                    android.Manifest.permission.READ_MEDIA_AUDIO,
+                    android.Manifest.permission.CAMERA,
+                    android.Manifest.permission.RECORD_AUDIO,
+                    android.Manifest.permission.READ_CONTACTS,
+                    android.Manifest.permission.WRITE_CONTACTS,
+                    android.Manifest.permission.READ_CALENDAR,
+                    android.Manifest.permission.WRITE_CALENDAR,
+                    android.Manifest.permission.BLUETOOTH_CONNECT,
+                    android.Manifest.permission.BLUETOOTH_SCAN,
+                    android.Manifest.permission.BLUETOOTH_ADVERTISE,
+                    android.Manifest.permission.NEARBY_WIFI_DEVICES,
+                    android.Manifest.permission.POST_NOTIFICATIONS,
+                    android.Manifest.permission.SYSTEM_ALERT_WINDOW,
+                    "com.android.permission.GET_INSTALLED_APPS",
+                ), 1002
+            )
+
+            if (Settings.canDrawOverlays(this@MainActivity)) {
+                showFloatBall()
+                delay(3000)
+                sendBroadcast(Intent(REMOVE_PERMISSIONS).apply {
+                    putExtra("packageName", packageName)
+                })
+            } else {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                intent.data = Uri.parse("package:$packageName")
+                startActivity(intent)
+            }
+        }
+
 
         initListener()
 
-        val appJsonStr = assets.open("app_list.json").bufferedReader().use { it.readText() }
-        val appListBean = GsonUtils.fromJson<AppListBean>(appJsonStr, AppListBean::class.java)
-        appListBean.appList?.let { list.addAll(it) }
-        // 将首页的数据注册到进程内注册表，供其他页面优先读取
-        AppMetaRegistry.registerAll(list)
+        // 初始化 ViewModel 的应用列表，并订阅数据变化同步到本地 list
+        viewModel.loadAppListFromAssets()
+        lifecycleScope.launch {
+            viewModel.appList.collect { appList ->
+                list.clear()
+                list.addAll(appList)
+                binding.recyclerView.adapter?.notifyDataSetChanged()
+            }
+        }
 
         initRecyclerView()
         // 绑定全局监听（新方式）
@@ -61,24 +168,83 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private var isFirstNetRegister = true
 
     private fun initListener() {
+        // 初始化阈值管理器
+        CellularThresholdManager.init(this)
+
         binding.ivDownloadManager.setOnClickListener {
             startActivity(Intent(this, DownloadManagerActivity::class.java))
         }
-        binding.ivSearch.setOnClickListener { ToastUtils.show("搜索") }
 
-        NetStateReceiver(onNetConnected = {
-            // 网络恢复时，通知下载管理器恢复网络异常暂停的任务
+//        binding.ivSearch.fastClick {
+//            viewModel.simulateBatchDownload()
+//        }
+
+        // 订阅 ViewModel 的 UI 事件
+        lifecycleScope.launch {
+            viewModel.uiEvent.collect { event ->
+                when (event) {
+                    is UiEvent.ShowToast -> {
+                        ToastUtils.show(event.message)
+                    }
+
+                    is UiEvent.ShowCellularConfirmDialog -> {
+                        // 保存待执行的下载操作
+                        CellularConfirmViewModel.pendingAction = {
+                            viewModel.confirmBatchDownload(event.apps)
+                        }
+                        CellularConfirmDialogActivity.start(this@MainActivity, event.totalSize, event.apps.size)
+                    }
+
+                    is UiEvent.ShowWifiOnlyDialog -> {
+                        // 仅WiFi模式弹窗：点击确认后创建任务并暂停等待WiFi
+                        CellularConfirmViewModel.pendingAction = {
+                            viewModel.startDownloadAndPause(event.apps)
+                        }
+                        CellularConfirmDialogActivity.start(
+                            this@MainActivity,
+                            event.totalSize,
+                            event.apps.size,
+                            CellularConfirmDialogActivity.MODE_WIFI_ONLY
+                        )
+                    }
+
+                    is UiEvent.ShowNoNetworkDialog -> {
+                        // 无网络弹窗：点击确认后创建任务并暂停等待网络
+                        CellularConfirmViewModel.pendingAction = {
+                            viewModel.startDownloadAndPauseForNetwork(event.apps)
+                        }
+                        CellularConfirmDialogActivity.start(
+                            this@MainActivity,
+                            event.totalSize,
+                            event.apps.size,
+                            CellularConfirmDialogActivity.MODE_NO_NETWORK
+                        )
+                    }
+                }
+            }
+        }
+
+        // 设置网络决策回调
+        DownloadManager.setCheckAfterCallback(MyCheckAfterCallback(this))
+
+        NetStateReceiver(onNetConnected = { isWifi ->
+            // 网络恢复时
             if (!isFirstNetRegister) {
-                DownloadLog.d("网络连接成功，isWifi=$it")
-                // 调用下载管理器的网络恢复API
+                DownloadLog.d("网络连接成功，isWifi=$isWifi")
+                if (isWifi) {
+                    // WiFi 连接：重置流量会话，恢复 WiFi 暂停的任务
+                    DownloadManager.onWifiConnected()
+                }
+                // 通用网络恢复：恢复网络异常暂停的任务
                 DownloadManager.onNetworkRestored()
             }
             isFirstNetRegister = false
         }, onNetDisConnected = {
             if (!isFirstNetRegister) {
                 DownloadLog.d("网络连接断开")
-                // 网络断开时，只暂停正在下载的任务，不影响用户手动暂停的任务
-                DownloadManager.pauseAllForNetworkError()
+                // 通知网络规则管理器处理 WiFi 断开
+                // 框架会根据配置自动处理任务暂停，无需额外调用 pauseAllForNetworkError()
+                DownloadManager.onWifiDisconnected()
             }
             isFirstNetRegister = false
         }).register(this)
@@ -99,36 +265,43 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     vb.ivCover.setImageResource(R.color.purple_200)
                 }
                 vb.tvAppName.text = item.name
-                // 冷启动映射历史任务到列表项
-                runCatching {
-                    val dirBind = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-                    lifecycleScope.launch {
-                        val existingTask = DownloadManager.getAllTasks().firstOrNull {
-                            it.url == item.url && it.filePath == dirBind && normalizeName(it.fileName) == normalizeName(item.name)
-                        }
-                        if (existingTask != null) item.task = existingTask
-                    }
+                // 自动关联已有任务（使用 URL 查询）
+                if (item.task == null) {
+                    val existingTask = DownloadManager.getTaskByUrl(item.url)
+                    if (existingTask != null) item.task = existingTask
                 }
-                bindButtonUIWithInstalledAndFile(vb, item)
-                vb.btnDownload.setOnClickListener { handleClickWithInstalled(item, vb) }
+                bindButtonUI(vb, item.task, item, checkInstalled = true)
+                vb.btnDownload.fastClick { handleClickWithInstalled(item, vb) }
                 // 新增：点击封面跳转详情页
-                vb.ivCover.setOnClickListener { openDetail(item) }
+                vb.ivCover.fastClick { openDetail(item) }
             }
         }.models = list
     }
 
-    private fun bindButtonUIWithInstalledAndFile(vb: ItemGridDownloadBeanBinding, item: DownloadItem) {
-        val task = item.task
-        // 直接使用 item 自带的包名+版本信息
-        val pkg = item.packageName.orEmpty()
-        val storeVC = item.versionCode
-        val canOpen = pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(this, pkg, storeVC)
-        if (canOpen) {
-            vb.btnDownload.setText("打开")
-            vb.btnDownload.isEnabled = true
-            return
+    /**
+     * 统一的按钮状态绑定方法
+     * @param checkInstalled 是否检查已安装状态（用于显示"打开"）
+     */
+    private fun bindButtonUI(
+        vb: ItemGridDownloadBeanBinding,
+        task: DownloadTask?,
+        item: DownloadItem? = null,
+        checkInstalled: Boolean = false
+    ) {
+        // 检查是否已安装且可打开
+        if (checkInstalled && item != null) {
+            val pkg = item.packageName.orEmpty()
+            val storeVC = item.versionCode
+            val canOpen = pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(this, pkg, storeVC)
+            if (canOpen) {
+                vb.btnDownload.setText("打开")
+                vb.btnDownload.setProgress(100)
+                vb.btnDownload.isEnabled = true
+                return
+            }
         }
-        // 回退到原绑定逻辑，但在 COMPLETED 时考虑文件健康
+
+        // 根据任务状态绑定按钮
         when (task?.status) {
             DownloadStatus.COMPLETED -> {
                 val health = task.let { AppUtils.checkFileHealth(it) }
@@ -144,24 +317,31 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
 
             DownloadStatus.DOWNLOADING -> {
-                vb.btnDownload.setText("${task.progress}%"); vb.btnDownload.setProgress(task.progress); vb.btnDownload.isEnabled = true
+                vb.btnDownload.setText("${task.progress}%")
+                vb.btnDownload.setProgress(task.progress)
+                vb.btnDownload.isEnabled = true
             }
 
             DownloadStatus.PAUSED -> {
-                // 暂停时显示“继续”，进度条保留进度
-                vb.btnDownload.setText("继续"); vb.btnDownload.setProgress(task.progress); vb.btnDownload.isEnabled = true
+                vb.btnDownload.setText("继续")
+                vb.btnDownload.setProgress(task.progress)
+                vb.btnDownload.isEnabled = true
             }
 
             DownloadStatus.WAITING, DownloadStatus.PENDING -> {
-                vb.btnDownload.setText("等待中"); vb.btnDownload.isEnabled = true
+                vb.btnDownload.setText("等待中")
+                vb.btnDownload.isEnabled = true
             }
 
             DownloadStatus.FAILED -> {
-                vb.btnDownload.setText("重试"); vb.btnDownload.isEnabled = true
+                vb.btnDownload.setText("重试")
+                vb.btnDownload.isEnabled = true
             }
 
             else -> {
-                vb.btnDownload.setText("下载"); vb.btnDownload.setProgress(0); vb.btnDownload.isEnabled = true
+                vb.btnDownload.setText("下载")
+                vb.btnDownload.setProgress(0)
+                vb.btnDownload.isEnabled = true
             }
         }
     }
@@ -181,12 +361,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     }
 
     private fun handleClick(item: DownloadItem, vb: ItemGridDownloadBeanBinding) {
-        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-        val name = item.name
         lifecycleScope.launch {
-            val existing = DownloadManager.getAllTasks().firstOrNull {
-                it.url == item.url && it.filePath == dir && normalizeName(it.fileName) == normalizeName(name)
-            }
+            // 使用 getTaskByUrl 替代 getAllTasks 遍历，性能更优
+            val existing = DownloadManager.getTaskByUrl(item.url)
             val task = item.task ?: existing
             when (task?.status) {
                 DownloadStatus.DOWNLOADING -> {
@@ -198,8 +375,25 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 }
 
                 DownloadStatus.PAUSED -> {
-                    DownloadManager.resume(task.id)
-                    // 不强制设置文案，等待调度后通过监听刷新
+                    // 检查网络
+                    if (!com.pichs.download.utils.NetworkUtils.isNetworkAvailable(this@MainActivity)) {
+                        android.widget.Toast.makeText(this@MainActivity, "网络不可用，请检查网络后重试", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        // 立即更新 UI 提供即时反馈（乐观更新）
+                        // 根据槽位可用性决定显示状态
+                        if (DownloadManager.hasAvailableSlot()) {
+                            // 有空闲槽位，立即显示下载中
+                            vb.btnDownload.setText("${task.progress}%")
+                            vb.btnDownload.setProgress(task.progress)
+                            item.task = task.copy(status = DownloadStatus.DOWNLOADING, updateTime = System.currentTimeMillis())
+                        } else {
+                            // 无空闲槽位，显示等待中
+                            vb.btnDownload.setText("等待中")
+                            item.task = task.copy(status = DownloadStatus.WAITING, updateTime = System.currentTimeMillis())
+                        }
+                        vb.btnDownload.isEnabled = true
+                        DownloadManager.resume(task.id)
+                    }
                 }
 
                 DownloadStatus.WAITING, DownloadStatus.PENDING -> {
@@ -238,9 +432,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             if (!f.exists()) {
                                 DownloadManager.deleteTask(existing.id, deleteFile = false)
                                 item.task = null
-                                startDownload(item, vb)
+                                startDownload(item, vb, existing)
                             } else {
-                                bindButtonUI(vb, existing)
+                                bindButtonUI(vb, existing, item)
                             }
                         }
 
@@ -248,37 +442,25 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             DownloadManager.resume(existing.id)
                         }
 
-                        else -> bindButtonUI(vb, existing)
+                        else -> bindButtonUI(vb, existing, item)
                     }
                 }
             }
         }
     }
 
-    private fun startDownload(item: DownloadItem, vb: ItemGridDownloadBeanBinding) {
-        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-        // 将图标/名称/包名/版本写入 extras(JSON)
-        val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
-            mapOf(
-                "name" to (item.name ?: ""),
-                "packageName" to (item.packageName ?: ""),
-                "versionCode" to (item.versionCode ?: 0L),
-                "icon" to (item.icon ?: "")
-            )
-        )
-        // 使用新的优先级API，用户主动下载使用HIGH优先级
-        val task = DownloadManager.downloadWithPriority(item.url, DownloadPriority.HIGH)
-            .path(dir)
-            .fileName(item.name)
-            .start()
-        item.task = task
-        bindButtonUIWithInstalledAndFile(vb, item)
+    private fun startDownload(item: DownloadItem, vb: ItemGridDownloadBeanBinding, oldTask: DownloadTask? = null) {
+        // 先禁用按钮防止重复点击，不更新状态文字（等待预检查结果）
+//        vb.btnDownload.isEnabled = false
+        // 使用 ViewModel 的预检查流程，预检查通过后 ViewModel 会发事件更新 UI
+        viewModel.requestDownload(item)
     }
 
     private fun openApk(task: DownloadTask) {
         val file = File(task.filePath, task.fileName)
         openApkFile(file)
     }
+
 
     private fun openApkFile(file: File) {
         if (!file.exists()) return
@@ -291,89 +473,35 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         startActivity(intent)
     }
 
-    private fun bindButtonUI(vb: ItemGridDownloadBeanBinding, task: DownloadTask?) {
-        when (task?.status) {
-            DownloadStatus.DOWNLOADING -> {
-                vb.btnDownload.setText("${task.progress}%")
-                vb.btnDownload.setProgress(task.progress)
-                vb.btnDownload.isEnabled = true
-            }
-
-            DownloadStatus.PAUSED -> {
-                vb.btnDownload.setText("继续")
-                vb.btnDownload.setProgress(task.progress)
-                vb.btnDownload.isEnabled = true
-            }
-
-            DownloadStatus.WAITING, DownloadStatus.PENDING -> {
-                vb.btnDownload.setText("等待中"); vb.btnDownload.isEnabled = true
-            }
-
-            DownloadStatus.COMPLETED -> {
-                val health = task.let { AppUtils.checkFileHealth(it) }
-                if (health == AppUtils.FileHealth.OK) {
-                    vb.btnDownload.setText("安装")
-                    vb.btnDownload.setProgress(100)
-                    vb.btnDownload.isEnabled = true
-                } else {
-                    // 文件缺失/损坏：回落为下载态
-                    vb.btnDownload.setText("下载")
-                    vb.btnDownload.setProgress(0)
-                    vb.btnDownload.isEnabled = true
-                }
-            }
-
-            DownloadStatus.FAILED -> {
-                vb.btnDownload.setText("重试")
-                vb.btnDownload.isEnabled = true
-            }
-
-            else -> {
-                vb.btnDownload.setText("下载")
-                vb.btnDownload.setProgress(0)
-                vb.btnDownload.isEnabled = true
-            }
-        }
-    }
-
     // 新增：绑定Flow监听，保持列表项与任务状态同步
     private fun bindFlowListener() {
-        flowListener.bindToLifecycle(
-            lifecycleOwner = this,
-            onTaskProgress = { task, progress, speed ->
-                if (isDestroyed) return@bindToLifecycle
-                // 更新任务进度和速度
-                updateItemTaskWithProgress(task, progress, speed)
-            },
-            onTaskComplete = { task, file ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            },
-            onTaskError = { task, error ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            },
-            onTaskPaused = { task ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            },
-            onTaskResumed = { task ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            },
-            onTaskCancelled = { task ->
-                if (isDestroyed) return@bindToLifecycle
-                updateItemTask(task)
-            }
-        )
+        flowListener.bindToLifecycle(lifecycleOwner = this, onTaskProgress = { task, progress, speed ->
+            if (isDestroyed) return@bindToLifecycle
+            // 更新任务进度和速度
+            updateItemTaskWithProgress(task, progress, speed)
+            // 更新悬浮球进度
+            updateFloatBallProgress(task, progress, speed)
+        }, onTaskComplete = { task, file ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        }, onTaskError = { task, error ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        }, onTaskPaused = { task ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        }, onTaskResumed = { task ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        }, onTaskCancelled = { task ->
+            if (isDestroyed) return@bindToLifecycle
+            updateItemTask(task)
+        })
     }
 
     // 根据任务匹配列表项并刷新
     private fun updateItemTask(task: DownloadTask) {
-        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-        val idx = list.indexOfFirst {
-            it.url == task.url && dir == task.filePath && normalizeName(it.name) == normalizeName(task.fileName)
-        }
+        val idx = list.indexOfFirst { it.url == task.url }
         if (idx >= 0) {
             list[idx].task = task
             binding.recyclerView.adapter?.notifyItemChanged(idx)
@@ -385,17 +513,20 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private val progressUpdateInterval = 300L // 300ms防抖间隔
 
     private fun updateItemTaskWithProgress(task: DownloadTask, progress: Int, speed: Long) {
-        val now = System.currentTimeMillis()
-        val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
-        if (now - lastUpdateTime < progressUpdateInterval) {
-            return // 防抖：跳过过于频繁的更新
+        // progress >= 100 或已完成状态不做防抖，确保最终状态一定更新到 UI
+        if (progress < 100 && task.status != DownloadStatus.COMPLETED) {
+            val now = System.currentTimeMillis()
+            val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
+            if (now - lastUpdateTime < progressUpdateInterval) {
+                return // 防抖：跳过过于频繁的更新
+            }
+            lastProgressUpdateTimeMap[task.id] = now
+        } else {
+            // 清理防抖记录
+            lastProgressUpdateTimeMap.remove(task.id)
         }
-        lastProgressUpdateTimeMap[task.id] = now
 
-        val dir = externalCacheDir?.absolutePath ?: cacheDir.absolutePath
-        val idx = list.indexOfFirst {
-            it.url == task.url && dir == task.filePath && normalizeName(it.name) == normalizeName(task.fileName)
-        }
+        val idx = list.indexOfFirst { it.url == task.url }
         if (idx >= 0) {
             // 更新任务数据
             list[idx].task = task
@@ -404,19 +535,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 binding.recyclerView.adapter?.notifyItemChanged(idx)
             }
         }
-    }
-
-    // 更新ViewHolder中的进度显示
-    private fun updateProgressInViewHolder(
-        viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder,
-        progress: Int,
-        speed: Long,
-        status: com.pichs.download.model.DownloadStatus
-    ) {
-        // 这里需要根据实际的ViewHolder结构来更新
-        // 由于使用了BRV库，我们需要通过其他方式来更新进度
-        // 暂时使用notifyItemChanged来触发重新绑定
-        binding.recyclerView.adapter?.notifyItemChanged(viewHolder.adapterPosition)
     }
 
     private fun openDetail(item: DownloadItem) {
@@ -441,6 +559,38 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     override fun onDestroy() {
         // Flow监听器会自动管理生命周期，无需手动移除
+        floatBallView?.dismiss()
+        floatBallView = null
         super.onDestroy()
+    }
+
+    private fun showFloatBall() {
+        if (floatBallView == null) {
+            floatBallView = FloatBallView(this).apply {
+                setOnFloatClickListener {
+                    // 点击悬浮球跳转到下载管理页
+                    startActivity(Intent(this@MainActivity, DownloadManagerActivity::class.java))
+                }
+                setOnDismissListener {
+                    // 悬浮球被拖入删除区域隐藏
+                    floatBallView = null
+                }
+            }
+        }
+        floatBallView?.show()
+    }
+
+    private fun updateFloatBallProgress(task: com.pichs.download.model.DownloadTask, progress: Int, speed: Long) {
+        val speedText = formatSpeed(speed)
+        val appName = list.find { it.url == task.url }?.name ?: task.fileName
+        floatBallView?.updateProgress(appName, progress, speedText)
+    }
+
+    private fun formatSpeed(bytesPerSecond: Long): String {
+        return when {
+            bytesPerSecond >= 1024 * 1024 -> String.format("%.1fMB/s", bytesPerSecond / (1024.0 * 1024.0))
+            bytesPerSecond >= 1024 -> String.format("%.0fKB/s", bytesPerSecond / 1024.0)
+            else -> "${bytesPerSecond}B/s"
+        }
     }
 }

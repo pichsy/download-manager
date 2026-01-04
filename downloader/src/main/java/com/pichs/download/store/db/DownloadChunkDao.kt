@@ -1,11 +1,13 @@
 package com.pichs.download.store.db
 
+import androidx.annotation.Keep
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 
+@Keep
 @Dao
 internal interface DownloadChunkDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)

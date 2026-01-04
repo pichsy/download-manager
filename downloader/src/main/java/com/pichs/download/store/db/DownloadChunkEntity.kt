@@ -1,11 +1,13 @@
 package com.pichs.download.store.db
 
+import androidx.annotation.Keep
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.pichs.download.model.ChunkStatus
 import com.pichs.download.model.DownloadChunk
 
+@Keep
 @Entity(
     tableName = "download_chunks",
     indices = [Index(value = ["taskId", "index"], unique = true)]
