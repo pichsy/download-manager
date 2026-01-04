@@ -5,9 +5,6 @@ import androidx.annotation.Keep
 @Keep
 data class DownloadConfig(
     var maxConcurrentTasks: Int = 1,
-    var maxConcurrentOnWifi: Int = 1,
-    var maxConcurrentOnCellular: Int = 1,
-    var maxConcurrentOnLowBattery: Int = 1,
     var connectTimeoutSec: Long = 60,
     var readTimeoutSec: Long = 60,
     var writeTimeoutSec: Long = 60,
