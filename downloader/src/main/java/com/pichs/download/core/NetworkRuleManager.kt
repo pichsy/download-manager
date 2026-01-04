@@ -47,7 +47,7 @@ class NetworkRuleManager(
         val promptMode = promptModeStr?.let { 
             runCatching { CellularPromptMode.valueOf(it) }.getOrNull() 
         } ?: CellularPromptMode.ALWAYS
-        val checkBeforeCreate = prefs.getBoolean(KEY_CHECK_BEFORE_CREATE, true)
+        val checkBeforeCreate = prefs.getBoolean(KEY_CHECK_BEFORE_CREATE, false)
         return NetworkDownloadConfig(wifiOnly, promptMode, checkBeforeCreate)
     }
     
