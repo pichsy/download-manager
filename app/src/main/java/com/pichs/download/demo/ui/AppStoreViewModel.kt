@@ -129,8 +129,9 @@ class AppStoreViewModel : ViewModel() {
             .cellularConfirmed(cellularConfirmed)
             .start()
 
-        // 更新列表中的任务
-        updateTaskInList(appInfo.apk_url?.qiniuHostUrl, task)
+        // 不在这里更新 UI，让 FlowListener 回调来处理
+        // 因为 checkAfterCreate 可能会将任务状态改为 PAUSED（需要流量确认时）
+        // 如果在这里用 start() 返回的 WAITING 状态更新 UI，会导致显示错误
         return task
     }
 

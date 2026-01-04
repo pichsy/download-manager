@@ -512,7 +512,7 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
 
                     DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                         btnUpdate.visibility = View.VISIBLE
-                        btnUpdate.setText("等待下载")
+                        btnUpdate.setText("等待中")
                         btnUpdate.setProgress(task.progress)
                         tvAppSize.text = originalSize
                         tvTag.visibility = View.GONE
