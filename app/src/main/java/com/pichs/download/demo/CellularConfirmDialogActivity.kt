@@ -15,6 +15,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.ActivityCellularConfirmDialogBinding
+import com.pichs.download.model.CellularPromptMode
 import kotlinx.coroutines.launch
 
 /**
@@ -88,29 +89,37 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         // 阻止内容区域的点击事件传递到根布局
         binding.llContent.setOnClickListener { }
         
-        // 根据模式设置内容
+        // 流量提示
         val sizeText = formatFileSize(totalSize)
         val countText = if (taskCount == 1) "1 个应用" else "${taskCount} 个应用"
+        binding.tvFlowTips.text = "预计消耗 $sizeText"
         
+        // 根据模式设置内容
         when (mode) {
             MODE_NO_NETWORK -> {
                 // 无网络模式
+                binding.tvTitle.text = "网络连接提醒"
                 binding.tvMessage.text = "暂无网络连接\n将下载 $countText 共 $sizeText"
                 binding.btnUseCellular.text = "等待网络下载"
+                binding.btnConnectWifi.text = "连接网络"
             }
             MODE_WIFI_ONLY -> {
                 // 仅WiFi模式
-                binding.tvMessage.text = "当前未连接WiFi，将下载 $countText 共 $sizeText"
+                binding.tvTitle.text = "WiFi连接提醒"
+                binding.tvMessage.text = "当前未连接WiFi\n将下载 $countText 共 $sizeText"
                 binding.btnUseCellular.text = "等待WiFi下载"
+                binding.btnConnectWifi.text = "连接WIFI"
             }
             else -> {
                 // 流量确认模式
-                binding.tvMessage.text = "当前使用移动网络，将下载 $countText 共 $sizeText\n确定使用流量下载？"
-                binding.btnUseCellular.text = "使用流量下载"
+                binding.tvTitle.text = "应用下载提醒"
+                binding.tvMessage.text = "有新版本升级，升级会消耗一定的移动数据流量，是否确认下载?"
+                binding.btnUseCellular.text = "立即下载更新"
+                binding.btnConnectWifi.text = "连接WIFI"
             }
         }
         
-        // 取消按钮
+        // 关闭按钮
         binding.btnCancel.setOnClickListener {
             handleDeny()
         }
@@ -125,6 +134,11 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         // 确认按钮（使用流量/等待WiFi）
         binding.btnUseCellular.setOnClickListener {
             handleConfirm()
+        }
+        
+        // 不再提醒区域点击
+        binding.llDoNotRemind.setOnClickListener {
+            binding.civDoNotRemind.toggle()
         }
     }
     
@@ -150,6 +164,15 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
     }
     
     private fun handleConfirm() {
+        // 检查是否勾选了"不再提醒"
+//        if (binding.civDoNotRemind.isChecked) {
+//            // 更新网络配置为不再提醒
+//            val currentConfig = DownloadManager.getNetworkConfig()
+//            DownloadManager.setNetworkConfig(
+//                currentConfig.copy(cellularPromptMode = CellularPromptMode.NEVER)
+//            )
+//        }
+        
         // pendingAction 已在设置时包含 cellularConfirmed=true
         lifecycleScope.launch {
             CellularConfirmViewModel.confirm()
@@ -175,4 +198,3 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
     
     private fun formatFileSize(bytes: Long): String = FormatUtils.formatFileSize(bytes)
 }
-

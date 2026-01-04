@@ -1,89 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#80000000">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/llContent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginHorizontal="32dp"
-        android:background="@drawable/bg_dialog_rounded"
-        android:orientation="vertical"
-        android:paddingTop="16dp"
-        android:paddingHorizontal="20dp"
-        android:paddingBottom="20dp">
+        android:layout_gravity="center">
 
-        <!-- 关闭按钮 -->
-        <ImageView
-            android:id="@+id/btnCancel"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="end"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:padding="2dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="关闭" />
+        <!-- 背景图片 -->
+        <com.pichs.xwidget.view.XImageView
+            android:id="@+id/iv_bg"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:gravity="center_horizontal"
+            android:src="@drawable/ic_app_use_liuliang_bg"
+            app:layout_constraintDimensionRatio="H,276:366"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.736" />
 
         <!-- 标题 -->
-        <TextView
+        <com.pichs.xwidget.view.XTextView
             android:id="@+id/tvTitle"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:text="流量下载提醒"
+            android:layout_marginTop="42dp"
+            android:text="应用下载提醒"
             android:textColor="#333333"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textSize="22dp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/iv_bg" />
+
+        <!-- 图标 -->
+        <com.pichs.xwidget.view.XImageView
+            android:id="@+id/iv_icon"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="6dp"
+            android:src="@drawable/ic_download_liuliang_tips_icon"
+            app:layout_constraintDimensionRatio="H,1:1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvTitle"
+            app:layout_constraintWidth_percent="0.32" />
 
         <!-- 消息内容 -->
-        <TextView
+        <com.pichs.xwidget.view.XTextView
             android:id="@+id/tvMessage"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:gravity="center"
-            android:lineSpacingExtra="4dp"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="12dp"
+            android:gravity="center_horizontal"
+            android:paddingStart="22dp"
+            android:paddingEnd="22dp"
             android:text="当前使用移动网络，确定使用流量下载？"
-            android:textColor="#666666"
-            android:textSize="15sp" />
+            android:textColor="#333333"
+            android:textSize="14dp"
+            app:layout_constraintBottom_toTopOf="@+id/tvFlowTips"
+            app:layout_constraintEnd_toEndOf="@+id/iv_bg"
+            app:layout_constraintStart_toStartOf="@+id/iv_bg"
+            app:layout_constraintTop_toBottomOf="@id/iv_icon" />
 
-        <!-- 按钮区域：横向排列 -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- 流量提示标签 -->
+        <com.pichs.xwidget.roundview.XRoundTextView
+            android:id="@+id/tvFlowTips"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:orientation="horizontal">
+            android:layout_marginBottom="62dp"
+            android:background="#3000"
+            android:paddingHorizontal="15dp"
+            android:paddingVertical="7dp"
+            android:text="预计消耗 50MB流量"
+            android:textColor="#fff"
+            android:textSize="14dp"
+            app:layout_constraintBottom_toBottomOf="@+id/iv_bg"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:xp_radius="8dp" />
 
-            <!-- 连接 WiFi 按钮 -->
-            <Button
+        <!-- 不再提醒区域 -->
+        <LinearLayout
+            android:id="@+id/ll_do_not_remind"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="@id/iv_bg"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="@id/iv_bg"
+            app:layout_constraintTop_toBottomOf="@id/tvFlowTips">
+
+            <com.pichs.xwidget.view.XCheckedImageView
+                android:id="@+id/civDoNotRemind"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_app_sue_data_cbox_unchecked"
+                app:xp_checked_src="@drawable/ic_app_sue_data_cbox_checked" />
+
+            <com.pichs.xwidget.view.XTextView
+                android:id="@+id/tvDoNotRemind"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="不再提醒"
+                android:textColor="#333333"
+                android:textSize="11dp" />
+        </LinearLayout>
+
+        <!-- 底部按钮区域 -->
+        <LinearLayout
+            android:id="@+id/ll_bottom_bar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="@id/iv_bg"
+            app:layout_constraintStart_toStartOf="@id/iv_bg"
+            app:layout_constraintTop_toBottomOf="@id/iv_bg">
+
+            <com.pichs.xwidget.roundview.XRoundButton
                 android:id="@+id/btnConnectWifi"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
                 android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:background="@drawable/bg_button_outline"
-                android:text="连接 WiFi"
-                android:textColor="#4285F4"
-                android:textSize="14sp" />
+                android:background="#A6A0A0"
+                android:paddingVertical="12dp"
+                android:text="连接WIFI"
+                android:textColor="#FFFFFF"
+                app:xp_radius="50dp" />
 
-            <!-- 使用流量按钮 -->
-            <Button
+            <com.pichs.xwidget.roundview.XRoundButton
                 android:id="@+id/btnUseCellular"
                 android:layout_width="0dp"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
                 android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_button_primary_round"
-                android:text="使用流量"
+                android:paddingVertical="12dp"
+                android:text="立即下载更新"
                 android:textColor="#FFFFFF"
-                android:textSize="14sp" />
+                app:xp_backgroundEndColor="#9F05FE"
+                app:xp_backgroundStartColor="#6621F8"
+                app:xp_radius="50dp" />
 
         </LinearLayout>
 
-    </LinearLayout>
+        <!-- 关闭按钮 -->
+        <com.pichs.xwidget.view.XImageView
+            android:id="@+id/btnCancel"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="14dp"
+            android:layout_marginEnd="14dp"
+            android:src="@drawable/ic_app_use_data_close"
+            app:layout_constraintDimensionRatio="H,1:1"
+            app:layout_constraintEnd_toEndOf="@id/iv_bg"
+            app:layout_constraintTop_toTopOf="@+id/iv_bg"
+            app:layout_constraintWidth_percent="0.0693"
+            app:xp_pressedAlpha="0.8" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </FrameLayout>
