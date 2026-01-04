@@ -31,7 +31,7 @@
 
 
   ```
-    api("com.gitee.pichs:downloader:1.0.0")
+    api("com.gitee.pichs:downloader:2.0.0")
   
   ```
 
