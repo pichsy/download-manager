@@ -237,6 +237,50 @@ class AppStoreFragment : BaseFragment<FragmentAppStoreBinding>() {
                             CellularConfirmDialogActivity.MODE_NO_NETWORK
                         )
                     }
+
+                    // ==================== 批量下载事件 ====================
+                    
+                    is AppStoreUiEvent.ShowBatchCellularConfirmDialog -> {
+                        // 批量流量确认弹窗
+                        CellularConfirmViewModel.pendingAction = {
+                            viewModel.confirmBatchDownload(requireContext(), event.apps)
+                        }
+                        CellularConfirmDialogActivity.start(
+                            requireContext(),
+                            event.totalSize,
+                            event.apps.size
+                        )
+                    }
+
+                    is AppStoreUiEvent.ShowBatchWifiOnlyDialog -> {
+                        // 批量仅WiFi模式弹窗
+                        CellularConfirmViewModel.pendingAction = {
+                            viewModel.startBatchDownloadAndPause(requireContext(), event.apps)
+                        }
+                        CellularConfirmDialogActivity.start(
+                            requireContext(),
+                            event.totalSize,
+                            event.apps.size,
+                            CellularConfirmDialogActivity.MODE_WIFI_ONLY
+                        )
+                    }
+
+                    is AppStoreUiEvent.ShowBatchNoNetworkDialog -> {
+                        // 批量无网络弹窗
+                        CellularConfirmViewModel.pendingAction = {
+                            viewModel.startBatchDownloadAndPauseForNetwork(requireContext(), event.apps)
+                        }
+                        CellularConfirmDialogActivity.start(
+                            requireContext(),
+                            event.totalSize,
+                            event.apps.size,
+                            CellularConfirmDialogActivity.MODE_NO_NETWORK
+                        )
+                    }
+
+                    else -> {
+
+                    }
                 }
             }
         }

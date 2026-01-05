@@ -230,6 +230,204 @@ class AppStoreViewModel : ViewModel() {
         DownloadManager.resume(taskId)
     }
 
+    // ==================== 批量下载 API ====================
+
+    /**
+     * 请求批量下载（带预检查）
+     * 从服务器获取最新的 TYPE_MUST_DOWNLOAD 列表进行批量下载
+     *
+     */
+    fun cheAndDownloadMustDownload(context: Context) {
+        viewModelScope.launch {
+            try {
+                // 从服务器获取最新的应用列表（TYPE_MUST_DOWNLOAD）
+                val response = ShanHaiApi.getApi().loadUpdateAppList(
+                    UpdateAppBody(
+                        type = 0,
+                        category_type = "1,3"  // TYPE_MUST_DOWNLOAD
+                    )
+                )
+
+                val freshAppList = response?.result?.data
+                if (freshAppList.isNullOrEmpty()) {
+                    return@launch
+                }
+
+                // 同步已有任务状态
+                syncTasksToAppList(freshAppList)
+
+                // 过滤需要下载的应用（排除已完成和正在下载的）
+                val appsToDownload = freshAppList.filter { appInfo ->
+                    val task = appInfo.task
+                    task == null || task.status == DownloadStatus.FAILED || task.status == DownloadStatus.CANCELLED
+                }
+
+                if (appsToDownload.isEmpty()) {
+                    return@launch
+                }
+
+                // 计算总大小
+                val totalSize = appsToDownload.sumOf { it.size ?: 0L }
+
+                android.util.Log.d("AppStore", "批量下载请求: ${appsToDownload.size} 个应用, 总大小: $totalSize")
+
+                // 预检查
+                when (val result = DownloadManager.checkBeforeCreate(totalSize, appsToDownload.size)) {
+                    is CheckBeforeResult.Allow -> {
+                        // 允许下载，直接开始（静默）
+                        doStartBatchDownload(context, appsToDownload)
+                    }
+
+                    is CheckBeforeResult.NoNetwork -> {
+                        // 无网络：弹窗让用户选择
+                        _uiEvent.emit(AppStoreUiEvent.ShowBatchNoNetworkDialog(appsToDownload, totalSize))
+                    }
+
+                    is CheckBeforeResult.WifiOnly -> {
+                        // 仅WiFi模式，弹窗让用户选择
+                        _uiEvent.emit(AppStoreUiEvent.ShowBatchWifiOnlyDialog(appsToDownload, totalSize))
+                    }
+
+                    is CheckBeforeResult.NeedConfirmation -> {
+                        // 需要确认
+                        _uiEvent.emit(AppStoreUiEvent.ShowBatchCellularConfirmDialog(appsToDownload, result.estimatedSize))
+                    }
+
+                    is CheckBeforeResult.UserControlled -> {
+                        if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
+                            _uiEvent.emit(AppStoreUiEvent.ShowBatchCellularConfirmDialog(appsToDownload, result.estimatedSize))
+                        } else {
+                            // 未超阈值，静默下载
+                            doStartBatchDownload(context, appsToDownload, cellularConfirmed = true)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
+     * 用户确认后执行批量下载（流量确认弹窗）
+     */
+    fun confirmBatchDownload(context: Context, apps: List<UpdateAppInfo>) {
+        viewModelScope.launch {
+            doStartBatchDownload(context, apps, cellularConfirmed = true)
+        }
+    }
+
+    /**
+     * 批量等待WiFi下载：创建任务并暂停
+     */
+    fun startBatchDownloadAndPause(context: Context, apps: List<UpdateAppInfo>) {
+        viewModelScope.launch {
+            val dir = context.externalCacheDir?.absolutePath ?: context.cacheDir.absolutePath
+
+            apps.forEach { appInfo ->
+                val url = appInfo.apk_url?.qiniuHostUrl ?: return@forEach
+
+                val extras = ExtraMeta(
+                    name = appInfo.app_name,
+                    packageName = appInfo.package_name,
+                    versionCode = appInfo.version_code,
+                    icon = appInfo.app_icon,
+                    size = appInfo.size
+                ).toJson()
+
+                val task = DownloadManager.download(url)
+                    .path(dir)
+                    .fileName("${appInfo.package_name}_${appInfo.version_code}.apk")
+                    .extras(extras)
+                    .estimatedSize(appInfo.size ?: 0L)
+                    .start()
+
+                // 立即暂停，等待WiFi
+                DownloadManager.pause(task.id)
+                appInfo.task = task.copy(status = DownloadStatus.PAUSED)
+            }
+
+            // 触发列表刷新
+            _appListInfoFlow.value = _appListInfoFlow.value.toMutableList()
+        }
+    }
+
+    /**
+     * 批量等待网络下载：创建任务并暂停（无网络时使用）
+     */
+    fun startBatchDownloadAndPauseForNetwork(context: Context, apps: List<UpdateAppInfo>) {
+        viewModelScope.launch {
+            val dir = context.externalCacheDir?.absolutePath ?: context.cacheDir.absolutePath
+
+            apps.forEach { appInfo ->
+                val url = appInfo.apk_url?.qiniuHostUrl ?: return@forEach
+
+                val extras = ExtraMeta(
+                    name = appInfo.app_name,
+                    packageName = appInfo.package_name,
+                    versionCode = appInfo.version_code,
+                    icon = appInfo.app_icon,
+                    size = appInfo.size
+                ).toJson()
+
+                val task = DownloadManager.download(url)
+                    .path(dir)
+                    .fileName("${appInfo.package_name}_${appInfo.version_code}.apk")
+                    .extras(extras)
+                    .estimatedSize(appInfo.size ?: 0L)
+                    .start()
+
+                // 立即暂停，设置为网络异常原因
+                DownloadManager.pauseTask(task.id, PauseReason.NETWORK_ERROR)
+                appInfo.task = task.copy(
+                    status = DownloadStatus.PAUSED,
+                    pauseReason = PauseReason.NETWORK_ERROR
+                )
+            }
+
+            // 触发列表刷新
+            _appListInfoFlow.value = _appListInfoFlow.value.toMutableList()
+        }
+    }
+
+    /**
+     * 内部方法：实际执行批量下载
+     */
+    private fun doStartBatchDownload(
+        context: Context,
+        apps: List<UpdateAppInfo>,
+        cellularConfirmed: Boolean = false
+    ) {
+        val dir = context.externalCacheDir?.absolutePath ?: context.cacheDir.absolutePath
+
+        android.util.Log.d("AppStore", "开始创建 ${apps.size} 个批量下载任务")
+
+        apps.forEach { appInfo ->
+            val url = appInfo.apk_url?.qiniuHostUrl ?: return@forEach
+
+            val extras = ExtraMeta(
+                name = appInfo.app_name,
+                packageName = appInfo.package_name,
+                versionCode = appInfo.version_code,
+                icon = appInfo.app_icon,
+                size = appInfo.size
+            ).toJson()
+
+            val task = DownloadManager.downloadWithPriority(url, DownloadPriority.NORMAL)
+                .path(dir)
+                .fileName("${appInfo.package_name}_${appInfo.version_code}.apk")
+                .extras(extras)
+                .estimatedSize(appInfo.size ?: 0L)
+                .cellularConfirmed(cellularConfirmed)
+                .start()
+
+            // 不在这里更新 UI，让 FlowListener 回调来处理
+            android.util.Log.d("AppStore", "批量下载任务创建: ${appInfo.app_name}, taskId=${task.id}")
+        }
+    }
+
+    // ==================== 列表更新 ====================
+
     /**
      * 更新列表中指定 URL 的任务
      */
@@ -272,7 +470,14 @@ class AppStoreViewModel : ViewModel() {
  */
 sealed class AppStoreUiEvent {
     data class ShowToast(val message: String) : AppStoreUiEvent()
+
+    // 单个下载事件
     data class ShowCellularConfirmDialog(val appInfo: UpdateAppInfo, val totalSize: Long) : AppStoreUiEvent()
     data class ShowWifiOnlyDialog(val appInfo: UpdateAppInfo) : AppStoreUiEvent()
     data class ShowNoNetworkDialog(val appInfo: UpdateAppInfo) : AppStoreUiEvent()
+
+    // 批量下载事件
+    data class ShowBatchCellularConfirmDialog(val apps: List<UpdateAppInfo>, val totalSize: Long) : AppStoreUiEvent()
+    data class ShowBatchWifiOnlyDialog(val apps: List<UpdateAppInfo>, val totalSize: Long) : AppStoreUiEvent()
+    data class ShowBatchNoNetworkDialog(val apps: List<UpdateAppInfo>, val totalSize: Long) : AppStoreUiEvent()
 }
