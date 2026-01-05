@@ -179,7 +179,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 //            viewModel.simulateBatchDownload()
 //        }
 
-        // 订阅 ViewModel 的 UI 事件
+        // 订阅 ViewModel 的 UI 事件（MainActivity 自身的事件）
         lifecycleScope.launch {
             viewModel.uiEvent.collect { event ->
                 when (event) {
@@ -217,6 +217,42 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             this@MainActivity,
                             event.totalSize,
                             event.apps.size,
+                            CellularConfirmDialogActivity.MODE_NO_NETWORK
+                        )
+                    }
+                }
+            }
+        }
+
+        // 订阅全局下载 UI 事件（来自后台批量下载等）
+        lifecycleScope.launch {
+            DownloadUiEventManager.uiEvent.collect { event ->
+                when (event) {
+                    is DownloadUiEvent.ShowToast -> {
+                        ToastUtils.show(event.message)
+                    }
+
+                    is DownloadUiEvent.ShowCellularConfirmDialog -> {
+                        CellularConfirmViewModel.pendingAction = event.onConfirm
+                        CellularConfirmDialogActivity.start(this@MainActivity, event.totalSize, event.count)
+                    }
+
+                    is DownloadUiEvent.ShowWifiOnlyDialog -> {
+                        CellularConfirmViewModel.pendingAction = event.onConfirm
+                        CellularConfirmDialogActivity.start(
+                            this@MainActivity,
+                            event.totalSize,
+                            event.count,
+                            CellularConfirmDialogActivity.MODE_WIFI_ONLY
+                        )
+                    }
+
+                    is DownloadUiEvent.ShowNoNetworkDialog -> {
+                        CellularConfirmViewModel.pendingAction = event.onConfirm
+                        CellularConfirmDialogActivity.start(
+                            this@MainActivity,
+                            event.totalSize,
+                            event.count,
                             CellularConfirmDialogActivity.MODE_NO_NETWORK
                         )
                     }
