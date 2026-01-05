@@ -7,30 +7,11 @@ import java.io.File
 
 object AppUtils {
 
-    private fun normalizeName(n: String): String = n.substringBeforeLast('.')
-        .trim()
-        .lowercase()
-
-    // 不再通过 URL 获取版本号或包名，统一走本地 catalog（app_list.json）
-    fun getCatalog(context: Context): AppListBean? = CatalogRepository.get(context)
-
     fun getStoreVersionCode(context: Context, packageName: String): Long? =
         CatalogRepository.getStoreVersionCode(context, packageName)
 
-    fun getStoreVersionName(context: Context, packageName: String): String? =
-        CatalogRepository.getStoreVersionName(context, packageName)
-
-    fun getCatalogItemByName(context: Context, displayName: String): DownloadItem? =
-        CatalogRepository.findByDisplayName(context, displayName)
-
-    fun getPackageNameByName(context: Context, displayName: String): String? =
-        getCatalogItemByName(context, displayName)?.packageName
-
     fun getPackageNameForTask(context: Context, task: DownloadTask): String? =
         CatalogRepository.resolveForTask(context, task.fileName)?.packageName
-
-    fun getStoreVersionCodeForTask(context: Context, task: DownloadTask): Long? =
-        CatalogRepository.resolveForTask(context, task.fileName)?.versionCode
 
     fun getInstalledVersionCode(context: Context, packageName: String): Long? = runCatching {
         val pm = context.packageManager
@@ -44,17 +25,6 @@ object AppUtils {
         return installed >= storeVC
     }
 
-    fun isInstalledAndUpToDate(context: Context, item: DownloadItem): Boolean {
-        val pkg = item.packageName.ifBlank { getPackageNameByName(context, item.name) ?: return false }
-        val storeVC = item.versionCode ?: getStoreVersionCode(context, pkg)
-        return isInstalledAndUpToDate(context, pkg, storeVC)
-    }
-
-    fun isInstalledAndUpToDate(context: Context, task: DownloadTask): Boolean {
-        val pkg = getPackageNameForTask(context, task) ?: return false
-        val storeVC = getStoreVersionCodeForTask(context, task)
-        return isInstalledAndUpToDate(context, pkg, storeVC)
-    }
 
     fun openApp(context: Context, packageName: String): Boolean = runCatching {
         val pm = context.packageManager

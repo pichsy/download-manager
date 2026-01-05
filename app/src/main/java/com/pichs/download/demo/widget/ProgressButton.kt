@@ -1,6 +1,5 @@
 package com.pichs.download.demo.widget
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
