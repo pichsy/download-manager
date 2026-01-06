@@ -53,9 +53,39 @@ object BackgroundBatchDownloadHelper {
                     appInfo.task = matchedTask
                 }
 
-                // 3. 过滤需要下载的应用
+                // 3. 过滤需要下载的应用（考虑已安装版本、任务状态、文件健康）
                 val appsToDownload = freshAppList.filter { appInfo ->
                     val task = appInfo.task
+                    val pkg = appInfo.package_name ?: ""
+                    val storeVC = appInfo.version_code ?: 0L
+                    
+                    // 已安装且版本 >= 商店版本，跳过下载
+                    if (pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(context, pkg, storeVC)) {
+                        android.util.Log.d("BackgroundBatch", "跳过已安装最新版: ${appInfo.app_name}")
+                        return@filter false
+                    }
+                    
+                    // 下载任务已完成，检查文件健康
+                    if (task?.status == DownloadStatus.COMPLETED) {
+                        val health = AppUtils.checkFileHealth(task)
+                        // 文件损坏或缺失，需要重新下载
+                        if (health != AppUtils.FileHealth.OK) {
+                            android.util.Log.d("BackgroundBatch", "文件损坏/缺失，重新下载: ${appInfo.app_name}")
+                            return@filter true
+                        }
+                        // 文件健康，跳过
+                        return@filter false
+                    }
+                    
+                    // 正在下载/等待中，跳过
+                    if (task?.status == DownloadStatus.DOWNLOADING || 
+                        task?.status == DownloadStatus.WAITING ||
+                        task?.status == DownloadStatus.PENDING ||
+                        task?.status == DownloadStatus.PAUSED) {
+                        return@filter false
+                    }
+                    
+                    // 无任务 / 失败 / 取消，需要下载
                     task == null || task.status == DownloadStatus.FAILED || task.status == DownloadStatus.CANCELLED
                 }
 
