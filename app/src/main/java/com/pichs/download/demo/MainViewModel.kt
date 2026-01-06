@@ -177,7 +177,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     .start()
 
                 // 立即暂停，等待WiFi
-                DownloadManager.pause(task.id)
+                DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE)
                 app.task = task.copy(status = com.pichs.download.model.DownloadStatus.PAUSED)
             }
 
@@ -308,7 +308,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * 暂停下载
      */
     fun pauseDownload(taskId: String) {
-        DownloadManager.pause(taskId)
+        DownloadManager.pauseTask(taskId, com.pichs.download.model.PauseReason.USER_MANUAL)
     }
 
     /**

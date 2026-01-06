@@ -169,7 +169,7 @@ class AppStoreViewModel : ViewModel() {
                 .start()
 
             // 立即暂停，等待WiFi
-            DownloadManager.pause(task.id)
+            DownloadManager.pauseTask(task.id, PauseReason.WIFI_UNAVAILABLE)
             // 直接修改 appInfo.task（与 MainActivity 保持一致）
             appInfo.task = task.copy(status = DownloadStatus.PAUSED)
             // 触发列表刷新
@@ -220,7 +220,7 @@ class AppStoreViewModel : ViewModel() {
      * 暂停下载
      */
     fun pauseDownload(taskId: String) {
-        DownloadManager.pause(taskId)
+        DownloadManager.pauseTask(taskId, PauseReason.USER_MANUAL)
     }
 
     /**
@@ -343,7 +343,7 @@ class AppStoreViewModel : ViewModel() {
                     .start()
 
                 // 立即暂停，等待WiFi
-                DownloadManager.pause(task.id)
+                DownloadManager.pauseTask(task.id, PauseReason.WIFI_UNAVAILABLE)
                 appInfo.task = task.copy(status = DownloadStatus.PAUSED)
             }
 

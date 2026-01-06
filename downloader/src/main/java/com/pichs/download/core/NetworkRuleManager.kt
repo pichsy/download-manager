@@ -293,6 +293,10 @@ class NetworkRuleManager(
         resumeWifiUnavailableTasks()
         // 恢复等待流量确认的任务（现在有 WiFi 了）
         resumeCellularPendingTasks()
+        // 恢复因网络异常暂停的任务（WiFi 连接也是网络恢复）
+        resumeNetworkErrorTasks()
+        // 恢复其他系统原因暂停的任务（电量、存储、资源等）
+        resumeOtherSystemPausedTasks()
     }
     
     /**
@@ -376,6 +380,27 @@ class NetworkRuleManager(
     private fun resumeCellularPendingTasks() {
         InMemoryTaskStore.getAll()
             .filter { it.status == DownloadStatus.PAUSED && it.pauseReason == PauseReason.CELLULAR_PENDING }
+            .forEach { task ->
+                downloadManager.resume(task.id)
+            }
+    }
+    
+    private fun resumeNetworkErrorTasks() {
+        InMemoryTaskStore.getAll()
+            .filter { it.status == DownloadStatus.PAUSED && it.pauseReason == PauseReason.NETWORK_ERROR }
+            .forEach { task ->
+                downloadManager.resume(task.id)
+            }
+    }
+    
+    private fun resumeOtherSystemPausedTasks() {
+        InMemoryTaskStore.getAll()
+            .filter { 
+                it.status == DownloadStatus.PAUSED && 
+                (it.pauseReason == PauseReason.BATTERY_LOW || 
+                 it.pauseReason == PauseReason.STORAGE_FULL || 
+                 it.pauseReason == PauseReason.SYSTEM_RESOURCE_LOW)
+            }
             .forEach { task ->
                 downloadManager.resume(task.id)
             }

@@ -167,13 +167,13 @@
             android:configChanges="orientation|screenSize|keyboardHidden|fontScale|density|colorMode|navigation|layoutDirection|uiMode|screenLayout|smallestScreenSize"
             android:exported="true"
             android:launchMode="singleTask">
-<!--            <intent-filter>-->
-<!--                <action android:name="android.intent.action.MAIN" />-->
-<!--                <action android:name="android.intent.action.VIEW" />-->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.VIEW" />
 
-<!--                <category android:name="android.intent.category.LAUNCHER" />-->
-<!--                <category android:name="android.intent.category.DEFAULT" />-->
-<!--            </intent-filter>-->
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
 
         </activity>
 
@@ -200,13 +200,13 @@
             android:configChanges="orientation|screenSize|keyboardHidden|fontScale|density|colorMode|navigation|layoutDirection|uiMode|screenLayout|smallestScreenSize"
             android:exported="true"
             android:launchMode="singleTask" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <action android:name="android.intent.action.VIEW" />
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <action android:name="android.intent.action.VIEW" />-->
 
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--                <category android:name="android.intent.category.DEFAULT" />-->
+<!--            </intent-filter>-->
         </activity>
 
         <!-- 流量确认弹窗 Activity（透明主题） -->

@@ -20,7 +20,7 @@ import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemGridDownloadBeanBinding
 import com.pichs.download.utils.DownloadLog
 import com.pichs.shanhai.base.base.BaseActivity
-import com.pichs.shanhai.base.receiver.NetStateReceiver
+import com.pichs.shanhai.base.receiver.NetworkMonitor
 import com.pichs.shanhai.base.utils.toast.ToastUtils
 import com.pichs.xbase.kotlinext.fastClick
 import com.pichs.xbase.kotlinext.setItemAnimatorDisable
@@ -54,6 +54,32 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     val REMOVE_PERMISSIONS = "com.gankao.dpc.request.REMOVE_PERMISSIONS"
 
     override fun afterOnCreate() {
+        NetworkMonitor(
+            onNetworkChanged = { isWifi ->
+//                if (!isFirstNetRegister) {
+                    DownloadLog.d("网络类型变化，isWifi=$isWifi")
+                    if (isWifi) {
+                        ToastUtils.show("WIFI已连接")
+                        // WiFi 连接或从流量切换到 WiFi
+                        DownloadManager.onWifiConnected()
+                    }else{
+                        ToastUtils.show("数据流量已连接")
+                    }
+                    // 通用网络恢复：恢复网络异常暂停的任务
+                    DownloadManager.onNetworkRestored()
+//                }
+//                isFirstNetRegister = false
+            },
+            onNetworkLost = {
+//                if (!isFirstNetRegister) {
+                    DownloadLog.d("网络断开")
+                    ToastUtils.show("网络已断开")
+                    // 通知网络规则管理器处理 WiFi 断开
+                    DownloadManager.onWifiDisconnected()
+//                }
+//                isFirstNetRegister = false
+            }
+        ).register(this)
 
         binding.tvTitle.fastClick {
             startActivity(Intent(this, AppStoreActivity::class.java))
@@ -168,6 +194,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private var isFirstNetRegister = true
 
     private fun initListener() {
+        DownloadLog.d("MainActivity", "======> initListener() 开始执行")
         // 初始化阈值管理器
         CellularThresholdManager.init(this)
 
@@ -260,30 +287,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
         }
 
+
         // 设置网络决策回调
         DownloadManager.setCheckAfterCallback(MyCheckAfterCallback(this))
 
-        NetStateReceiver(onNetConnected = { isWifi ->
-            // 网络恢复时
-            if (!isFirstNetRegister) {
-                DownloadLog.d("网络连接成功，isWifi=$isWifi")
-                if (isWifi) {
-                    // WiFi 连接：重置流量会话，恢复 WiFi 暂停的任务
-                    DownloadManager.onWifiConnected()
-                }
-                // 通用网络恢复：恢复网络异常暂停的任务
-                DownloadManager.onNetworkRestored()
-            }
-            isFirstNetRegister = false
-        }, onNetDisConnected = {
-            if (!isFirstNetRegister) {
-                DownloadLog.d("网络连接断开")
-                // 通知网络规则管理器处理 WiFi 断开
-                // 框架会根据配置自动处理任务暂停，无需额外调用 pauseAllForNetworkError()
-                DownloadManager.onWifiDisconnected()
-            }
-            isFirstNetRegister = false
-        }).register(this)
+        // 使用 NetworkMonitor 监听网络类型变化（可以准确捕获流量→WiFi切换）
+
     }
 
     @SuppressLint("SetTextI18n")
@@ -403,7 +412,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             val task = item.task ?: existing
             when (task?.status) {
                 DownloadStatus.DOWNLOADING -> {
-                    DownloadManager.pause(task.id)
+                    DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
                     // 暂停后应显示“继续”，进度条保持当前进度
                     vb.btnDownload.setText("继续")
                     vb.btnDownload.setProgress(task.progress)
@@ -434,7 +443,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
                 DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                     // 等待中也可暂停：从队列移出，切换为“继续”
-                    DownloadManager.pause(task.id)
+                    DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
                     vb.btnDownload.setText("继续")
                     vb.btnDownload.isEnabled = true
                     // 立刻更新本地模型，避免下一次点击仍按 WAITING 分支

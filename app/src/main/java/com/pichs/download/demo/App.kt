@@ -20,8 +20,8 @@ class App : Application() {
         DownloadManager.init(this)
         // 显式设置最大并发下载=3（默认即为3，这里加一行便于配置清晰）
         DownloadManager.setMaxConcurrent(1)
-//        DownloadManager.config {
-//            connectTimeoutSec
-//        }
+        DownloadManager.config {
+            defaultDownloadDirPath = "${this@App.getExternalFilesDir(null)?.absolutePath ?: cacheDir.absolutePath}/downloads"
+        }
     }
 }
