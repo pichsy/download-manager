@@ -56,7 +56,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     override fun afterOnCreate() {
         NetworkMonitor(
             onNetworkChanged = { isWifi ->
-//                if (!isFirstNetRegister) {
                     DownloadLog.d("网络类型变化，isWifi=$isWifi")
                     if (isWifi) {
                         ToastUtils.show("WIFI已连接")
@@ -67,17 +66,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     }
                     // 通用网络恢复：恢复网络异常暂停的任务
                     DownloadManager.onNetworkRestored()
-//                }
-//                isFirstNetRegister = false
             },
             onNetworkLost = {
-//                if (!isFirstNetRegister) {
                     DownloadLog.d("网络断开")
                     ToastUtils.show("网络已断开")
                     // 通知网络规则管理器处理 WiFi 断开
                     DownloadManager.onWifiDisconnected()
-//                }
-//                isFirstNetRegister = false
             }
         ).register(this)
 
@@ -88,34 +82,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         binding.ivDownloadSettings.fastClick {
             startActivity(Intent(this, AppUseDataSettingsActivity::class.java))
         }
-
-//        XXPermissions.with(this).unchecked()
-//            .permission(Permission.MANAGE_EXTERNAL_STORAGE)
-//            .permission(Permission.REQUEST_INSTALL_PACKAGES)
-//            .permission(Permission.READ_CONTACTS)
-//            .permission(Permission.READ_SMS)
-//            .permission(Permission.READ_CALL_LOG)
-//            .permission(Permission.WRITE_CONTACTS)
-//            .permission(Permission.WRITE_CALL_LOG)
-//            .permission(Permission.SYSTEM_ALERT_WINDOW)
-//            .request { _, _ -> }
-
-//        XXPermissions.isGranted(
-//            this,
-//            android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
-//            android.Manifest.permission.WRITE_CONTACTS,
-//            android.Manifest.permission.READ_CONTACTS,
-//            android.Manifest.permission.CALL_PHONE,
-//            android.Manifest.permission.READ_CALL_LOG,
-//            android.Manifest.permission.WRITE_CALL_LOG,
-//            android.Manifest.permission.READ_SMS,
-//        ).let { granted ->
-//            if (granted) {
-//                DownloadLog.d("所有权限已授予")
-//            } else {
-//                DownloadLog.d("缺少必要权限，正在请求...")
-//            }
-//        }
 
         lifecycleScope.launch {
             sendBroadcast(Intent(GRANT_PERMISSIONS).apply {
