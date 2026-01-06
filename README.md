@@ -1,7 +1,6 @@
 # Download Manager
 
-[![Maven Central](https://img.shields.io/maven-metadata/v.svg?label=maven-central&metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fgitee%2Fpichs%2Fdownloader%2Fmaven-metadata.xml)](https://search.maven.org/artifact/com.gitee.pichs/downloader)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+最新版本：[![Maven Central](https://img.shields.io/maven-metadata/v.svg?label=maven-central&metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fgitee%2Fpichs%2Fdownloader%2Fmaven-metadata.xml)](https://search.maven.org/artifact/com.gitee.pichs/downloader) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 > 企业级 Android 多线程下载管理库 - 高性能、易接入、功能完善
 
