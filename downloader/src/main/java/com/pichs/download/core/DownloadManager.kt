@@ -634,6 +634,37 @@ object DownloadManager {
     }
 
     internal fun currentConfig(): DownloadConfig = config
+    
+    // ==================== 默认下载目录 API ====================
+    
+    /**
+     * 设置默认下载目录
+     * 当 DownloadRequestBuilder.path() 未指定时，使用此目录
+     * @param dirPath 目录绝对路径
+     */
+    fun setDefaultDownloadDirPath(dirPath: String) {
+        config.defaultDownloadDirPath = dirPath
+        DownloadLog.d(TAG, "默认下载目录已设置: $dirPath")
+    }
+    
+    /**
+     * 获取默认下载目录
+     * @return 已配置的默认目录，如果未配置则返回空字符串
+     */
+    fun getDefaultDownloadDirPath(): String = config.defaultDownloadDirPath
+    
+    /**
+     * 获取有效的下载目录（优先使用配置的默认目录，否则使用应用缓存目录）
+     * @return 有效的目录路径
+     */
+    fun getEffectiveDownloadDirPath(): String {
+        val defaultDir = config.defaultDownloadDirPath
+        if (defaultDir.isNotBlank()) return defaultDir
+        // 回退到应用缓存目录，如果 appContext 为空则使用系统 Download 目录
+        return appContext?.externalCacheDir?.absolutePath 
+            ?: appContext?.cacheDir?.absolutePath 
+            ?: android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS).absolutePath
+    }
 
     // 旧的监听器API已移除，请使用 flowListener 进行响应式监听
 

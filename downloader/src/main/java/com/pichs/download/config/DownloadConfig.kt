@@ -11,6 +11,8 @@ data class DownloadConfig(
     var allowMetered: Boolean = true,
     // 回调线程语义：是否强制在主线程派发监听
     var callbackOnMain: Boolean = true,
+    // 默认下载目录（未指定 path 时使用）
+    var defaultDownloadDirPath: String = "",
     // 预留：校验相关（当前不启用实际校验逻辑）
     var checksum: Checksum? = null,
     // 预留：保留策略（用于自动清理已完成任务）

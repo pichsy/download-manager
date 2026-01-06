@@ -38,10 +38,13 @@ class DownloadRequestBuilder {
         val targetName = fileName ?: url.substringAfterLast('/').substringBefore('?')
         val normalized = normalizeName(targetName)
         
+        // 如果未指定 path，使用默认下载目录
+        val effectivePath = if (path.isBlank()) DownloadManager.getEffectiveDownloadDirPath() else path
+        
         // 检查是否已存在相同任务
         val existing = runBlocking { 
             DownloadManager.getAllTasks().firstOrNull {
-                it.url == url && it.filePath == path && normalizeName(it.fileName) == normalized
+                it.url == url && it.filePath == effectivePath && normalizeName(it.fileName) == normalized
             }
         }
         
@@ -85,11 +88,14 @@ class DownloadRequestBuilder {
         require(url.isNotBlank()) { "[DownloadRequestBuilder] url is blank" }
         val targetName = fileName ?: url.substringAfterLast('/').substringBefore('?')
         
+        // 如果未指定 path，使用默认下载目录
+        val effectivePath = if (path.isBlank()) DownloadManager.getEffectiveDownloadDirPath() else path
+        
         val task = DownloadTask(
             id = UUID.randomUUID().toString(),
             url = url,
             fileName = targetName,
-            filePath = path,
+            filePath = effectivePath,
             totalSize = 0L,
             currentSize = 0L,
             progress = 0,
@@ -112,11 +118,14 @@ class DownloadRequestBuilder {
     }
 
     private fun createNewTask(targetName: String): DownloadTask {
+        // 如果未指定 path，使用默认下载目录
+        val effectivePath = if (path.isBlank()) DownloadManager.getEffectiveDownloadDirPath() else path
+        
         val task = DownloadTask(
             id = UUID.randomUUID().toString(),
             url = url,
             fileName = targetName,
-            filePath = path,
+            filePath = effectivePath,
             totalSize = 0L,
             currentSize = 0L,
             progress = 0,
