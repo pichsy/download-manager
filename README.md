@@ -21,7 +21,7 @@
 
 ```kotlin
 dependencies {
-    implementation("com.gitee.pichs:downloader:2.0.1")
+    implementation("com.gitee.pichs:downloader:2.0.3")
 }
 ```
 
