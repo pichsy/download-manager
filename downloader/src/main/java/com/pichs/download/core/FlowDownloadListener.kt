@@ -79,32 +79,51 @@ class FlowDownloadListener {
         // 监听任务状态变化和进度
         lifecycleOwner.lifecycleScope.launch {
             val activeProgressListeners = mutableSetOf<String>()
+            // 跟踪每个任务的上一次状态，只有状态真正变化时才触发回调
+            val lastStatusMap = mutableMapOf<String, com.pichs.download.model.DownloadStatus>()
             
             observeAllTasks().collect { tasks: List<DownloadTask> ->
                 tasks.forEach { task ->
-                    when (task.status) {
+                    val lastStatus = lastStatusMap[task.id]
+                    val currentStatus = task.status
+                    val statusChanged = lastStatus != currentStatus
+                    lastStatusMap[task.id] = currentStatus
+                    
+                    when (currentStatus) {
                         com.pichs.download.model.DownloadStatus.COMPLETED -> {
-                            val file = File(task.filePath, task.fileName)
-                            if (file.exists()) {
-                                onTaskComplete(task, file)
+                            if (statusChanged) {
+                                val file = File(task.filePath, task.fileName)
+                                if (file.exists()) {
+                                    onTaskComplete(task, file)
+                                }
                             }
                         }
                         com.pichs.download.model.DownloadStatus.FAILED -> {
-                            onTaskError(task, com.pichs.download.core.DownloadError.NetworkError)
+                            if (statusChanged) {
+                                onTaskError(task, com.pichs.download.core.DownloadError.NetworkError)
+                            }
                         }
                         com.pichs.download.model.DownloadStatus.PAUSED -> {
-                            onTaskPaused(task)
+                            if (statusChanged) {
+                                onTaskPaused(task)
+                            }
                         }
                         com.pichs.download.model.DownloadStatus.CANCELLED -> {
-                            onTaskCancelled(task)
+                            if (statusChanged) {
+                                onTaskCancelled(task)
+                            }
                         }
                         com.pichs.download.model.DownloadStatus.WAITING,
                         com.pichs.download.model.DownloadStatus.PENDING -> {
-                            onTaskResumed(task)
+                            if (statusChanged) {
+                                onTaskResumed(task)
+                            }
                         }
                         com.pichs.download.model.DownloadStatus.DOWNLOADING -> {
-                            // 立即触发一次进度回调，确保 UI 马上更新
-                            onTaskProgress(task, task.progress, task.speed)
+                            // 状态刚变为 DOWNLOADING 时触发一次进度回调
+                            if (statusChanged) {
+                                onTaskProgress(task, task.progress, task.speed)
+                            }
                             // 为下载中的任务启动进度监听
                             if (!activeProgressListeners.contains(task.id)) {
                                 activeProgressListeners.add(task.id)
@@ -140,32 +159,51 @@ class FlowDownloadListener {
         // 监听任务状态变化和进度
         scope.launch(Dispatchers.Main) {
             val activeProgressListeners = mutableSetOf<String>()
+            // 跟踪每个任务的上一次状态，只有状态真正变化时才触发回调
+            val lastStatusMap = mutableMapOf<String, com.pichs.download.model.DownloadStatus>()
             
             observeAllTasks().collect { tasks: List<DownloadTask> ->
                 tasks.forEach { task ->
-                    when (task.status) {
+                    val lastStatus = lastStatusMap[task.id]
+                    val currentStatus = task.status
+                    val statusChanged = lastStatus != currentStatus
+                    lastStatusMap[task.id] = currentStatus
+                    
+                    when (currentStatus) {
                         com.pichs.download.model.DownloadStatus.COMPLETED -> {
-                            val file = File(task.filePath, task.fileName)
-                            if (file.exists()) {
-                                onTaskComplete(task, file)
+                            if (statusChanged) {
+                                val file = File(task.filePath, task.fileName)
+                                if (file.exists()) {
+                                    onTaskComplete(task, file)
+                                }
                             }
                         }
                         com.pichs.download.model.DownloadStatus.FAILED -> {
-                            onTaskError(task, com.pichs.download.core.DownloadError.NetworkError)
+                            if (statusChanged) {
+                                onTaskError(task, com.pichs.download.core.DownloadError.NetworkError)
+                            }
                         }
                         com.pichs.download.model.DownloadStatus.PAUSED -> {
-                            onTaskPaused(task)
+                            if (statusChanged) {
+                                onTaskPaused(task)
+                            }
                         }
                         com.pichs.download.model.DownloadStatus.CANCELLED -> {
-                            onTaskCancelled(task)
+                            if (statusChanged) {
+                                onTaskCancelled(task)
+                            }
                         }
                         com.pichs.download.model.DownloadStatus.WAITING,
                         com.pichs.download.model.DownloadStatus.PENDING -> {
-                            onTaskResumed(task)
+                            if (statusChanged) {
+                                onTaskResumed(task)
+                            }
                         }
                         com.pichs.download.model.DownloadStatus.DOWNLOADING -> {
-                            // 立即触发一次进度回调，确保 UI 马上更新
-                            onTaskProgress(task, task.progress, task.speed)
+                            // 状态刚变为 DOWNLOADING 时触发一次进度回调
+                            if (statusChanged) {
+                                onTaskProgress(task, task.progress, task.speed)
+                            }
                             if (!activeProgressListeners.contains(task.id)) {
                                 activeProgressListeners.add(task.id)
                                 launch {
