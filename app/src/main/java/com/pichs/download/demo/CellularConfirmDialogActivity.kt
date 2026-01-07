@@ -87,58 +87,66 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         }
         
         // 阻止内容区域的点击事件传递到根布局
-        binding.llContent.setOnClickListener { }
+        binding.cardContent.setOnClickListener { }
         
         // 流量提示
         val sizeText = formatFileSize(totalSize)
-        val countText = if (taskCount == 1) "1 个应用" else "${taskCount} 个应用"
-        binding.tvFlowTips.text = "预计消耗 $sizeText"
+        val countText ="${taskCount}个应用"
         
         // 根据模式设置内容
         when (mode) {
             MODE_NO_NETWORK -> {
                 // 无网络模式
                 binding.tvTitle.text = "网络连接提醒"
-                binding.tvMessage.text = "暂无网络连接\n将下载 $countText 共 $sizeText"
-                binding.btnUseCellular.text = "等待网络下载"
+                binding.tvMessage.text = "暂无网络连接，将下载${countText}共$sizeText"
+                binding.btnUseCellular.text = "等待网络"
                 binding.btnConnectWifi.text = "连接网络"
             }
             MODE_WIFI_ONLY -> {
                 // 仅WiFi模式
-                binding.tvTitle.text = "WiFi连接提醒"
-                binding.tvMessage.text = "当前未连接WiFi\n将下载 $countText 共 $sizeText"
-                binding.btnUseCellular.text = "等待WiFi下载"
-                binding.btnConnectWifi.text = "连接WIFI"
+                binding.tvTitle.text = "流量安装提醒"
+                binding.tvMessage.text = "已预约WLAN下自动安装，或选择消耗${sizeText}流量直接安装，是否直接安装?"
+                binding.btnUseCellular.text = "直接安装"
+                binding.btnConnectWifi.text = "取消"
             }
             else -> {
                 // 流量确认模式
-                binding.tvTitle.text = "应用下载提醒"
-                binding.tvMessage.text = "有新版本升级，升级会消耗一定的移动数据流量，是否确认下载?"
-                binding.btnUseCellular.text = "立即下载更新"
-                binding.btnConnectWifi.text = "连接WIFI"
+                binding.tvTitle.text = "流量安装提醒"
+                binding.tvMessage.text = "已预约WLAN下自动安装，或选择消耗${sizeText}流量直接安装，是否直接安装?"
+                binding.btnUseCellular.text = "直接安装"
+                binding.btnConnectWifi.text = "取消"
             }
         }
         
-        // 关闭按钮
-        binding.btnCancel.setOnClickListener {
-            handleDeny()
-        }
         
-        // 连接 WiFi 按钮
+        // 取消按钮
         binding.btnConnectWifi.setOnClickListener {
-            runCatching {
-                startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+            when (mode) {
+                MODE_NO_NETWORK -> {
+                    // 无网络模式下，点击"连接网络"跳转到 WiFi 设置
+                    runCatching {
+                        startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                    }
+                }
+                else -> {
+                    // 其他模式下，点击"取消"关闭弹窗
+                    handleDeny()
+                }
             }
         }
         
-        // 确认按钮（使用流量/等待WiFi）
+        // 确认按钮（直接安装/等待网络）
         binding.btnUseCellular.setOnClickListener {
             handleConfirm()
         }
         
-        // 不再提醒区域点击
-        binding.llDoNotRemind.setOnClickListener {
-            binding.civDoNotRemind.toggle()
+        // "去设置" 按钮点击
+        binding.tvGoSettings.setOnClickListener {
+            runCatching {
+                // TODO: 跳转到应用内的下载设置页面
+                // 或者跳转到系统数据流量设置
+                startActivity(Intent(Settings.ACTION_DATA_USAGE_SETTINGS))
+            }
         }
     }
     
