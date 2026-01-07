@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:layout_marginHorizontal="32dp"
+        android:layout_marginHorizontal="15dp"
         android:layout_marginBottom="36dp"
         android:background="#fff"
         app:layout_constraintEnd_toEndOf="parent"
@@ -29,8 +29,8 @@
             android:paddingVertical="10dp"
             android:text="流量安装提醒"
             android:textColor="#000"
-            android:textSize="18dp"
-            android:textStyle="bold"
+            android:textSize="20dp"
+            android:layout_marginTop="15dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/cardContent"
@@ -60,7 +60,7 @@
             android:lineSpacingMultiplier="1.15"
             android:text="已预约WLAN下自动安装，或选择消耗，1MB流量直接安装，是否直接安装?"
             android:textColor="#000"
-            android:textSize="15dp"
+            android:textSize="16dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/iv_icon" />
 
@@ -126,8 +126,7 @@
                 android:paddingVertical="10dp"
                 android:text="取消"
                 android:textColor="#333"
-                android:textSize="14dp"
-                android:textStyle="bold"
+                android:textSize="15dp"
                 app:xp_radius="25dp" />
 
             <!-- 直接安装按钮 -->
@@ -140,8 +139,7 @@
                 android:paddingVertical="10dp"
                 android:text="直接安装"
                 android:textColor="#fff"
-                android:textSize="14dp"
-                android:textStyle="bold"
+                android:textSize="15dp"
                 app:xp_backgroundGradientColors="#0074ff"
                 app:xp_backgroundOrientation="vertical"
                 app:xp_radius="25dp" />
