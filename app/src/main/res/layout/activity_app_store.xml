@@ -52,7 +52,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:padding="5dp"
-            android:text="应用更新"
+            android:text="应用商店"
             android:textColor="#333"
             android:textSize="18dp"
             android:textStyle="bold"
@@ -65,7 +65,7 @@
 
     <com.pichs.xwidget.radiogroup.XCardLinearRadioGroup
         android:id="@+id/ll_tab_group"
-        android:layout_width="215dp"
+        android:layout_width="match_parent"
         android:layout_height="43dp"
         android:background="#66FFFFFF"
         android:orientation="horizontal"
@@ -84,10 +84,9 @@
             android:layout_weight="1"
             android:background="#0000"
             android:checked="true"
-            android:text="必装应用"
+            android:text="首页应用"
             android:textColor="#0D0B1D"
             android:textSize="15dp"
-            app:xp_checkedBackground="#fff"
             app:xp_checkedTextColor="#3381FF"
             app:xp_radius="14dp" />
 
@@ -101,10 +100,9 @@
             android:layout_marginBottom="3dp"
             android:layout_weight="1"
             android:background="#0000"
-            android:text="推荐应用"
+            android:text="其他应用"
             android:textColor="#0D0B1D"
             android:textSize="15dp"
-            app:xp_checkedBackground="#fff"
             app:xp_checkedTextColor="#3381FF"
             app:xp_radius="14dp" />
 

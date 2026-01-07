@@ -51,7 +51,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-
         <com.pichs.xwidget.view.XImageView
             android:id="@+id/iv_download_manager"
             android:layout_width="40dp"
@@ -64,7 +63,6 @@
             app:layout_constraintTop_toTopOf="parent"
             app:xp_colorFilter="@color/tool_bar_text_color"
             app:xp_pressedScale="0.94" />
-
 
         <com.pichs.xwidget.view.XImageView
             android:id="@+id/iv_download_settings"

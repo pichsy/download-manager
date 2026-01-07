@@ -38,18 +38,6 @@
             app:xp_borderWidth="2dp"
             app:xp_radius="10dp" />
 
-        <!-- 图标区域（虚线边框） -->
-        <com.pichs.xwidget.roundview.XRoundImageView
-            android:id="@+id/iv_icon"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:layout_marginTop="32dp"
-            android:src="@drawable/ic_download_place_holder"
-            android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tvTitle" />
-
         <!-- 消息内容 -->
         <com.pichs.xwidget.view.XTextView
             android:id="@+id/tvMessage"
@@ -61,7 +49,7 @@
             android:textColor="#000"
             android:textSize="16dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/iv_icon" />
+            app:layout_constraintTop_toBottomOf="@id/tvTitle" />
 
         <!-- 设置提醒链接 -->
         <LinearLayout
