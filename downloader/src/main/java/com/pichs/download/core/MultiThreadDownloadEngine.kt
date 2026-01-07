@@ -36,50 +36,144 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
     )
     
     override suspend fun start(task: DownloadTask) {
-        val ctl = controllers.getOrPut(task.id) { DownloadController() }
+        // ⭐ 第一步：验证文件状态，自动修复异常
+        val validatedTask = validateBeforeDownload(task)
+        
+        val ctl = controllers.getOrPut(validatedTask.id) { DownloadController() }
         ctl.paused.set(false)
         ctl.cancelled.set(false)
         ctl.chunkManager = DownloadManager.getChunkManager()
         
-        DownloadLog.d("MultiThreadDownloadEngine", "开始下载任务: ${task.id}, URL: ${task.url}")
+        DownloadLog.d("MultiThreadDownloadEngine", "开始下载任务: ${validatedTask.id}, URL: ${validatedTask.url}")
         
         ctl.job = scope.launch {
             try {
-                DownloadLog.d("MultiThreadDownloadEngine", "启动下载协程: ${task.id}")
-                downloadWithChunks(task, ctl)
+                DownloadLog.d("MultiThreadDownloadEngine", "启动下载协程: ${validatedTask.id}")
+                downloadWithChunks(validatedTask, ctl)
             } catch (e: CancellationException) {
-                DownloadLog.d("MultiThreadDownloadEngine", "下载被取消: ${task.id}")
+                DownloadLog.d("MultiThreadDownloadEngine", "下载被取消: ${validatedTask.id}")
                 // ignore
             } catch (e: Throwable) {
-                DownloadLog.e("MultiThreadDownloadEngine", "下载异常: ${task.id}", e)
+                DownloadLog.e("MultiThreadDownloadEngine", "下载异常: ${validatedTask.id}", e)
                 
                 // 根据异常类型决定任务状态
                 val pauseReason = com.pichs.download.utils.ErrorClassifier.getPauseReason(e)
                 if (pauseReason != null) {
                     // 网络/存储异常 → 暂停，可自动恢复
-                    val paused = task.copy(
+                    val paused = validatedTask.copy(
                         status = DownloadStatus.PAUSED,
                         pauseReason = pauseReason,
                         speed = 0L,
                         updateTime = System.currentTimeMillis()
                     )
                     DownloadManager.updateTaskInternal(paused)
-                    DownloadLog.d("MultiThreadDownloadEngine", "任务因 $pauseReason 暂停: ${task.id}")
+                    DownloadLog.d("MultiThreadDownloadEngine", "任务因 $pauseReason 暂停: ${validatedTask.id}")
                 } else {
                     // 其他异常 → 真正的失败
-                    val failed = task.copy(
+                    val failed = validatedTask.copy(
                         status = DownloadStatus.FAILED,
                         updateTime = System.currentTimeMillis()
                     )
                     DownloadManager.updateTaskInternal(failed)
-                    DownloadLog.d("MultiThreadDownloadEngine", "任务失败: ${task.id}")
+                    DownloadLog.d("MultiThreadDownloadEngine", "任务失败: ${validatedTask.id}")
                 }
             } finally {
                 // 关键修复：任务结束（无论成功、失败还是取消）都必须移除 Controller，防止内存泄漏
-                controllers.remove(task.id)
-                DownloadLog.d("MultiThreadDownloadEngine", "清理任务资源: ${task.id}")
+                controllers.remove(validatedTask.id)
+                DownloadLog.d("MultiThreadDownloadEngine", "清理任务资源: ${validatedTask.id}")
             }
         }
+    }
+    
+    /**
+     * 下载前文件验证和修复
+     * 检测文件丢失或损坏的情况，自动重置进度
+     * @return 验证后的任务（可能已重置进度）
+     */
+    private suspend fun validateBeforeDownload(task: DownloadTask): DownloadTask {
+        val file = File(task.filePath, task.fileName)
+        val partFile = File(task.filePath, "${task.fileName}.part")
+        
+        // 场景1: 断点续传，但文件丢失
+        if (task.currentSize > 0) {
+            if (!file.exists() && !partFile.exists()) {
+                DownloadLog.w("MultiThreadDownloadEngine", 
+                    "检测到断点续传文件丢失，自动重置进度: ${task.fileName}, 之前进度=${task.progress}%")
+                
+                // 重置任务进度
+                val resetTask = task.copy(
+                    currentSize = 0,
+                    progress = 0,
+                    totalSize = 0,  // 重新获取文件大小
+                    updateTime = System.currentTimeMillis()
+                )
+                
+                // 更新到数据库（不影响UI，因为引擎会立即开始下载）
+                DownloadManager.updateTaskInternal(resetTask)
+                
+                // 清理分片记录
+                DownloadManager.getChunkManager()?.deleteChunks(task.id)
+                
+                return resetTask
+            }
+        }
+        
+        // 场景2: 文件大小超过预期（损坏）
+        if (file.exists() && task.totalSize > 0) {
+            val actualSize = file.length()
+            if (actualSize > task.totalSize) {
+                DownloadLog.w("MultiThreadDownloadEngine", 
+                    "检测到文件损坏，删除并重新下载: ${task.fileName}, actual=$actualSize, expected=${task.totalSize}")
+                
+                // 删除损坏的文件
+                withContext(Dispatchers.IO) {
+                    file.delete()
+                    partFile.delete()
+                }
+                
+                // 重置任务进度
+                val resetTask = task.copy(
+                    currentSize = 0,
+                    progress = 0,
+                    totalSize = 0,
+                    updateTime = System.currentTimeMillis()
+                )
+                
+                DownloadManager.updateTaskInternal(resetTask)
+                DownloadManager.getChunkManager()?.deleteChunks(task.id)
+                
+                return resetTask
+            }
+        }
+        
+        // 场景3: 临时文件大小超过预期（损坏）
+        if (partFile.exists() && task.totalSize > 0) {
+            val actualSize = partFile.length()
+            if (actualSize > task.totalSize) {
+                DownloadLog.w("MultiThreadDownloadEngine", 
+                    "检测到临时文件损坏，删除并重新下载: ${task.fileName}.part")
+                
+                withContext(Dispatchers.IO) {
+                    partFile.delete()
+                }
+                
+                // 重置任务进度
+                val resetTask = task.copy(
+                    currentSize = 0,
+                    progress = 0,
+                    totalSize = 0,
+                    updateTime = System.currentTimeMillis()
+                )
+                
+                DownloadManager.updateTaskInternal(resetTask)
+                DownloadManager.getChunkManager()?.deleteChunks(task.id)
+                
+                return resetTask
+            }
+        }
+        
+        // 文件状态正常，返回原任务
+        return task
     }
     
     override fun pause(taskId: String) {

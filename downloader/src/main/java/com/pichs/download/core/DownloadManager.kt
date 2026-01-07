@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 
 object DownloadManager {
 
@@ -960,26 +961,30 @@ object DownloadManager {
         scheduleNext()
     }
 
+    /**
+     * 取消任务（完全删除任务数据和文件）
+     * 取消后任务将从数据库和内存中删除，就像从未存在过
+     */
     fun cancel(taskId: String) {
-        dispatcher.remove(taskId)
-        val t = InMemoryTaskStore.get(taskId)
-    if (t != null && (t.status == DownloadStatus.WAITING || t.status == DownloadStatus.PENDING || t.status == DownloadStatus.PAUSED)) {
-            val cancelled = t.copy(status = DownloadStatus.CANCELLED, speed = 0L, updateTime = System.currentTimeMillis())
-            updateTaskInternal(cancelled)
-        } else {
-            engine.cancel(taskId)
-        }
-        scheduleNext()
+        // 直接调用 deleteTask，完全删除
+        deleteTask(taskId, deleteFile = true)
     }
-
+    
     // 显式删除单任务
     fun deleteTask(taskId: String, deleteFile: Boolean = false) {
         val t = InMemoryTaskStore.get(taskId) ?: return
-        // 停止并移除调度
-        cancel(taskId)
+        
+        // 如果任务正在下载中，先通知引擎停止
+        if (t.status == DownloadStatus.DOWNLOADING) {
+            engine.cancel(taskId)
+        }
+        
+        // 从调度队列移除
+        dispatcher.remove(taskId)
+        
         // 删文件
         if (deleteFile) {
-            kotlin.runCatching {
+            runCatching {
                 val f = java.io.File(t.filePath, t.fileName)
                 if (f.exists()) f.delete()
                 val part = java.io.File(t.filePath, "${t.fileName}.part")
@@ -993,6 +998,72 @@ object DownloadManager {
             cacheManager?.removeTask(taskId)
             _tasksState.value = cacheManager?.getAllTasks()?.sortedBy { it.createTime } ?: emptyList()
         }
+        
+        // 调度下一个任务
+        scheduleNext()
+    }
+    
+    /**
+     * 验证并清理无效的任务
+     * 检测文件被删除或损坏的任务并清理
+     * 
+     * @return 清理的任务数量
+     */
+    suspend fun validateAndCleanTasks(): Int = withContext(dispatcherIO) {
+        val allTasks = getAllTasks()
+        var cleanedCount = 0
+        
+        allTasks.forEach { task ->
+            val shouldClean = when (task.status) {
+                DownloadStatus.COMPLETED -> {
+                    // 已完成但文件不存在
+                    val file = java.io.File(task.filePath, task.fileName)
+                    val fileNotExists = !file.exists()
+                    if (fileNotExists) {
+                        DownloadLog.d("DownloadManager", 
+                            "检测到已完成任务文件丢失: ${task.id} - ${task.fileName}")
+                    }
+                    fileNotExists
+                }
+                DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED -> {
+                    // 关键修复：只有当已经下载过（currentSize > 0）但文件丢失时，才认为异常
+                    if (task.currentSize > 0) {
+                        val file = java.io.File(task.filePath, "${task.fileName}.part")
+                        val fileNotExists = !file.exists()
+                        
+                        if (fileNotExists) {
+                            DownloadLog.d("DownloadManager", 
+                                "检测到下载中任务文件丢失: ${task.id} - ${task.fileName}, currentSize=${task.currentSize}")
+                            true
+                        } else {
+                            // 文件存在但大小超过预期（损坏）
+                            val fileSize = file.length()
+                            val isCorrupted = task.totalSize > 0 && fileSize > task.totalSize
+                            if (isCorrupted) {
+                                DownloadLog.d("DownloadManager", 
+                                    "检测到文件损坏: ${task.id} - ${task.fileName}, fileSize=$fileSize, expected=${task.totalSize}")
+                            }
+                            isCorrupted
+                        }
+                    } else {
+                        // currentSize = 0，说明还没开始下载，文件不存在是正常的
+                        false
+                    }
+                }
+                else -> false
+            }
+            
+            if (shouldClean) {
+                deleteTask(task.id, deleteFile = true)
+                cleanedCount++
+            }
+        }
+        
+        if (cleanedCount > 0) {
+            DownloadLog.d("DownloadManager", "任务验证完成，清理了 $cleanedCount 个无效任务")
+        }
+        
+        cleanedCount
     }
 
     // Flow: 获取单任务进度流（进度, 速度）
