@@ -100,21 +100,21 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
             MODE_NO_NETWORK -> {
                 // 无网络模式
                 binding.tvTitle.text = "网络连接提醒"
-                binding.tvMessage.text = "暂无网络连接，将下载${countText}共$sizeText"
+                binding.tvMessage.text = "该应用下载将消耗 $sizeText 流量，暂无网络连接，是否等待网络？"
                 binding.btnUseCellular.text = "等待网络"
             }
 
             MODE_WIFI_ONLY -> {
                 // 仅WiFi模式
                 binding.tvTitle.text = "流量安装提醒"
-                binding.tvMessage.text = "已预约WLAN下自动安装，或选择消耗${sizeText}流量直接安装，是否直接安装?"
+                binding.tvMessage.text = "该应用下载将消耗 $sizeText 流量，已预约 WLAN 下自动安装，是否直接安装？"
                 binding.btnUseCellular.text = "直接安装"
             }
 
             else -> {
                 // 流量确认模式
                 binding.tvTitle.text = "流量安装提醒"
-                binding.tvMessage.text = "已预约WLAN下自动安装，或选择消耗${sizeText}流量直接安装，是否直接安装?"
+                binding.tvMessage.text = "该应用下载将消耗 $sizeText 流量，已预约 WLAN 下自动安装，是否直接安装？"
                 binding.btnUseCellular.text = "直接安装"
             }
         }
