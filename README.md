@@ -66,7 +66,7 @@
 
 ```kotlin
 dependencies {
-    implementation("com.gitee.pichs:downloader:2.0.4")
+    implementation("com.gitee.pichs:downloader:2.0.5")
 }
 ```
 
@@ -712,3 +712,42 @@ data class DownloadConfig(
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！
+
+---
+
+## 📋 更新日志
+
+### v2.0.5 (2026-01-07)
+
+#### 🚀 新增功能
+- **新增 `NetworkMonitor` 类** - 使用 `NetworkCallback` API 替代 `BroadcastReceiver`
+  - 可准确检测网络类型变化（流量 ↔ WiFi）
+  - 解决了 `CONNECTIVITY_ACTION` 广播在网络类型切换时不触发的问题
+
+#### 🐛 Bug 修复
+- **修复 WiFi 自动下载功能**
+  - 修复了流量切换到 WiFi 时下载不自动恢复的问题
+  - 完善了 `NetworkRuleManager` 的 WiFi 恢复逻辑
+  - 新增 `resumeOtherSystemPausedTasks()` 恢复其他系统暂停的任务
+
+- **修复网络恢复逻辑**
+  - 修复应用重启后在流量网络下自动恢复未确认任务的问题
+  - WiFi 网络：恢复所有网络相关暂停的任务
+  - 流量网络：仅恢复 `cellularConfirmed=true` 的任务
+  - 完善了对 `WIFI_UNAVAILABLE`、`CELLULAR_PENDING`、`NETWORK_ERROR` 三种暂停原因的处理
+
+#### 🔧 优化改进
+- **完善暂停原因机制**
+  - 明确区分用户手动暂停（`USER_MANUAL`）和系统暂停
+  - 优化了不同暂停原因的自动恢复策略
+  - 添加详细的日志输出便于调试
+
+- **Demo 应用优化**
+  - 统一所有用户手动暂停使用 `PauseReason.USER_MANUAL`
+  - 统一等待 WiFi 暂停使用 `PauseReason.WIFI_UNAVAILABLE`
+
+---
+
+### v2.0.4 及更早版本
+
+详见 [GitHub Releases](https://github.com/pichsy/download-manager/releases)
