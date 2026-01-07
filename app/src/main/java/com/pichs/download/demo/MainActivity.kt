@@ -56,22 +56,22 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     override fun afterOnCreate() {
         NetworkMonitor(
             onNetworkChanged = { isWifi ->
-                    DownloadLog.d("网络类型变化，isWifi=$isWifi")
-                    if (isWifi) {
-                        ToastUtils.show("WIFI已连接")
-                        // WiFi 连接或从流量切换到 WiFi
-                        DownloadManager.onWifiConnected()
-                    }else{
-                        ToastUtils.show("数据流量已连接")
-                    }
-                    // 通用网络恢复：恢复网络异常暂停的任务
-                    DownloadManager.onNetworkRestored()
+                DownloadLog.d("网络类型变化，isWifi=$isWifi")
+                if (isWifi) {
+                    ToastUtils.show("WIFI已连接")
+                    // WiFi 连接或从流量切换到 WiFi
+                    DownloadManager.onWifiConnected()
+                }else{
+                    ToastUtils.show("数据流量已连接")
+                }
+                // 通用网络恢复：恢复网络异常暂停的任务
+                DownloadManager.onNetworkRestored()
             },
             onNetworkLost = {
-                    DownloadLog.d("网络断开")
-                    ToastUtils.show("网络已断开")
-                    // 通知网络规则管理器处理 WiFi 断开
-                    DownloadManager.onWifiDisconnected()
+                DownloadLog.d("网络断开")
+                ToastUtils.show("网络已断开")
+                // 通知网络规则管理器处理 WiFi 断开
+                DownloadManager.onWifiDisconnected()
             }
         ).register(this)
 

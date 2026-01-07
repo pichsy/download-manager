@@ -78,20 +78,44 @@ class NetworkAutoResumeManager(
                     DownloadLog.d("NetworkAutoResumeManager", "暂停任务: ${task.id} - ${task.fileName}, 原因: ${task.pauseReason}")
                 }
                 
+                // 过滤出所有因网络原因暂停的任务
                 val networkPausedTasks = allTasks.filter { task ->
                     task.status == DownloadStatus.PAUSED && 
-                    task.pauseReason == PauseReason.NETWORK_ERROR
+                    (task.pauseReason == PauseReason.NETWORK_ERROR ||
+                     task.pauseReason == PauseReason.WIFI_UNAVAILABLE ||
+                     task.pauseReason == PauseReason.CELLULAR_PENDING)
                 }
                 
                 if (networkPausedTasks.isNotEmpty()) {
+                    // 检查当前网络类型
+                    val isWifiAvailable = downloadManager.isWifiAvailable()
+                    val isCellularAvailable = downloadManager.isCellularAvailable()
+                    
                     DownloadLog.d("NetworkAutoResumeManager", 
-                        "网络恢复，自动恢复 ${networkPausedTasks.size} 个网络异常暂停的任务")
+                        "网络恢复，WiFi=${isWifiAvailable}, Cellular=${isCellularAvailable}, 待恢复任务: ${networkPausedTasks.size} 个")
                     
                     networkPausedTasks.forEach { task ->
                         try {
-                            downloadManager.resume(task.id)
-                            DownloadLog.d("NetworkAutoResumeManager", 
-                                "自动恢复任务成功: ${task.id} - ${task.fileName}")
+                            val shouldResume = when {
+                                // 1. WiFi 连接：恢复所有网络相关的暂停任务
+                                isWifiAvailable -> true
+                                
+                                // 2. 流量连接：只恢复已确认流量的任务
+                                isCellularAvailable && !isWifiAvailable -> task.cellularConfirmed
+                                
+                                // 3. 没网：不恢复
+                                else -> false
+                            }
+                            
+                            if (shouldResume) {
+                                downloadManager.resume(task.id)
+                                val networkType = if (isWifiAvailable) "WiFi" else "流量"
+                                DownloadLog.d("NetworkAutoResumeManager", 
+                                    "${networkType}网络恢复任务: ${task.id} - ${task.fileName}, 原因: ${task.pauseReason}")
+                            } else if (isCellularAvailable && !isWifiAvailable && !task.cellularConfirmed) {
+                                DownloadLog.d("NetworkAutoResumeManager", 
+                                    "流量网络下跳过未确认的任务: ${task.id} - ${task.fileName}, 原因: ${task.pauseReason}")
+                            }
                         } catch (e: Exception) {
                             DownloadLog.e("NetworkAutoResumeManager", 
                                 "自动恢复任务失败: ${task.id}", e)
