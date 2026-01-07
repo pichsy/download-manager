@@ -28,21 +28,23 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         private const val EXTRA_TOTAL_SIZE = "total_size"
         private const val EXTRA_TASK_COUNT = "task_count"
         private const val EXTRA_MODE = "mode"
-        
+
         /** 流量确认模式 */
         const val MODE_CELLULAR = 0
+
         /** 仅WiFi模式 */
         const val MODE_WIFI_ONLY = 1
+
         /** 无网络模式 */
         const val MODE_NO_NETWORK = 2
-        
+
         /**
          * 启动确认弹窗（默认流量确认模式）
          */
         fun start(context: Context, totalSize: Long, taskCount: Int) {
             start(context, totalSize, taskCount, MODE_CELLULAR)
         }
-        
+
         /**
          * 启动确认弹窗
          * @param mode 弹窗模式：MODE_CELLULAR 或 MODE_WIFI_ONLY
@@ -61,38 +63,38 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private lateinit var binding: ActivityCellularConfirmDialogBinding
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // 设置无标题
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
-        
+
         // 沉浸式状态栏和导航栏
         setupImmersiveMode()
-        
+
         binding = ActivityCellularConfirmDialogBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        
+
         // 获取参数
         val totalSize = intent.getLongExtra(EXTRA_TOTAL_SIZE, 0L)
         val taskCount = intent.getIntExtra(EXTRA_TASK_COUNT, 0)
         val mode = intent.getIntExtra(EXTRA_MODE, MODE_CELLULAR)
-        
+
         // 点击外部区域关闭
         binding.root.setOnClickListener {
             handleDeny()
         }
-        
+
         // 阻止内容区域的点击事件传递到根布局
         binding.cardContent.setOnClickListener { }
-        
+
         // 流量提示
         val sizeText = formatFileSize(totalSize)
-        val countText ="${taskCount}个应用"
-        
+        val countText = "${taskCount}个应用"
+
         // 根据模式设置内容
         when (mode) {
             MODE_NO_NETWORK -> {
@@ -100,46 +102,34 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
                 binding.tvTitle.text = "网络连接提醒"
                 binding.tvMessage.text = "暂无网络连接，将下载${countText}共$sizeText"
                 binding.btnUseCellular.text = "等待网络"
-                binding.btnConnectWifi.text = "连接网络"
             }
+
             MODE_WIFI_ONLY -> {
                 // 仅WiFi模式
                 binding.tvTitle.text = "流量安装提醒"
                 binding.tvMessage.text = "已预约WLAN下自动安装，或选择消耗${sizeText}流量直接安装，是否直接安装?"
                 binding.btnUseCellular.text = "直接安装"
-                binding.btnConnectWifi.text = "取消"
             }
+
             else -> {
                 // 流量确认模式
                 binding.tvTitle.text = "流量安装提醒"
                 binding.tvMessage.text = "已预约WLAN下自动安装，或选择消耗${sizeText}流量直接安装，是否直接安装?"
                 binding.btnUseCellular.text = "直接安装"
-                binding.btnConnectWifi.text = "取消"
             }
         }
-        
-        
+
+
         // 取消按钮
-        binding.btnConnectWifi.setOnClickListener {
-            when (mode) {
-                MODE_NO_NETWORK -> {
-                    // 无网络模式下，点击"连接网络"跳转到 WiFi 设置
-                    runCatching {
-                        startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-                    }
-                }
-                else -> {
-                    // 其他模式下，点击"取消"关闭弹窗
-                    handleDeny()
-                }
-            }
+        binding.btnCancel.setOnClickListener {
+            handleDeny()
         }
-        
+
         // 确认按钮（直接安装/等待网络）
         binding.btnUseCellular.setOnClickListener {
             handleConfirm()
         }
-        
+
         // "去设置" 按钮点击
         binding.tvGoSettings.setOnClickListener {
             runCatching {
@@ -149,28 +139,28 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun setupImmersiveMode() {
         // 设置沉浸式状态栏和导航栏
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        
+
         window.apply {
             statusBarColor = Color.TRANSPARENT
             navigationBarColor = Color.TRANSPARENT
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                attributes.layoutInDisplayCutoutMode = 
+                attributes.layoutInDisplayCutoutMode =
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
-        
+
         // 设置状态栏和导航栏图标颜色为深色（浅色背景）
         WindowInsetsControllerCompat(window, window.decorView).apply {
             isAppearanceLightStatusBars = true
             isAppearanceLightNavigationBars = true
         }
     }
-    
+
     private fun handleConfirm() {
         // 检查是否勾选了"不再提醒"
 //        if (binding.civDoNotRemind.isChecked) {
@@ -180,29 +170,29 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
 //                currentConfig.copy(cellularPromptMode = CellularPromptMode.NEVER)
 //            )
 //        }
-        
+
         // pendingAction 已在设置时包含 cellularConfirmed=true
         lifecycleScope.launch {
             CellularConfirmViewModel.confirm()
         }
         finishWithAnimation()
     }
-    
+
     private fun handleDeny() {
         lifecycleScope.launch {
             CellularConfirmViewModel.deny()
         }
         finishWithAnimation()
     }
-    
+
     override fun onBackPressed() {
         handleDeny()
     }
-    
+
     private fun finishWithAnimation() {
         finish()
         overridePendingTransition(R.anim.no_anim, R.anim.dialog_scale_out)
     }
-    
+
     private fun formatFileSize(bytes: Long): String = FormatUtils.formatFileSize(bytes)
 }
