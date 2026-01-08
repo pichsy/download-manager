@@ -389,10 +389,181 @@ object DownloadManager {
         return this
     }
     
+    /**
+     * 批量恢复所有暂停的任务
+     * 优化：批量后置检查，只弹一次确认框
+     */
     fun resumeAll(): DownloadManager {
-        InMemoryTaskStore.getAll().forEach { resume(it.id) }
+        val pausedTasks = InMemoryTaskStore.getAll()
+            .filter { it.status == DownloadStatus.PAUSED }
+        resumeTasksBatch(pausedTasks)
         return this
     }
+    
+    /**
+     * 批量恢复指定暂停原因的任务
+     * @param pauseReason 暂停原因
+     */
+    fun resumeAll(pauseReason: com.pichs.download.model.PauseReason): DownloadManager {
+        val tasksToResume = InMemoryTaskStore.getAll()
+            .filter { it.status == DownloadStatus.PAUSED && it.pauseReason == pauseReason }
+        resumeTasksBatch(tasksToResume)
+        return this
+    }
+    
+    /**
+     * 批量恢复指定的任务列表
+     * @param tasks 要恢复的任务列表
+     */
+    fun resumeTasks(tasks: List<DownloadTask>): DownloadManager {
+        // 从内存获取最新状态，避免使用过期的快照数据
+        val pausedTasks = tasks.mapNotNull { InMemoryTaskStore.get(it.id) }
+            .filter { it.status == DownloadStatus.PAUSED }
+        resumeTasksBatch(pausedTasks)
+        return this
+    }
+    
+    /**
+     * 内部批量恢复方法
+     * 批量后置检查，只弹一次确认框
+     */
+    private fun resumeTasksBatch(tasks: List<DownloadTask>) {
+        if (tasks.isEmpty()) return
+        
+        val config = networkRuleManager?.config ?: NetworkDownloadConfig()
+        
+        // 如果后置检查未启用，直接全部恢复
+        if (!config.checkAfterCreate) {
+            tasks.forEach { task ->
+                val pending = task.copy(
+                    status = DownloadStatus.WAITING,
+                    pauseReason = null,
+                    speed = 0L,
+                    updateTime = System.currentTimeMillis()
+                )
+                InMemoryTaskStore.put(pending)
+                repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
+                dispatcher.enqueue(pending)
+                DownloadEventBus.emitTaskEvent(TaskEvent.TaskResumed(pending))
+            }
+            scheduleNext()
+            DownloadLog.d(TAG, "批量恢复 ${tasks.size} 个任务（后置检查未启用）")
+            return
+        }
+        
+        // 使用第一个任务判断网络状态（批量检查只判断一次）
+        val firstTask = tasks.first()
+        val totalSize = tasks.sumOf { it.totalSize }
+        
+        when (val decision = checkAfterPermission(firstTask)) {
+            is CheckAfterResult.Allow -> {
+                // 允许下载，全部恢复
+                tasks.forEach { task ->
+                    val pending = task.copy(
+                        status = DownloadStatus.WAITING,
+                        pauseReason = null,
+                        speed = 0L,
+                        updateTime = System.currentTimeMillis()
+                    )
+                    InMemoryTaskStore.put(pending)
+                    repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
+                    dispatcher.enqueue(pending)
+                    DownloadEventBus.emitTaskEvent(TaskEvent.TaskResumed(pending))
+                }
+                scheduleNext()
+                DownloadLog.d(TAG, "批量恢复 ${tasks.size} 个任务（网络允许）")
+            }
+            is CheckAfterResult.NeedConfirmation -> {
+                // 需要确认：通过回调弹窗，只弹一次
+                networkRuleManager?.checkAfterCallback?.requestCellularConfirmation(
+                    pendingTasks = tasks,
+                    totalSize = totalSize,
+                    onConnectWifi = {
+                        // 用户选择连接 WiFi，保持暂停状态
+                        DownloadLog.d(TAG, "用户选择连接 WiFi，${tasks.size} 个任务保持暂停")
+                    },
+                    onUseCellular = {
+                        // 用户确认使用流量，标记并恢复所有任务
+                        tasks.forEach { task ->
+                            val confirmed = task.copy(
+                                cellularConfirmed = true,
+                                status = DownloadStatus.WAITING,
+                                pauseReason = null,
+                                speed = 0L,
+                                updateTime = System.currentTimeMillis()
+                            )
+                            InMemoryTaskStore.put(confirmed)
+                            repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(confirmed) } }
+                            dispatcher.enqueue(confirmed)
+                            DownloadEventBus.emitTaskEvent(TaskEvent.TaskResumed(confirmed))
+                        }
+                        scheduleNext()
+                        DownloadLog.d(TAG, "批量恢复 ${tasks.size} 个任务（用户确认使用流量）")
+                    }
+                ) ?: run {
+                    // 未设置回调，直接放行
+                    DownloadLog.w(TAG, "未设置 checkAfterCallback，直接放行 ${tasks.size} 个任务")
+                    tasks.forEach { task ->
+                        val pending = task.copy(
+                            status = DownloadStatus.WAITING,
+                            pauseReason = null,
+                            speed = 0L,
+                            updateTime = System.currentTimeMillis()
+                        )
+                        InMemoryTaskStore.put(pending)
+                        repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
+                        dispatcher.enqueue(pending)
+                        DownloadEventBus.emitTaskEvent(TaskEvent.TaskResumed(pending))
+                    }
+                    scheduleNext()
+                }
+            }
+            is CheckAfterResult.Deny -> {
+                when (decision.reason) {
+                    DenyReason.NO_NETWORK -> {
+                        // 无网络，更新暂停原因
+                        tasks.forEach { task ->
+                            updateTaskInternal(task.copy(
+                                pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR,
+                                updateTime = System.currentTimeMillis()
+                            ))
+                        }
+                        // 通知使用端
+                        networkRuleManager?.checkAfterCallback?.requestConfirmation(
+                            scenario = NetworkScenario.NO_NETWORK,
+                            pendingTasks = tasks,
+                            totalSize = totalSize,
+                            onConnectWifi = { },
+                            onUseCellular = { }
+                        )
+                        DownloadLog.d(TAG, "批量恢复失败：无网络，${tasks.size} 个任务保持暂停")
+                    }
+                    DenyReason.WIFI_ONLY_MODE -> {
+                        // 仅 WiFi 模式，更新暂停原因
+                        tasks.forEach { task ->
+                            updateTaskInternal(task.copy(
+                                pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE,
+                                updateTime = System.currentTimeMillis()
+                            ))
+                        }
+                        networkRuleManager?.checkAfterCallback?.showWifiOnlyHint(firstTask)
+                        DownloadLog.d(TAG, "批量恢复失败：仅 WiFi 模式，${tasks.size} 个任务保持暂停")
+                    }
+                    DenyReason.USER_CONTROLLED_NOT_ALLOWED -> {
+                        // 使用端控制模式，更新暂停原因
+                        tasks.forEach { task ->
+                            updateTaskInternal(task.copy(
+                                pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING,
+                                updateTime = System.currentTimeMillis()
+                            ))
+                        }
+                        DownloadLog.d(TAG, "批量恢复：使用端控制模式，${tasks.size} 个任务等待放行")
+                    }
+                }
+            }
+        }
+    }
+    
     fun cancelAll(): DownloadManager {
         InMemoryTaskStore.getAll().forEach { cancel(it.id) }
         return this

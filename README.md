@@ -539,9 +539,16 @@ val builders = urls.map { url ->
 }
 DownloadManager.startTasks(builders)
 
-// 批量操作
-DownloadManager.pauseAll()
-DownloadManager.resumeAll()
+// 批量暂停
+DownloadManager.pauseAll()                              // 暂停所有任务
+DownloadManager.pauseAll(PauseReason.WIFI_UNAVAILABLE)  // 暂停并指定原因
+
+// 批量恢复（优化：批量后置检查，只弹一次确认框）
+DownloadManager.resumeAll()                             // 恢复所有暂停任务
+DownloadManager.resumeAll(PauseReason.NETWORK_ERROR)    // 只恢复指定原因的任务
+DownloadManager.resumeTasks(tasks)                      // 恢复指定任务列表
+
+// 批量取消
 DownloadManager.cancelAll()
 ```
 
@@ -716,6 +723,25 @@ data class DownloadConfig(
 ---
 
 ## 📋 更新日志
+
+### v2.0.7 (2026-01-08)
+
+#### 🚀 新增功能
+- **批量恢复 API 增强**
+  - `resumeAll()` - 优化为批量后置检查，流量环境只弹一次确认框
+  - `resumeAll(pauseReason)` - 按暂停原因筛选恢复任务
+  - `resumeTasks(tasks)` - 恢复指定任务列表
+
+#### 🔧 优化改进
+- **批量恢复后置检查优化**
+  - 原来：每个任务独立检查，10 个任务可能弹 10 次确认框
+  - 现在：批量检查，只判断一次，只弹一次确认框
+  - 提升用户体验，避免频繁弹窗干扰
+
+- **任务状态安全性**
+  - `resumeTasks(tasks)` 从内存获取最新状态，避免使用过期快照数据
+
+---
 
 ### v2.0.6 (2026-01-07)
 
