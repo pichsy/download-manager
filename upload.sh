@@ -34,7 +34,7 @@ if [[ -z "$PUBLISH_VERSION" ]]; then
   exit 1
 fi
 
-ZIP_NAME="filepicker_${PUBLISH_VERSION}.zip"
+ZIP_NAME="downloader_${PUBLISH_VERSION}.zip"
 ZIP_FILE="$BUILD_DIR/$ZIP_NAME"
 
 # 打印参数信息
