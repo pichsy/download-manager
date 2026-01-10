@@ -375,8 +375,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         val task = DownloadManager.download(item.url)
             .fileName(item.name.replace(" ", "_") + ".apk")
             .priority(priority)
-            .packageName(item.packageName.orEmpty())
-            .storeVersionCode(item.versionCode)
             .extras(extrasJson)
             .start()
         item.task = task
