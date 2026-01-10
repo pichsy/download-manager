@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.pichs.xwidget.cardview.XCardConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="4dp"
+    android:layout_marginEnd="4dp"
+    android:background="@color/content_background_color"
+    android:padding="8dp"
+    app:xp_radius="12dp">
+
+    <!-- 图标容器 -->
+    <FrameLayout
+        android:id="@+id/fl_cover_container"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.pichs.xwidget.cardview.XCardImageView
+            android:id="@+id/iv_cover"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="#DFDFFB"
+            app:xp_radius="10dp" />
+
+        <!-- 优先级标签：右上角 -->
+        <com.pichs.xwidget.view.XTextView
+            android:id="@+id/tv_priority"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="-2dp"
+            android:layout_marginEnd="-4dp"
+            android:paddingStart="4dp"
+            android:paddingTop="1dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="1dp"
+            android:text="必装"
+            android:textColor="#fff"
+            android:textSize="8sp"
+            android:textStyle="bold"
+            android:background="#FF5722" />
+
+    </FrameLayout>
+
+    <com.pichs.xwidget.view.XTextView
+        android:id="@+id/tv_app_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:text="应用名称"
+        android:textColor="@color/content_text_color"
+        android:textSize="11sp"
+        app:layout_constraintEnd_toEndOf="@+id/fl_cover_container"
+        app:layout_constraintStart_toStartOf="@+id/fl_cover_container"
+        app:layout_constraintTop_toBottomOf="@+id/fl_cover_container" />
+
+    <com.pichs.download.demo.widget.ProgressButton
+        android:id="@+id/btn_download"
+        android:layout_width="70dp"
+        android:layout_height="26dp"
+        android:layout_marginTop="6dp"
+        android:text="下载"
+        android:textColor="#fff"
+        android:textSize="11sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_app_name"
+        app:pb_backgroundColor="#1A1A1A"
+        app:pb_progressColor="#6161FF"
+        app:pb_radius="13dp" />
+
+</com.pichs.xwidget.cardview.XCardConstraintLayout>

@@ -205,6 +205,33 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
         // 交由调度器在 DownloadManager.resume 中统一置为 WAITING/PENDING
     }
     
+    /**
+     * 抢占：停止下载但任务状态改为 WAITING（等待中）
+     * 与 pause 不同，被抢占的任务继续排队等待，而不是暂停
+     * 注意：此方法为非阻塞，状态更新在后台执行
+     */
+    override fun preempt(taskId: String) {
+        controllers[taskId]?.let { ctl ->
+            ctl.paused.set(true)
+            ctl.job?.cancel()
+            // 使用 scope.launch 而不是 runBlocking，避免阻塞调用线程
+            scope.launch {
+                val task = DownloadManager.getTaskImmediate(taskId) ?: return@launch
+                // 状态改为 WAITING，而不是 PAUSED
+                val waiting = task.copy(
+                    status = DownloadStatus.WAITING,
+                    pauseReason = null,  // 不是暂停，是等待
+                    speed = 0L,
+                    updateTime = System.currentTimeMillis()
+                )
+                DownloadManager.updateTaskInternal(waiting)
+                DownloadLog.d("MultiThreadDownloadEngine", "任务被抢占，改为等待中: $taskId")
+                // 清理进度计算器中的数据
+                progressCalculator.clearTaskProgress(taskId)
+            }
+        }
+    }
+    
     override fun cancel(taskId: String) {
         controllers[taskId]?.let { ctl ->
             ctl.cancelled.set(true)

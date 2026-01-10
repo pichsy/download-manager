@@ -78,13 +78,16 @@ class NetworkAutoResumeManager(
                     DownloadLog.d("NetworkAutoResumeManager", "暂停任务: ${task.id} - ${task.fileName}, 原因: ${task.pauseReason}")
                 }
                 
-                // 过滤出所有因网络原因暂停的任务
+                // 过滤出所有因网络原因暂停的任务，并按优先级排序
                 val networkPausedTasks = allTasks.filter { task ->
                     task.status == DownloadStatus.PAUSED && 
                     (task.pauseReason == PauseReason.NETWORK_ERROR ||
                      task.pauseReason == PauseReason.WIFI_UNAVAILABLE ||
                      task.pauseReason == PauseReason.CELLULAR_PENDING)
-                }
+                }.sortedWith(
+                    compareByDescending<com.pichs.download.model.DownloadTask> { it.priority }
+                        .thenBy { it.createTime }
+                )
                 
                 if (networkPausedTasks.isNotEmpty()) {
                     // 检查当前网络类型

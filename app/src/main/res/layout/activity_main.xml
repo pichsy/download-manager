@@ -19,34 +19,20 @@
         android:background="@color/tool_bar_color"
         app:layout_constraintTop_toBottomOf="@+id/status_bar_view">
 
-<!--        <com.pichs.xwidget.view.XImageView-->
-<!--            android:id="@+id/iv_search"-->
-<!--            android:layout_width="40dp"-->
-<!--            android:layout_height="40dp"-->
-<!--            android:layout_marginStart="12dp"-->
-<!--            android:padding="8dp"-->
-<!--            android:src="@drawable/ic_search_mini"-->
-<!--            app:layout_constraintBottom_toBottomOf="parent"-->
-<!--            app:layout_constraintStart_toStartOf="parent"-->
-<!--            app:layout_constraintTop_toTopOf="parent"-->
-<!--            app:xp_colorFilter="@color/tool_bar_text_color" />-->
-
         <com.pichs.xwidget.roundview.XRoundButton
             android:id="@+id/tv_title"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="6dp"
             android:layout_marginStart="12dp"
             android:gravity="center"
-            android:text="应用更新"
+            android:text="应用商店"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
-            android:textColor="#fff"
+            android:textColor="#000"
             android:textSize="17sp"
             android:textStyle="bold"
             app:xp_radius="120dp"
-            app:xp_backgroundStartColor="#12de31"
-            app:xp_backgroundEndColor="#7258fe"
-            app:xp_backgroundOrientation="vertical"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -78,13 +64,136 @@
 
     </com.pichs.xwidget.cardview.XCardConstraintLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerView"
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:fillViewport="true"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/toolBar" />
+        app:layout_constraintTop_toBottomOf="@+id/toolBar">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="16dp">
+
+            <!-- 必装应用 (URGENT, priority=3) -->
+            <TextView
+                android:id="@+id/tv_category_urgent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:text="必装应用（优先级：URGENT）"
+                android:textColor="@color/content_text_color"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_urgent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:clipToPadding="false"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+
+            <!-- 推荐应用 (HIGH, priority=2) -->
+            <TextView
+                android:id="@+id/tv_category_high"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="24dp"
+                android:text="推荐应用（优先级：HIGH）"
+                android:textColor="@color/content_text_color"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_high"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:clipToPadding="false"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+
+            <!-- 常用应用 (NORMAL/LOW, priority=1/0) -->
+            <TextView
+                android:id="@+id/tv_category_normal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="24dp"
+                android:text="常用应用（优先级：NORMAL）"
+                android:textColor="@color/content_text_color"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_normal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:clipToPadding="false"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+
+            <!-- 一键下载测试按钮 -->
+            <com.pichs.xwidget.roundview.XRoundButton
+                android:id="@+id/btn_download_all"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="32dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="center"
+                android:text="一键下载全部（测试优先级）"
+                android:textColor="#fff"
+                android:textSize="14dp"
+                android:textStyle="bold"
+                app:xp_radius="25dp"
+                android:paddingHorizontal="16dp"
+                app:xp_backgroundStartColor="#FF5722"
+                app:xp_backgroundEndColor="#E91E63"
+                app:xp_backgroundOrientation="horizontal" />
+
+            <com.pichs.xwidget.roundview.XRoundButton
+                android:id="@+id/btn_pause_all"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:paddingHorizontal="16dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="center"
+                android:text="暂停全部"
+                android:textColor="#fff"
+                android:textSize="14dp"
+                android:textStyle="bold"
+                app:xp_radius="25dp"
+                app:xp_backgroundStartColor="#607D8B"
+                app:xp_backgroundEndColor="#455A64"
+                app:xp_backgroundOrientation="horizontal" />
+
+            <com.pichs.xwidget.roundview.XRoundButton
+                android:id="@+id/btn_resume_all"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:paddingHorizontal="16dp"
+                android:gravity="center"
+                android:text="恢复全部（测试恢复顺序）"
+                android:textColor="#fff"
+                android:textSize="14dp"
+                android:textStyle="bold"
+                app:xp_radius="25dp"
+                app:xp_backgroundStartColor="#4CAF50"
+                app:xp_backgroundEndColor="#2E7D32"
+                app:xp_backgroundOrientation="horizontal" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -123,8 +123,11 @@ object DownloadManager {
                 
                 // 重新恢复需要继续下载的任务
                 if (tasksToEnqueue.isNotEmpty()) {
-                    // 按 createTime 排序确保恢复顺序正确
-                    val sortedTasks = tasksToEnqueue.sortedBy { it.createTime }
+                    // 按优先级降序 + 创建时间升序排序，确保高优先级任务先入队
+                    val sortedTasks = tasksToEnqueue.sortedWith(
+                        compareByDescending<DownloadTask> { it.priority }
+                            .thenBy { it.createTime }
+                    )
                     
                     // 分组：已确认使用流量的任务 vs 未确认的任务
                     val confirmedTasks = sortedTasks.filter { it.cellularConfirmed }
@@ -430,11 +433,17 @@ object DownloadManager {
     private fun resumeTasksBatch(tasks: List<DownloadTask>) {
         if (tasks.isEmpty()) return
         
+        // 按优先级降序 + 创建时间升序排序，确保高优先级任务先入队
+        val sortedTasks = tasks.sortedWith(
+            compareByDescending<DownloadTask> { it.priority }
+                .thenBy { it.createTime }
+        )
+        
         val config = networkRuleManager?.config ?: NetworkDownloadConfig()
         
         // 如果后置检查未启用，直接全部恢复
         if (!config.checkAfterCreate) {
-            tasks.forEach { task ->
+            sortedTasks.forEach { task ->
                 val pending = task.copy(
                     status = DownloadStatus.WAITING,
                     pauseReason = null,
@@ -458,7 +467,7 @@ object DownloadManager {
         when (val decision = checkAfterPermission(firstTask)) {
             is CheckAfterResult.Allow -> {
                 // 允许下载，全部恢复
-                tasks.forEach { task ->
+                sortedTasks.forEach { task ->
                     val pending = task.copy(
                         status = DownloadStatus.WAITING,
                         pauseReason = null,
@@ -484,7 +493,7 @@ object DownloadManager {
                     },
                     onUseCellular = {
                         // 用户确认使用流量，标记并恢复所有任务
-                        tasks.forEach { task ->
+                        sortedTasks.forEach { task ->
                             val confirmed = task.copy(
                                 cellularConfirmed = true,
                                 status = DownloadStatus.WAITING,
@@ -503,7 +512,7 @@ object DownloadManager {
                 ) ?: run {
                     // 未设置回调，直接放行
                     DownloadLog.w(TAG, "未设置 checkAfterCallback，直接放行 ${tasks.size} 个任务")
-                    tasks.forEach { task ->
+                    sortedTasks.forEach { task ->
                         val pending = task.copy(
                             status = DownloadStatus.WAITING,
                             pauseReason = null,
@@ -522,7 +531,7 @@ object DownloadManager {
                 when (decision.reason) {
                     DenyReason.NO_NETWORK -> {
                         // 无网络，更新暂停原因
-                        tasks.forEach { task ->
+                        sortedTasks.forEach { task ->
                             updateTaskInternal(task.copy(
                                 pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR,
                                 updateTime = System.currentTimeMillis()
@@ -540,7 +549,7 @@ object DownloadManager {
                     }
                     DenyReason.WIFI_ONLY_MODE -> {
                         // 仅 WiFi 模式，更新暂停原因
-                        tasks.forEach { task ->
+                        sortedTasks.forEach { task ->
                             updateTaskInternal(task.copy(
                                 pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE,
                                 updateTime = System.currentTimeMillis()
@@ -551,7 +560,7 @@ object DownloadManager {
                     }
                     DenyReason.USER_CONTROLLED_NOT_ALLOWED -> {
                         // 使用端控制模式，更新暂停原因
-                        tasks.forEach { task ->
+                        sortedTasks.forEach { task ->
                             updateTaskInternal(task.copy(
                                 pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING,
                                 updateTime = System.currentTimeMillis()

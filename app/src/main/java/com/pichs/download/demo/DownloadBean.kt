@@ -14,5 +14,7 @@ data class DownloadItem(
     var icon: String? = null,
     var versionCode: Long? = null,
     var versionName: String? = null,
-    var task: DownloadTask? = null
+    var task: DownloadTask? = null,
+    var priority: Int = 1,  // 优先级：1=NORMAL, 2=HIGH, 3=URGENT
+    var isInstalled: Boolean = false  // 缓存安装状态，避免每次绑定时查询 PackageManager
 )

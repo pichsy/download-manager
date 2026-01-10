@@ -268,7 +268,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val extrasJson = buildExtrasJson(item)
         val fileName = buildFileName(item.name)
 
-        val task = DownloadManager.downloadWithPriority(item.url, DownloadPriority.HIGH)
+        // 使用 item 的 priority，如果未设置则默认为 NORMAL
+        val priority = when (item.priority) {
+            DownloadPriority.URGENT.value -> DownloadPriority.URGENT
+            DownloadPriority.HIGH.value -> DownloadPriority.HIGH
+            DownloadPriority.LOW.value -> DownloadPriority.LOW
+            else -> DownloadPriority.NORMAL
+        }
+        
+        DownloadLog.d("MainViewModel", "下载任务: ${item.name}, priority=${priority.value}")
+
+        val task = DownloadManager.downloadWithPriority(item.url, priority)
             .path(downloadDir)
             .fileName(fileName)
             .estimatedSize(item.size)
