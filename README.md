@@ -66,7 +66,7 @@
 
 ```kotlin
 dependencies {
-    implementation("com.gitee.pichs:downloader:2.0.6")
+    implementation("com.gitee.pichs:downloader:2.0.8")
 }
 ```
 
@@ -612,6 +612,57 @@ data class DownloadTask(
 | `HIGH` | 2 | 用户主动下载 |
 | `URGENT` | 3 | 系统关键下载 |
 
+### 优先级调度与抢占机制
+
+#### 调度规则
+
+1. **队列排序**：等待队列按优先级降序排列，同优先级按创建时间先后（FIFO）
+2. **有空位时**：自动从队列取出优先级最高的任务执行
+3. **抢占触发**：仅当 **URGENT** 任务入队且并发已满时触发抢占
+
+#### 抢占场景表
+
+| 队列首任务 | 运行中任务 | 抢占行为 |
+|-----------|----------|---------|
+| NORMAL (1) | 任意 | ❌ 不抢占，等待空位 |
+| HIGH (2) | 任意 | ❌ 不抢占，等待空位 |
+| URGENT (3) | LOW (0) | ✅ 抢占 LOW，URGENT 立即执行 |
+| URGENT (3) | NORMAL (1) | ✅ 抢占 NORMAL，URGENT 立即执行 |
+| URGENT (3) | HIGH (2) | ✅ 抢占 HIGH，URGENT 立即执行 |
+| URGENT (3) | URGENT (3) | ❌ 优先级相等，等待空位 |
+
+#### 被抢占任务的处理
+
+- 被抢占的任务**不会**变成 `PAUSED` 状态
+- 被抢占的任务状态变为 `WAITING`，自动重新入队
+- 当有空位时，被抢占的任务会按优先级自动恢复执行
+
+#### 使用示例
+
+```kotlin
+// 紧急任务会抢占正在下载的普通任务
+DownloadManager.downloadUrgent("https://example.com/critical.apk")
+    .path(downloadPath)
+    .fileName("critical.apk")
+    .start()
+
+// 设置优先级的完整方式
+DownloadManager.download("https://example.com/app.apk")
+    .path(downloadPath)
+    .fileName("app.apk")
+    .priority(DownloadPriority.URGENT.value)
+    .start()
+```
+
+#### 最佳实践
+
+| 场景 | 推荐优先级 |
+|------|----------|
+| 用户点击下载按钮 | `HIGH` |
+| 后台静默更新 | `NORMAL` 或 `LOW` |
+| 系统核心组件更新 | `URGENT` |
+| 预加载/缓存 | `LOW` |
+
 ## 🏗️ 项目结构
 
 ```
@@ -723,6 +774,32 @@ data class DownloadConfig(
 ---
 
 ## 📋 更新日志
+
+### v2.0.8 (2026-01-10)
+
+#### 🚀 新增功能
+- **优先级抢占机制**
+  - URGENT 任务可抢占 LOW/NORMAL/HIGH 任务立即执行
+  - 被抢占任务状态变为 `WAITING` 自动重新入队
+  - 等待队列按优先级降序 + 创建时间升序排列
+
+#### 🐛 Bug 修复
+- **修复调度器无限循环问题**
+  - 修复当多个 URGENT 任务同时存在时 `scheduleNextInternal()` 死循环
+  - `tryPreempt()` 现返回抢占结果，失败时正确退出循环
+
+- **修复 ANR 问题**
+  - `handleClick()` 中 `isInstalledAndUpToDate()` 移至后台线程
+  - `bindButtonUI()` 使用缓存的安装状态，避免主线程查询 PackageManager
+  - `initCategoryLists()` 预计算应用安装状态
+  - `downloadAllWithPriority()` 过滤逻辑移至后台线程
+
+#### 🔧 优化改进
+- **抢占逻辑完善**
+  - 同优先级任务不互相抢占，遵循先来先服务原则
+  - 任务完成后自动触发调度，处理等待中的任务
+
+---
 
 ### v2.0.7 (2026-01-08)
 
