@@ -9,47 +9,98 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <androidx.core.widget.NestedScrollView
+    <!-- 标题栏 -->
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="56dp"
+        android:background="#050521"
+        android:paddingStart="8dp"
+        android:paddingEnd="16dp">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- 返回按钮 -->
+        <ImageView
+            android:id="@+id/ivBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_centerVertical="true"
+            android:padding="8dp"
+            android:src="@drawable/ic_back"
+            android:contentDescription="返回"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+
+        <!-- 标题 -->
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_centerInParent="true"
+            android:text="下载管理"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </RelativeLayout>
 
-            <com.pichs.xwidget.view.XTextView
-                android:id="@+id/tv_downloading"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="12dp"
-                android:text="正在下载"
-                android:textColor="#fff"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+    <!-- 分隔线 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1AFFFFFF" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+    <!-- 顶部 Tab 切换 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center">
 
-            <com.pichs.xwidget.view.XTextView
-                android:id="@+id/tv_downloaded"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="12dp"
-                android:text="已下载"
-                android:textColor="#fff"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+        <TextView
+            android:id="@+id/tab_downloading"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="正在下载"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="?attr/selectableItemBackground" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerView_downloaded"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+        <TextView
+            android:id="@+id/tab_completed"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="下载完成"
+            android:textColor="#80FFFFFF"
+            android:textSize="16sp"
+            android:background="?attr/selectableItemBackground" />
+    </LinearLayout>
+
+    <!-- Tab 指示器 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/indicator_downloading"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="#6366F1" />
+
+        <View
+            android:id="@+id/indicator_completed"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent" />
+    </LinearLayout>
+
+    <!-- ViewPager2 -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
 </LinearLayout>

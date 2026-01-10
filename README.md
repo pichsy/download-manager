@@ -745,6 +745,206 @@ data class DownloadConfig(
 )
 ```
 
+## ⚠️ 使用注意事项
+
+### 线程安全
+
+#### ✅ 可在任意线程调用的 API
+
+以下 API 内部已做线程安全处理，可以在主线程或子线程调用：
+
+```kotlin
+// 任务控制
+DownloadManager.pause(taskId)
+DownloadManager.resume(taskId)
+DownloadManager.cancel(taskId)
+DownloadManager.pauseAll()
+DownloadManager.resumeAll()
+
+// 任务查询
+DownloadManager.getTask(taskId)
+DownloadManager.getTaskByUrl(url)
+DownloadManager.getAllTasks()
+
+// 网络状态
+DownloadManager.isNetworkAvailable()
+DownloadManager.hasAvailableSlot()
+```
+
+#### ⚠️ 建议在子线程调用的操作
+
+以下操作可能涉及数据库或耗时计算，**建议在后台线程执行**：
+
+```kotlin
+lifecycleScope.launch(Dispatchers.IO) {
+    // 批量任务操作
+    urls.forEach { url ->
+        DownloadManager.download(url)
+            .path(downloadPath)
+            .fileName(getFileName(url))
+            .priority(DownloadPriority.NORMAL.value)
+            .start()
+    }
+}
+```
+
+### 避免 ANR
+
+#### ❌ 错误示例
+
+```kotlin
+// 在主线程查询 PackageManager（可能导致 ANR）
+fun bindButtonUI(button: Button, item: AppItem) {
+    // ❌ 这会阻塞主线程
+    val isInstalled = packageManager.getPackageInfo(item.packageName, 0)
+    button.text = if (isInstalled != null) "打开" else "下载"
+}
+```
+
+#### ✅ 正确示例
+
+```kotlin
+// 方案1：预计算安装状态
+private fun initData() {
+    lifecycleScope.launch {
+        withContext(Dispatchers.IO) {
+            appList.forEach { item ->
+                item.isInstalled = AppUtils.isInstalledAndUpToDate(context, item.packageName)
+            }
+        }
+        // 使用缓存的状态
+        adapter.notifyDataSetChanged()
+    }
+}
+
+// 方案2：点击时在后台检查
+private fun handleClick(item: AppItem) {
+    lifecycleScope.launch {
+        val canOpen = withContext(Dispatchers.IO) {
+            AppUtils.isInstalledAndUpToDate(context, item.packageName)
+        }
+        if (canOpen) {
+            openApp(item.packageName)
+        } else {
+            startDownload(item)
+        }
+    }
+}
+```
+
+### RecyclerView 集成最佳实践
+
+#### 1. 使用 Payload 局部刷新进度
+
+避免进度更新时重新绑定整个 ViewHolder：
+
+```kotlin
+// Adapter
+fun updateProgress(task: DownloadTask) {
+    val idx = data.indexOfFirst { it.id == task.id }
+    if (idx >= 0) {
+        data[idx] = task
+        notifyItemChanged(idx, "PROGRESS_UPDATE")  // 使用 Payload
+    }
+}
+
+override fun onBindViewHolder(holder: VH, position: Int, payloads: List<Any>) {
+    if (payloads.contains("PROGRESS_UPDATE")) {
+        holder.updateProgressOnly(data[position])  // 只更新进度
+    } else {
+        holder.bind(data[position])  // 完整绑定
+    }
+}
+```
+
+#### 2. 进度更新防抖
+
+高频回调可能导致 UI 卡顿：
+
+```kotlin
+private val lastUpdateTimeMap = mutableMapOf<String, Long>()
+private val updateInterval = 300L  // 300ms 防抖
+
+private fun onTaskProgress(task: DownloadTask, progress: Int, speed: Long) {
+    // 100% 必须更新
+    if (progress >= 100) {
+        lastUpdateTimeMap.remove(task.id)
+        adapter.updateProgress(task)
+        return
+    }
+    
+    val now = System.currentTimeMillis()
+    val lastUpdate = lastUpdateTimeMap[task.id] ?: 0L
+    if (now - lastUpdate >= updateInterval) {
+        lastUpdateTimeMap[task.id] = now
+        adapter.updateProgress(task)
+    }
+}
+```
+
+#### 3. 关联已有任务
+
+列表加载时检查是否已有对应的下载任务：
+
+```kotlin
+private fun bindItem(holder: VH, item: AppItem) {
+    // 关联已有任务
+    if (item.task == null) {
+        item.task = DownloadManager.getTaskByUrl(item.downloadUrl)
+    }
+    
+    // 根据任务状态更新 UI
+    updateButtonState(holder.button, item.task)
+}
+```
+
+### 乐观更新（即时 UI 反馈）
+
+点击按钮后立即更新 UI，不等待回调：
+
+```kotlin
+private fun onResumeClick(task: DownloadTask, button: ProgressButton) {
+    // 1. 立即更新 UI（乐观更新）
+    val targetStatus = if (DownloadManager.hasAvailableSlot()) {
+        DownloadStatus.DOWNLOADING
+    } else {
+        DownloadStatus.WAITING
+    }
+    button.text = if (targetStatus == DownloadStatus.DOWNLOADING) "${task.progress}%" else "等待中"
+    
+    // 2. 执行实际操作
+    DownloadManager.resume(task.id)
+}
+```
+
+### 网络状态监听
+
+使用 `NetworkMonitor` 监听网络变化：
+
+```kotlin
+NetworkMonitor(
+    onNetworkChanged = { isWifi ->
+        if (isWifi) {
+            DownloadManager.onWifiConnected()  // 恢复 WiFi 暂停的任务
+        }
+        DownloadManager.onNetworkRestored()    // 恢复网络异常暂停的任务
+    },
+    onNetworkLost = {
+        DownloadManager.onWifiDisconnected()   // 暂停下载
+    }
+).register(this)  // 自动绑定生命周期
+```
+
+### 常见问题
+
+| 问题 | 原因 | 解决方案 |
+|------|------|---------|
+| 点击按钮无反应/卡顿 | `PackageManager` 查询在主线程 | 预计算或移到后台线程 |
+| 进度更新卡顿 | 高频刷新 RecyclerView | 添加 300ms 防抖 + Payload 局部刷新 |
+| 任务状态不同步 | 未订阅 Flow 监听器 | 使用 `flowListener.bindToLifecycle()` |
+| 重复创建任务 | 未检查已有任务 | 先调用 `getTaskByUrl()` 检查 |
+| 任务完成后按钮显示"下载" | 未关联任务对象 | 在 `onBind` 时关联 `item.task` |
+
 ## 🎯 分片策略
 
 根据文件大小自动选择最优线程数：
