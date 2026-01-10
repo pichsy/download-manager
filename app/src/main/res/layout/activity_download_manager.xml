@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
+    android:background="#f1f1f1"
     android:layout_height="match_parent"
-    android:background="#050521"
     android:orientation="vertical">
 
     <com.pichs.xwidget.space.XStatusBarSpace
@@ -13,7 +13,6 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:background="#050521"
         android:paddingStart="8dp"
         android:paddingEnd="16dp">
 
@@ -34,7 +33,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="下载管理"
-            android:textColor="#FFFFFF"
+            android:textColor="#333"
             android:textSize="18sp"
             android:textStyle="bold" />
     </RelativeLayout>
@@ -59,7 +58,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="正在下载"
-            android:textColor="#FFFFFF"
+            android:textColor="#333"
             android:textSize="16sp"
             android:textStyle="bold"
             android:background="?attr/selectableItemBackground" />
@@ -71,7 +70,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="下载完成"
-            android:textColor="#80FFFFFF"
+            android:textColor="#8333"
             android:textSize="16sp"
             android:background="?attr/selectableItemBackground" />
     </LinearLayout>

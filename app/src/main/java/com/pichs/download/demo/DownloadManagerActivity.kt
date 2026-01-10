@@ -53,18 +53,18 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
     private fun updateTabState(position: Int) {
         when (position) {
             0 -> {
-                binding.tabDownloading.setTextColor(0xFFFFFFFF.toInt())
+                binding.tabDownloading.setTextColor(0xFF333333.toInt())
                 binding.tabDownloading.paint.isFakeBoldText = true
-                binding.tabCompleted.setTextColor(0x80FFFFFF.toInt())
+                binding.tabCompleted.setTextColor(0x80333333.toInt())
                 binding.tabCompleted.paint.isFakeBoldText = false
                 
                 binding.indicatorDownloading.setBackgroundColor(0xFF6366F1.toInt())
                 binding.indicatorCompleted.setBackgroundColor(0x00000000)
             }
             1 -> {
-                binding.tabDownloading.setTextColor(0x80FFFFFF.toInt())
+                binding.tabDownloading.setTextColor(0x80333333.toInt())
                 binding.tabDownloading.paint.isFakeBoldText = false
-                binding.tabCompleted.setTextColor(0xFFFFFFFF.toInt())
+                binding.tabCompleted.setTextColor(0xFF333333.toInt())
                 binding.tabCompleted.paint.isFakeBoldText = true
                 
                 binding.indicatorDownloading.setBackgroundColor(0x00000000)

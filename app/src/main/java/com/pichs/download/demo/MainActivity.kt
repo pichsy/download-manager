@@ -363,9 +363,21 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
         }
         
+        // 准备 extras，包含图标和包名信息
+        val meta = ExtraMeta(
+            name = item.name,
+            packageName = item.packageName.orEmpty(),
+            versionCode = item.versionCode,
+            icon = item.icon
+        )
+        val extrasJson = meta.toJson()
+        
         val task = DownloadManager.download(item.url)
             .fileName(item.name.replace(" ", "_") + ".apk")
             .priority(priority)
+            .packageName(item.packageName.orEmpty())
+            .storeVersionCode(item.versionCode)
+            .extras(extrasJson)
             .start()
         item.task = task
     }
