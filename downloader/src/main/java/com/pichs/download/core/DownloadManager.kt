@@ -1123,6 +1123,31 @@ object DownloadManager {
         return InMemoryTaskStore.get(taskId)
     }
 
+    /**
+     * 从内存获取任务，如果内存中没有则从数据库加载
+     * 解决进程重启后 InMemoryTaskStore 与数据库不同步的问题
+     * @param taskId 任务ID
+     * @return 任务对象，如果找不到返回 null
+     */
+    private fun getTaskOrLoad(taskId: String): DownloadTask? {
+        // 优先从内存获取
+        var task = InMemoryTaskStore.get(taskId)
+        if (task != null) return task
+        
+        // 内存中没有，尝试从数据库加载
+        task = kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+            repository?.getById(taskId)
+        }
+        
+        if (task != null) {
+            // 加载到内存，保持同步
+            InMemoryTaskStore.put(task)
+            DownloadLog.d(TAG, "任务从数据库加载到内存: $taskId, status=${task.status}")
+        }
+        
+        return task
+    }
+
     // 旧的监听器管理器已移除，请使用 flowListener
 
     // 引擎控制
@@ -1138,7 +1163,8 @@ object DownloadManager {
     fun pauseTask(taskId: String, pauseReason: com.pichs.download.model.PauseReason) {
         // 移出等待队列
         dispatcher.remove(taskId)
-        val t = InMemoryTaskStore.get(taskId)
+        // 使用 getTaskOrLoad 确保从内存或数据库获取任务
+        val t = getTaskOrLoad(taskId)
         if (t != null && (t.status == DownloadStatus.WAITING || t.status == DownloadStatus.PENDING)) {
             val paused = t.copy(
                 status = DownloadStatus.PAUSED, 
@@ -1168,7 +1194,8 @@ object DownloadManager {
     }
 
     fun resume(taskId: String) {
-        val t = InMemoryTaskStore.get(taskId) ?: return
+        // 使用 getTaskOrLoad 确保从内存或数据库获取任务
+        val t = getTaskOrLoad(taskId) ?: return
         
         val config = networkRuleManager?.config ?: NetworkDownloadConfig()
         
@@ -1259,7 +1286,8 @@ object DownloadManager {
     
     // 显式删除单任务
     fun deleteTask(taskId: String, deleteFile: Boolean = false) {
-        val t = InMemoryTaskStore.get(taskId) ?: return
+        // 使用 getTaskOrLoad 确保从内存或数据库获取任务
+        val t = getTaskOrLoad(taskId) ?: return
         
         // 如果任务正在下载中，先通知引擎停止
         if (t.status == DownloadStatus.DOWNLOADING) {
