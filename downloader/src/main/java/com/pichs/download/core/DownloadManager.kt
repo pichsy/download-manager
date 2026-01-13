@@ -6,6 +6,7 @@ import com.pichs.download.config.Retention
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.model.NetworkDownloadConfig
+import com.pichs.download.model.PauseReason
 import com.pichs.download.store.InMemoryTaskStore
 import com.pichs.download.store.TaskRepository
 import com.pichs.download.utils.NetworkUtils
@@ -89,82 +90,10 @@ object DownloadManager {
         // 启动高级调度器
         scheduler = DownloadScheduler(context.applicationContext, engine, dispatcher)
         scheduler?.start()
-        // 同步恢复历史任务到内存；使用协程异步加载，避免阻塞主线程
-        scope.launch(dispatcherIO) {
-            runCatching {
-                val history = repository!!.getAll()
-                val now = System.currentTimeMillis()
-                val tasksToEnqueue = mutableListOf<DownloadTask>()
-                
-                history.forEach { t ->
-                    // 若标记已完成但文件不存在，清理脏记录
-                    val fileGone = (t.status == DownloadStatus.COMPLETED)
-                            && !java.io.File(t.filePath, t.fileName).exists()
-                    if (fileGone) {
-                        repository?.delete(t.id)
-                        return@forEach
-                    }
-                    val fixed = when (t.status) {
-                        DownloadStatus.DOWNLOADING, DownloadStatus.PENDING -> {
-                            // 进程被杀时正在下载/待执行的任务，改为等待中并入队继续下载
-                            val waiting = t.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = now)
-                            tasksToEnqueue.add(waiting)
-                            waiting
-                        }
-                        DownloadStatus.WAITING -> {
-                            // 等待中的任务需要重新入队
-                            tasksToEnqueue.add(t)
-                            t
-                        }
-                        else -> t
-                    }
-                    InMemoryTaskStore.put(fixed)
-                }
-                
-                // 重新恢复需要继续下载的任务
-                if (tasksToEnqueue.isNotEmpty()) {
-                    // 按优先级降序 + 创建时间升序排序，确保高优先级任务先入队
-                    val sortedTasks = tasksToEnqueue.sortedWith(
-                        compareByDescending<DownloadTask> { it.priority }
-                            .thenBy { it.createTime }
-                    )
-                    
-                    // 分组：已确认使用流量的任务 vs 未确认的任务
-                    val confirmedTasks = sortedTasks.filter { it.cellularConfirmed }
-                    val unconfirmedTasks = sortedTasks.filter { !it.cellularConfirmed }
-                    
-                    DownloadLog.d(TAG, "启动时恢复任务: 已确认=${confirmedTasks.size}, 未确认=${unconfirmedTasks.size}")
-                    
-                    // 已确认的任务直接入队，不需要再次确认
-                    if (confirmedTasks.isNotEmpty()) {
-                        confirmedTasks.forEach { task ->
-                            InMemoryTaskStore.put(task)
-                            dispatcher.enqueue(task)
-                            updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
-                        }
-                        scheduleNext()
-                    }
-                    
-                    // 未确认的任务走完整的后置检查流程
-                    if (unconfirmedTasks.isNotEmpty()) {
-                        val totalSize = unconfirmedTasks.sumOf { it.estimatedSize }
-                        checkAfterCreate(totalSize, unconfirmedTasks)
-                    }
-                }
-                
-                // 初始化后同步一次 StateFlow
-                _tasksState.value = InMemoryTaskStore.getAll().sortedBy { it.createTime }
-                
-                // 异步恢复智能暂停/恢复状态
-                restorePauseResumeState()
-                restoreProgressCalculators()
-                
-                // 自动清理：按保留策略执行（若配置开启）
-                config.retention.takeIf { it.keepDays > 0 || it.keepLatestCompleted > 0 }?.let { retention ->
-                    cleanCompletedInternal(deleteFiles = false, retention = retention)
-                }
-            }
-        }
+        
+        // 任务加载和恢复逻辑延迟到 restoreInterruptedTasks() 调用时执行
+        // 这样可以确保 checkAfterCallback 已经设置好
+        DownloadLog.d(TAG, "DownloadManager 初始化完成，等待调用 restoreInterruptedTasks() 恢复任务")
     }
     
     /**
@@ -392,6 +321,147 @@ object DownloadManager {
         return this
     }
     
+    /**
+     * 恢复所有被中断的任务（公开 API）
+     * 用于在 checkAfterCallback 设置后调用，恢复：
+     * 1. DOWNLOADING/WAITING/PENDING 状态的"僵尸"任务（进程被杀导致）
+     * 2. 非用户手动暂停的 PAUSED 任务（如网络异常、存储不足等）
+     * 
+     * 批量处理，只弹一次确认框
+     */
+    fun restoreInterruptedTasks(): DownloadManager {
+        scope.launch(dispatcherIO) {
+            try {
+                val allTasks = InMemoryTaskStore.getAll()
+                val tasksToResume = mutableListOf<DownloadTask>()
+                
+                allTasks.forEach { task ->
+                    when (task.status) {
+                        // 僵尸任务：进程被杀时正在下载/等待的任务
+                        DownloadStatus.DOWNLOADING, DownloadStatus.WAITING, DownloadStatus.PENDING -> {
+                            val waitingTask = task.copy(
+                                status = DownloadStatus.WAITING,
+                                speed = 0L,
+                                updateTime = System.currentTimeMillis()
+                            )
+                            tasksToResume.add(waitingTask)
+                            DownloadLog.d(TAG, "发现僵尸任务: ${task.id} - ${task.fileName}, status=${task.status}")
+                        }
+                        // 暂停任务：根据暂停原因决定是否恢复
+                        DownloadStatus.PAUSED -> {
+                            when (task.pauseReason) {
+                                PauseReason.USER_MANUAL -> {
+                                    // 用户手动暂停，不自动恢复
+                                    DownloadLog.d(TAG, "保持用户手动暂停的任务: ${task.id}")
+                                }
+                                PauseReason.NETWORK_ERROR -> {
+                                    // 网络异常暂停，检查网络状态
+                                    val networkAvailable = appContext?.let { NetworkUtils.isNetworkAvailable(it) } ?: true
+                                    if (networkAvailable) {
+                                        val waitingTask = task.copy(
+                                            status = DownloadStatus.WAITING,
+                                            pauseReason = null,
+                                            updateTime = System.currentTimeMillis()
+                                        )
+                                        tasksToResume.add(waitingTask)
+                                        DownloadLog.d(TAG, "网络已恢复，准备恢复任务: ${task.id}")
+                                    }
+                                }
+                                PauseReason.WIFI_UNAVAILABLE -> {
+                                    // WiFi 不可用暂停，检查 WiFi 状态
+                                    val wifiAvailable = appContext?.let { NetworkUtils.isWifiAvailable(it) } ?: false
+                                    if (wifiAvailable) {
+                                        val waitingTask = task.copy(
+                                            status = DownloadStatus.WAITING,
+                                            pauseReason = null,
+                                            updateTime = System.currentTimeMillis()
+                                        )
+                                        tasksToResume.add(waitingTask)
+                                        DownloadLog.d(TAG, "WiFi 已连接，准备恢复任务: ${task.id}")
+                                    }
+                                }
+                                PauseReason.STORAGE_FULL -> {
+                                    // 存储不足暂停，检查存储空间
+                                    val availableSpace = storageManager?.getAvailableSpace() ?: Long.MAX_VALUE
+                                    if (availableSpace > task.totalSize) {
+                                        val waitingTask = task.copy(
+                                            status = DownloadStatus.WAITING,
+                                            pauseReason = null,
+                                            updateTime = System.currentTimeMillis()
+                                        )
+                                        tasksToResume.add(waitingTask)
+                                        DownloadLog.d(TAG, "存储空间已恢复，准备恢复任务: ${task.id}")
+                                    }
+                                }
+                                PauseReason.CELLULAR_PENDING -> {
+                                    // 等待流量确认，走后置检查流程
+                                    val waitingTask = task.copy(
+                                        status = DownloadStatus.WAITING,
+                                        pauseReason = null,
+                                        updateTime = System.currentTimeMillis()
+                                    )
+                                    tasksToResume.add(waitingTask)
+                                    DownloadLog.d(TAG, "流量待确认任务，准备走后置检查: ${task.id}")
+                                }
+                                else -> {
+                                    // 其他原因（如 BATTERY_LOW, SYSTEM_RESOURCE_LOW），暂不自动恢复
+                                    DownloadLog.d(TAG, "保持其他原因暂停的任务: ${task.id}, reason=${task.pauseReason}")
+                                }
+                            }
+                        }
+                        else -> { /* 其他状态不处理 */ }
+                    }
+                }
+                
+                if (tasksToResume.isEmpty()) {
+                    DownloadLog.d(TAG, "没有需要恢复的任务")
+                    return@launch
+                }
+                
+                DownloadLog.d(TAG, "准备恢复 ${tasksToResume.size} 个任务")
+                
+                // 按优先级降序 + 创建时间升序排序
+                val sortedTasks = tasksToResume.sortedWith(
+                    compareByDescending<DownloadTask> { it.priority }
+                        .thenBy { it.createTime }
+                )
+                
+                // 分组处理
+                val confirmedTasks = sortedTasks.filter { it.cellularConfirmed }
+                val unconfirmedTasks = sortedTasks.filter { !it.cellularConfirmed }
+                
+                DownloadLog.d(TAG, "恢复任务分组: 已确认流量=${confirmedTasks.size}, 未确认=${unconfirmedTasks.size}")
+                
+                // 已确认的任务直接入队
+                if (confirmedTasks.isNotEmpty()) {
+                    confirmedTasks.forEach { task ->
+                        InMemoryTaskStore.put(task)
+                        repository?.save(task)
+                        dispatcher.enqueue(task)
+                    }
+                    scheduleNext()
+                }
+                
+                // 未确认的任务走后置检查流程（会触发弹窗）
+                if (unconfirmedTasks.isNotEmpty()) {
+                    val totalSize = unconfirmedTasks.sumOf { it.estimatedSize }
+                    unconfirmedTasks.forEach { task ->
+                        InMemoryTaskStore.put(task)
+                        repository?.save(task)
+                    }
+                    checkAfterCreate(totalSize, unconfirmedTasks)
+                }
+                
+                // 更新 StateFlow
+                _tasksState.value = InMemoryTaskStore.getAll().sortedBy { it.createTime }
+                
+            } catch (e: Exception) {
+                DownloadLog.e(TAG, "恢复中断任务时发生异常", e)
+            }
+        }
+        return this
+    }
+
     /**
      * 批量恢复所有暂停的任务
      * 优化：批量后置检查，只弹一次确认框

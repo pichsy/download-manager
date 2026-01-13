@@ -66,7 +66,7 @@
 
 ```kotlin
 dependencies {
-    implementation("com.gitee.pichs:downloader:2.0.8")
+    implementation("com.gitee.pichs:downloader:2.0.9")
 }
 ```
 
@@ -74,7 +74,7 @@ dependencies {
 
 ### 初始化
 
-在 `Application` 中初始化：
+#### 1. 在 `Application` 中初始化
 
 ```kotlin
 class App : Application() {
@@ -93,6 +93,53 @@ class App : Application() {
         }
     }
 }
+```
+
+#### 2. 在 Activity 中设置回调并恢复任务
+
+> [!IMPORTANT]
+> 必须先设置 `checkAfterCallback`，然后再调用 `restoreInterruptedTasks()`，确保恢复任务时流量确认弹窗能正常触发。
+
+```kotlin
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Step 1: 设置网络策略回调（处理流量确认弹窗等）
+        DownloadManager.setCheckAfterCallback(object : CheckAfterCallback {
+            override fun requestCellularConfirmation(
+                pendingTasks: List<DownloadTask>,
+                totalSize: Long,
+                onConnectWifi: () -> Unit,
+                onUseCellular: () -> Unit
+            ) {
+                // 显示流量确认对话框
+            }
+            override fun showWifiOnlyHint(task: DownloadTask) {
+                // 显示仅 WiFi 下载提示
+            }
+        })
+        
+        // Step 2: 恢复中断的任务（僵尸任务 + 非用户手动暂停的任务）
+        DownloadManager.restoreInterruptedTasks()
+    }
+}
+```
+
+#### 初始化流程图
+
+```
+App.onCreate()              Activity.onCreate()
+    │                              │
+    ▼                              ▼
+init(context) ──────────► setCheckAfterCallback()
+    │                              │
+    │                              ▼
+    │                     restoreInterruptedTasks()
+    │                              │
+    │◄─────── 回调已设置 ──────────┤
+                                   ▼
+                          恢复任务（可触发弹窗）
 ```
 
 ### 基础下载
@@ -552,6 +599,33 @@ DownloadManager.resumeTasks(tasks)                      // 恢复指定任务列
 DownloadManager.cancelAll()
 ```
 
+### 恢复中断任务
+
+用于进程重启后恢复因各种原因中断的任务。
+
+```kotlin
+// 恢复所有中断的任务（推荐在 Activity 中调用）
+DownloadManager.restoreInterruptedTasks()
+```
+
+#### 恢复规则
+
+| 任务状态 | 暂停原因 | 恢复条件 | 恢复行为 |
+|---------|---------|---------|---------|
+| `DOWNLOADING`/`WAITING`/`PENDING` | - | 始终 | 标记为 `WAITING`，重新入队 |
+| `PAUSED` | `USER_MANUAL` | **不恢复** | 保持暂停状态 |
+| `PAUSED` | `NETWORK_ERROR` | 网络已恢复 | 恢复下载 |
+| `PAUSED` | `WIFI_UNAVAILABLE` | WiFi 已连接 | 恢复下载 |
+| `PAUSED` | `STORAGE_FULL` | 存储空间充足 | 恢复下载 |
+| `PAUSED` | `CELLULAR_PENDING` | 始终 | 走后置检查流程（可能弹窗确认） |
+
+#### 设计说明
+
+1. **僵尸任务恢复**：进程被杀时正在下载的任务会成为"僵尸"状态（`DOWNLOADING`/`WAITING`/`PENDING`），重启后自动恢复
+2. **智能条件检查**：根据暂停原因检查恢复条件，避免无意义的重试
+3. **尊重用户意愿**：用户手动暂停的任务（`USER_MANUAL`）不会被自动恢复
+4. **批量弹窗优化**：多个待确认任务只会触发一次流量确认弹窗
+
 ### 网络状态监控
 
 ```kotlin
@@ -975,119 +1049,10 @@ NetworkMonitor(
 
 ## 📋 更新日志
 
-### v2.0.8 (2026-01-10)
+查看完整更新日志：[CHANGELOG.md](./CHANGELOG.md)
 
-#### 🚀 新增功能
-- **优先级抢占机制**
-  - URGENT 任务可抢占 LOW/NORMAL/HIGH 任务立即执行
-  - 被抢占任务状态变为 `WAITING` 自动重新入队
-  - 等待队列按优先级降序 + 创建时间升序排列
+### 最新版本 v2.0.9 (2026-01-13)
 
-#### 🐛 Bug 修复
-- **修复调度器无限循环问题**
-  - 修复当多个 URGENT 任务同时存在时 `scheduleNextInternal()` 死循环
-  - `tryPreempt()` 现返回抢占结果，失败时正确退出循环
+- **新增 `restoreInterruptedTasks()` API** - 进程重启后恢复中断的任务
+- **初始化流程优化** - 推荐在 `setCheckAfterCallback()` 后调用 `restoreInterruptedTasks()`
 
-- **修复 ANR 问题**
-  - `handleClick()` 中 `isInstalledAndUpToDate()` 移至后台线程
-  - `bindButtonUI()` 使用缓存的安装状态，避免主线程查询 PackageManager
-  - `initCategoryLists()` 预计算应用安装状态
-  - `downloadAllWithPriority()` 过滤逻辑移至后台线程
-
-#### 🔧 优化改进
-- **抢占逻辑完善**
-  - 同优先级任务不互相抢占，遵循先来先服务原则
-  - 任务完成后自动触发调度，处理等待中的任务
-
----
-
-### v2.0.7 (2026-01-08)
-
-#### 🚀 新增功能
-- **批量恢复 API 增强**
-  - `resumeAll()` - 优化为批量后置检查，流量环境只弹一次确认框
-  - `resumeAll(pauseReason)` - 按暂停原因筛选恢复任务
-  - `resumeTasks(tasks)` - 恢复指定任务列表
-
-#### 🔧 优化改进
-- **批量恢复后置检查优化**
-  - 原来：每个任务独立检查，10 个任务可能弹 10 次确认框
-  - 现在：批量检查，只判断一次，只弹一次确认框
-  - 提升用户体验，避免频繁弹窗干扰
-
-- **任务状态安全性**
-  - `resumeTasks(tasks)` 从内存获取最新状态，避免使用过期快照数据
-
----
-
-### v2.0.6 (2026-01-07)
-
-#### 🚀 新增功能
-- **三层文件验证体系** - 全方位保护下载数据完整性
-  - **方案 3**：应用启动时自动清理无效任务
-  - **方案 4**：下载引擎层自动检测并修复文件异常
-  - **方案 2**（待实现）：UI 层点击前防御性检查
-
-- **validateAndCleanTasks() 方法**
-  - 检测已完成任务文件是否丢失
-  - 检测下载中任务文件是否异常
-  - 智能判断：只清理真正异常的任务，不影响排队中的任务
-
-- **引擎层文件验证**
-  - 下载前自动检测文件丢失或损坏
-  - 自动重置进度并重新下载
-  - 用户无感知，透明修复
-
-#### 🐛 Bug 修复
-- **修复 cancel 和 deleteTask 死循环**
-  - 重构了任务取消和删除逻辑
-  - `cancel()` 现在完全删除任务和文件
-  - 避免了互相调用导致的栈溢出
-
-- **修复文件验证误判**
-  - 增加 `currentSize > 0` 判断
-  - 不再误删刚创建或排队中的任务
-  - 只清理真正下载过但文件丢失的任务
-
-#### 🔧 优化改进
-- **完善任务清理机制**
-  - 应用启动时异步清理，不影响启动速度
-  - 详细的日志输出便于问题排查
-  - 支持检测并删除损坏的文件
-
----
-
-### v2.0.5 (2026-01-07)
-
-#### 🚀 新增功能
-- **新增 `NetworkMonitor` 类** - 使用 `NetworkCallback` API 替代 `BroadcastReceiver`
-  - 可准确检测网络类型变化（流量 ↔ WiFi）
-  - 解决了 `CONNECTIVITY_ACTION` 广播在网络类型切换时不触发的问题
-
-#### 🐛 Bug 修复
-- **修复 WiFi 自动下载功能**
-  - 修复了流量切换到 WiFi 时下载不自动恢复的问题
-  - 完善了 `NetworkRuleManager` 的 WiFi 恢复逻辑
-  - 新增 `resumeOtherSystemPausedTasks()` 恢复其他系统暂停的任务
-
-- **修复网络恢复逻辑**
-  - 修复应用重启后在流量网络下自动恢复未确认任务的问题
-  - WiFi 网络：恢复所有网络相关暂停的任务
-  - 流量网络：仅恢复 `cellularConfirmed=true` 的任务
-  - 完善了对 `WIFI_UNAVAILABLE`、`CELLULAR_PENDING`、`NETWORK_ERROR` 三种暂停原因的处理
-
-#### 🔧 优化改进
-- **完善暂停原因机制**
-  - 明确区分用户手动暂停（`USER_MANUAL`）和系统暂停
-  - 优化了不同暂停原因的自动恢复策略
-  - 添加详细的日志输出便于调试
-
-- **Demo 应用优化**
-  - 统一所有用户手动暂停使用 `PauseReason.USER_MANUAL`
-  - 统一等待 WiFi 暂停使用 `PauseReason.WIFI_UNAVAILABLE`
-
----
-
-### v2.0.4 及更早版本
-
-详见 [GitHub Releases](https://github.com/pichsy/download-manager/releases)

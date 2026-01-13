@@ -288,6 +288,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         }
 
         DownloadManager.setCheckAfterCallback(MyCheckAfterCallback(this))
+        // 回调设置完成后，恢复中断的任务（僵尸任务 + 非用户手动暂停的任务）
+        DownloadManager.restoreInterruptedTasks()
     }
 
     /**
