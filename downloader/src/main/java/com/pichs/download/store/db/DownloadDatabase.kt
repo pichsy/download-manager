@@ -16,7 +16,7 @@ internal abstract class DownloadDatabase : RoomDatabase() {
     companion object {
         @Volatile private var INSTANCE: DownloadDatabase? = null
         fun get(context: Context): DownloadDatabase = INSTANCE ?: synchronized(this) {
-            INSTANCE ?: Room.databaseBuilder(context.applicationContext, DownloadDatabase::class.java, "downloads.db")
+            INSTANCE ?: Room.databaseBuilder(context.applicationContext.createDeviceProtectedStorageContext(), DownloadDatabase::class.java, "app_downloads_manager.db")
                 .fallbackToDestructiveMigration() // 破坏性迁移，直接重建数据库
                 .build().also { INSTANCE = it }
         }

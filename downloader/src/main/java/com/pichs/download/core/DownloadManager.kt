@@ -332,23 +332,52 @@ object DownloadManager {
     fun restoreInterruptedTasks(): DownloadManager {
         scope.launch(dispatcherIO) {
             try {
-                val allTasks = InMemoryTaskStore.getAll()
-                val tasksToResume = mutableListOf<DownloadTask>()
+                DownloadLog.d(TAG, "开始从数据库恢复被中断的任务")
                 
-                allTasks.forEach { task ->
+                // 从数据库读取所有历史任务
+                val history = repository?.getAll() ?: emptyList()
+                DownloadLog.d(TAG, "从数据库读取到 ${history.size} 个历史任务")
+                
+                if (history.isEmpty()) {
+                    DownloadLog.d(TAG, "没有历史任务，跳过恢复")
+                    return@launch
+                }
+                
+                val tasksToResume = mutableListOf<DownloadTask>()
+                val now = System.currentTimeMillis()
+                
+                history.forEach { task ->
+                    // 清理脏记录：已完成但文件不存在的任务
+                    if (task.status == DownloadStatus.COMPLETED) {
+                        val fileExists = java.io.File(task.filePath, task.fileName).exists()
+                        if (!fileExists) {
+                            DownloadLog.d(TAG, "清理脏记录（文件不存在）: ${task.id} - ${task.fileName}")
+                            repository?.delete(task.id)
+                            return@forEach
+                        }
+                        // 文件存在的已完成任务，加载到内存但不恢复下载
+                        InMemoryTaskStore.put(task)
+                        return@forEach
+                    }
+                    
                     when (task.status) {
                         // 僵尸任务：进程被杀时正在下载/等待的任务
                         DownloadStatus.DOWNLOADING, DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                             val waitingTask = task.copy(
                                 status = DownloadStatus.WAITING,
                                 speed = 0L,
-                                updateTime = System.currentTimeMillis()
+                                updateTime = now
                             )
+                            InMemoryTaskStore.put(waitingTask)
                             tasksToResume.add(waitingTask)
                             DownloadLog.d(TAG, "发现僵尸任务: ${task.id} - ${task.fileName}, status=${task.status}")
                         }
+                        
                         // 暂停任务：根据暂停原因决定是否恢复
                         DownloadStatus.PAUSED -> {
+                            // 先加载到内存
+                            InMemoryTaskStore.put(task)
+                            
                             when (task.pauseReason) {
                                 PauseReason.USER_MANUAL -> {
                                     // 用户手动暂停，不自动恢复
@@ -361,8 +390,9 @@ object DownloadManager {
                                         val waitingTask = task.copy(
                                             status = DownloadStatus.WAITING,
                                             pauseReason = null,
-                                            updateTime = System.currentTimeMillis()
+                                            updateTime = now
                                         )
+                                        InMemoryTaskStore.put(waitingTask)
                                         tasksToResume.add(waitingTask)
                                         DownloadLog.d(TAG, "网络已恢复，准备恢复任务: ${task.id}")
                                     }
@@ -374,8 +404,9 @@ object DownloadManager {
                                         val waitingTask = task.copy(
                                             status = DownloadStatus.WAITING,
                                             pauseReason = null,
-                                            updateTime = System.currentTimeMillis()
+                                            updateTime = now
                                         )
+                                        InMemoryTaskStore.put(waitingTask)
                                         tasksToResume.add(waitingTask)
                                         DownloadLog.d(TAG, "WiFi 已连接，准备恢复任务: ${task.id}")
                                     }
@@ -387,8 +418,9 @@ object DownloadManager {
                                         val waitingTask = task.copy(
                                             status = DownloadStatus.WAITING,
                                             pauseReason = null,
-                                            updateTime = System.currentTimeMillis()
+                                            updateTime = now
                                         )
+                                        InMemoryTaskStore.put(waitingTask)
                                         tasksToResume.add(waitingTask)
                                         DownloadLog.d(TAG, "存储空间已恢复，准备恢复任务: ${task.id}")
                                     }
@@ -398,8 +430,9 @@ object DownloadManager {
                                     val waitingTask = task.copy(
                                         status = DownloadStatus.WAITING,
                                         pauseReason = null,
-                                        updateTime = System.currentTimeMillis()
+                                        updateTime = now
                                     )
+                                    InMemoryTaskStore.put(waitingTask)
                                     tasksToResume.add(waitingTask)
                                     DownloadLog.d(TAG, "流量待确认任务，准备走后置检查: ${task.id}")
                                 }
@@ -409,7 +442,11 @@ object DownloadManager {
                                 }
                             }
                         }
-                        else -> { /* 其他状态不处理 */ }
+                        
+                        else -> {
+                            // 其他状态（FAILED, CANCELLED等）也加载到内存
+                            InMemoryTaskStore.put(task)
+                        }
                     }
                 }
                 
