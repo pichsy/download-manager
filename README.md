@@ -66,7 +66,7 @@
 
 ```kotlin
 dependencies {
-    implementation("com.gitee.pichs:downloader:2.0.9")
+    implementation("com.gitee.pichs:downloader:2.1.1")
 }
 ```
 
@@ -516,31 +516,52 @@ fun onResumeClick(task: DownloadTask) {
 // 设置网络下载配置
 DownloadManager.setNetworkConfig(
     NetworkDownloadConfig(
-        wifiOnly = false,                           // 是否仅 WiFi 下载
-        cellularPromptMode = CellularPromptMode.ALWAYS,  // 流量提醒模式
-        checkBeforeCreate = false,                   // 创建前检查
-        checkAfterCreate = true                     // 创建后检查
+        wifiOnly = false,                              // 是否仅 WiFi 下载
+        cellularThreshold = CellularThreshold.ALWAYS_PROMPT,  // 流量提醒阈值
+        checkBeforeCreate = false,                     // 创建前检查
+        checkAfterCreate = true                        // 创建后检查
     )
 )
 
 // 流量提醒回调
 DownloadManager.setCheckAfterCallback(object : CheckAfterCallback {
-    override fun onCellularConfirmRequired(tasks: List<DownloadTask>, onConfirm: () -> Unit) {
+    override fun requestCellularConfirmation(
+        pendingTasks: List<DownloadTask>,
+        totalSize: Long,
+        onConnectWifi: () -> Unit,
+        onUseCellular: () -> Unit
+    ) {
         // 显示确认对话框
     }
-    override fun onWifiOnlyBlocked(task: DownloadTask) {
-        // 显示提示
+    override fun showWifiOnlyHint(task: DownloadTask?) {
+        // 显示仅 WiFi 下载提示
     }
 })
 ```
 
-**流量提醒模式说明：**
+**流量提醒阈值说明 (v2.1.0+)：**
 
-| 模式 | 说明 |
-|-----|------|
-| `ALWAYS` | 每次使用流量时弹窗询问 |
-| `NEVER` | 不再提醒，直接使用流量下载 |
-| `USER_CONTROLLED` | 由使用端自行控制 |
+| 值 | 常量 | 说明 |
+|----|------|------|
+| `0L` | `CellularThreshold.ALWAYS_PROMPT` | 每次流量下载都弹窗 |
+| `Long.MAX_VALUE` | `CellularThreshold.NEVER_PROMPT` | 不再提醒，直接下载 |
+| 其他正值 | 自定义阈值 | 超过此大小时弹窗，否则静默下载 |
+
+**配置示例：**
+
+```kotlin
+// 每次都提醒（默认）
+cellularThreshold = CellularThreshold.ALWAYS_PROMPT  // 0L
+
+// 不提醒
+cellularThreshold = CellularThreshold.NEVER_PROMPT   // Long.MAX_VALUE
+
+// 智能提醒：超过 100MB 才弹窗
+cellularThreshold = 100 * 1024 * 1024L
+```
+
+> [!NOTE]
+> v2.1.0 起废弃 `CellularPromptMode` 枚举，改用 `cellularThreshold: Long` 配置。
 
 ### 存储与缓存管理
 
@@ -1051,8 +1072,14 @@ NetworkMonitor(
 
 查看完整更新日志：[CHANGELOG.md](./CHANGELOG.md)
 
-### 最新版本 v2.0.9 (2026-01-13)
+### 最新版本 v2.1.1 (2026-01-15)
+
+- **新增流量阈值配置** - 使用 `cellularThreshold: Long` 替代 `CellularPromptMode` 枚举
+- **智能流量提醒** - 支持自定义阈值，超过阈值才弹窗确认
+- **废弃 `CellularPromptMode`** - 保留兼容但标记为废弃
+- **废弃 `CheckBeforeResult.UserControlled`** - 框架统一处理阈值判断
+
+### v2.0.9 (2026-01-13)
 
 - **新增 `restoreInterruptedTasks()` API** - 进程重启后恢复中断的任务
 - **初始化流程优化** - 推荐在 `setCheckAfterCallback()` 后调用 `restoreInterruptedTasks()`
-

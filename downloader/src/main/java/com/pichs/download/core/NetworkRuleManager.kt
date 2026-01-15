@@ -21,7 +21,7 @@ class NetworkRuleManager(
         private const val TAG = "NetworkRuleManager"
         private const val PREFS_NAME = "download_network_config"
         private const val KEY_WIFI_ONLY = "wifi_only"
-        private const val KEY_CELLULAR_PROMPT_MODE = "cellular_prompt_mode"
+        private const val KEY_CELLULAR_THRESHOLD = "cellular_threshold"
         private const val KEY_CHECK_BEFORE_CREATE = "check_before_create"
     }
     
@@ -43,18 +43,15 @@ class NetworkRuleManager(
     
     private fun loadConfig(): NetworkDownloadConfig {
         val wifiOnly = prefs.getBoolean(KEY_WIFI_ONLY, false)
-        val promptModeStr = prefs.getString(KEY_CELLULAR_PROMPT_MODE, null)
-        val promptMode = promptModeStr?.let { 
-            runCatching { CellularPromptMode.valueOf(it) }.getOrNull() 
-        } ?: CellularPromptMode.ALWAYS
+        val cellularThreshold = prefs.getLong(KEY_CELLULAR_THRESHOLD, CellularThreshold.ALWAYS_PROMPT)
         val checkBeforeCreate = prefs.getBoolean(KEY_CHECK_BEFORE_CREATE, false)
-        return NetworkDownloadConfig(wifiOnly, promptMode, checkBeforeCreate)
+        return NetworkDownloadConfig(wifiOnly, cellularThreshold, checkBeforeCreate)
     }
     
     private fun saveConfig(config: NetworkDownloadConfig) {
         prefs.edit()
             .putBoolean(KEY_WIFI_ONLY, config.wifiOnly)
-            .putString(KEY_CELLULAR_PROMPT_MODE, config.cellularPromptMode.name)
+            .putLong(KEY_CELLULAR_THRESHOLD, config.cellularThreshold)
             .putBoolean(KEY_CHECK_BEFORE_CREATE, config.checkBeforeCreate)
             .apply()
         DownloadLog.d(TAG, "配置已保存: $config")
@@ -94,8 +91,9 @@ class NetworkRuleManager(
             return CheckAfterResult.Allow
         }
         
-        // 检查流量提醒策略
-        return checkCellularDownloadPermission()
+        // 检查流量提醒策略（需要传入任务大小）
+        val taskSize = getTaskEffectiveSize(task)
+        return checkCellularDownloadPermission(taskSize)
     }
     
     // ==================== 预检查 API（先决策后创建任务） ====================
@@ -134,36 +132,31 @@ class NetworkRuleManager(
             return CheckBeforeResult.WifiOnly
         }
         
-        // 根据提醒模式决定（任务级别确认在后置检查判断）
-        return when (config.cellularPromptMode) {
-            CellularPromptMode.ALWAYS -> {
+        // 根据阈值判断
+        val threshold = config.cellularThreshold
+        return when {
+            // 不提醒：直接允许
+            threshold == CellularThreshold.NEVER_PROMPT -> CheckBeforeResult.Allow
+            // 每次提醒 或 超过阈值：需要确认
+            threshold == CellularThreshold.ALWAYS_PROMPT || totalSize >= threshold -> {
                 CheckBeforeResult.NeedConfirmation(totalSize)
             }
-            CellularPromptMode.NEVER -> {
-                CheckBeforeResult.Allow
-            }
-            CellularPromptMode.USER_CONTROLLED -> {
-                // 交给使用端判断阈值
-                CheckBeforeResult.UserControlled(totalSize)
-            }
+            // 未超阈值：静默允许
+            else -> CheckBeforeResult.Allow
         }
     }
     
-    private fun checkCellularDownloadPermission(): CheckAfterResult {
-        // 根据提醒模式决定（任务级别的 cellularConfirmed 已在 checkCanDownload 中判断）
-        return when (config.cellularPromptMode) {
-            CellularPromptMode.ALWAYS -> {
-                // 每次提醒，需要确认
+    private fun checkCellularDownloadPermission(totalSize: Long): CheckAfterResult {
+        val threshold = config.cellularThreshold
+        return when {
+            // 不提醒：直接允许
+            threshold == CellularThreshold.NEVER_PROMPT -> CheckAfterResult.Allow
+            // 每次提醒 或 超过阈值：需要确认
+            threshold == CellularThreshold.ALWAYS_PROMPT || totalSize >= threshold -> {
                 CheckAfterResult.NeedConfirmation
             }
-            CellularPromptMode.NEVER -> {
-                // 不再提醒，直接允许
-                CheckAfterResult.Allow
-            }
-            CellularPromptMode.USER_CONTROLLED -> {
-                // 交给用户：检查是否已放行，未放行则拒绝（不弹窗）
-                CheckAfterResult.Deny(DenyReason.USER_CONTROLLED_NOT_ALLOWED)
-            }
+            // 未超阈值：静默允许
+            else -> CheckAfterResult.Allow
         }
     }
     
@@ -239,33 +232,27 @@ class NetworkRuleManager(
                 onDeny()
             }
             else -> {
-                // 根据提醒模式决定
-                when (config.cellularPromptMode) {
-                    CellularPromptMode.ALWAYS -> {
-                        // 每次提醒，通过回调弹窗
+                // 根据阈值判断
+                val threshold = config.cellularThreshold
+                when {
+                    // 不提醒：直接允许
+                    threshold == CellularThreshold.NEVER_PROMPT -> onAllow()
+                    // 每次提醒 或 超过阈值：弹窗确认
+                    threshold == CellularThreshold.ALWAYS_PROMPT || totalSize >= threshold -> {
                         mainHandler.post {
                             checkAfterCallback?.requestBatchCellularConfirmation(
                                 totalSize = totalSize,
                                 taskCount = taskCount,
                                 onConnectWifi = { onDeny() },
-                                onUseCellular = {
-                                    // 前置检查通过，任务创建时会标记 cellularConfirmed
-                                    onAllow()
-                                }
+                                onUseCellular = { onAllow() }
                             ) ?: run {
                                 DownloadLog.w(TAG, "未设置 decisionCallback，默认拒绝批量流量下载")
                                 onDeny()
                             }
                         }
                     }
-                    CellularPromptMode.NEVER -> {
-                        // 不再提醒，直接允许
-                        onAllow()
-                    }
-                    CellularPromptMode.USER_CONTROLLED -> {
-                        // 交给用户：未放行则拒绝
-                        onDeny()
-                    }
+                    // 未超阈值：静默允许
+                    else -> onAllow()
                 }
             }
         }
@@ -330,19 +317,48 @@ class NetworkRuleManager(
                 )
             }
             DownloadLog.d(TAG, "WiFi断开且无流量，任务已暂停等待网络恢复")
-        } else if (config.cellularPromptMode == CellularPromptMode.ALWAYS) {
-            // 有流量 + 每次提醒，检查活跃任务是否已确认使用流量
+        } else {
+            // 有流量网络可用
             val activeTasks = getActiveDownloadTasks()
             val unconfirmedTasks = activeTasks.filter { !it.cellularConfirmed }
+            
             if (unconfirmedTasks.isNotEmpty()) {
-                // 未确认的任务需要弹窗确认
-                requestCellularConfirmation(unconfirmedTasks) {
-                    // 用户确认后任务会自动继续
+                // 关键修复：先暂停所有未确认流量的任务，防止它们在用户确认前继续用流量下载
+                unconfirmedTasks.forEach { task ->
+                    downloadManager.pauseTask(task.id, PauseReason.CELLULAR_PENDING)
+                }
+                DownloadLog.d(TAG, "WiFi断开，暂停 ${unconfirmedTasks.size} 个未确认流量的任务")
+                
+                // 根据阈值判断是否弹窗
+                val totalSize = unconfirmedTasks.sumOf { getTaskEffectiveSize(it) }
+                val threshold = config.cellularThreshold
+                when {
+                    // 不提醒：直接恢复
+                    threshold == CellularThreshold.NEVER_PROMPT -> {
+                        unconfirmedTasks.forEach { task ->
+                            downloadManager.updateTaskCellularConfirmed(task.id, true)
+                            downloadManager.resume(task.id)
+                        }
+                        DownloadLog.d(TAG, "不提醒模式，自动确认并恢复 ${unconfirmedTasks.size} 个任务")
+                    }
+                    // 每次提醒 或 超过阈值：弹窗确认
+                    threshold == CellularThreshold.ALWAYS_PROMPT || totalSize >= threshold -> {
+                        requestCellularConfirmation(unconfirmedTasks) {
+                            // 用户确认后任务会自动继续
+                        }
+                    }
+                    // 未超阈值：静默恢复
+                    else -> {
+                        unconfirmedTasks.forEach { task ->
+                            downloadManager.updateTaskCellularConfirmed(task.id, true)
+                            downloadManager.resume(task.id)
+                        }
+                        DownloadLog.d(TAG, "未超阈值，自动确认并恢复 ${unconfirmedTasks.size} 个任务")
+                    }
                 }
             }
-            // 已确认的任务继续下载
+            // 已确认流量的任务（cellularConfirmed = true）继续下载
         }
-        // else: 有流量 + NEVER模式，继续下载
     }
     
     private fun getActiveDownloadTasks(): List<DownloadTask> {
@@ -426,7 +442,5 @@ sealed class CheckAfterResult {
  */
 enum class DenyReason {
     NO_NETWORK,
-    WIFI_ONLY_MODE,
-    /** 交给用户模式下未放行 */
-    USER_CONTROLLED_NOT_ALLOWED
+    WIFI_ONLY_MODE
 }

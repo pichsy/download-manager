@@ -665,16 +665,7 @@ object DownloadManager {
                         networkRuleManager?.checkAfterCallback?.showWifiOnlyHint(firstTask)
                         DownloadLog.d(TAG, "批量恢复失败：仅 WiFi 模式，${tasks.size} 个任务保持暂停")
                     }
-                    DenyReason.USER_CONTROLLED_NOT_ALLOWED -> {
-                        // 使用端控制模式，更新暂停原因
-                        sortedTasks.forEach { task ->
-                            updateTaskInternal(task.copy(
-                                pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING,
-                                updateTime = System.currentTimeMillis()
-                            ))
-                        }
-                        DownloadLog.d(TAG, "批量恢复：使用端控制模式，${tasks.size} 个任务等待放行")
-                    }
+
                 }
             }
         }
@@ -891,7 +882,7 @@ object DownloadManager {
     fun isCellularDownloadAllowed(): Boolean {
         if (isWifiAvailable()) return true
         val config = getNetworkConfig()
-        if (!config.wifiOnly && config.cellularPromptMode == com.pichs.download.model.CellularPromptMode.NEVER) return true
+        if (!config.wifiOnly && config.cellularThreshold == com.pichs.download.model.CellularThreshold.NEVER_PROMPT) return true
         return false
     }
     
@@ -1051,12 +1042,7 @@ object DownloadManager {
                         }
                         networkRuleManager?.checkAfterCallback?.showWifiOnlyHint(firstTask)
                     }
-                    DenyReason.USER_CONTROLLED_NOT_ALLOWED -> {
-                        // 使用端控制模式，暂停等待放行
-                        tasks.forEach { task ->
-                            updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = System.currentTimeMillis()))
-                        }
-                    }
+
                 }
             }
         }
@@ -1264,11 +1250,7 @@ object DownloadManager {
                         updateTaskInternal(paused)
                         showWifiOnlyHint(t)
                     }
-                    DenyReason.USER_CONTROLLED_NOT_ALLOWED -> {
-                        // 交给用户模式，保持暂停（由使用端自行判断和放行）
-                        val paused = t.copy(pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = System.currentTimeMillis())
-                        updateTaskInternal(paused)
-                    }
+
                 }
             }
         }

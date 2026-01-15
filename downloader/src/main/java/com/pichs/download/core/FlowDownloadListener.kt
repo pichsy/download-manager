@@ -92,9 +92,12 @@ class FlowDownloadListener {
                     when (currentStatus) {
                         com.pichs.download.model.DownloadStatus.COMPLETED -> {
                             if (statusChanged) {
+                                // 完成时触发 100% 进度回调，然后触发完成回调
+                                val completedTask = task.copy(progress = 100, speed = 0)
+                                onTaskProgress(completedTask, 100, 0)
                                 val file = File(task.filePath, task.fileName)
                                 if (file.exists()) {
-                                    onTaskComplete(task, file)
+                                    onTaskComplete(completedTask, file)
                                 }
                             }
                         }
@@ -172,9 +175,12 @@ class FlowDownloadListener {
                     when (currentStatus) {
                         com.pichs.download.model.DownloadStatus.COMPLETED -> {
                             if (statusChanged) {
+                                // 完成时触发 100% 进度回调，然后触发完成回调
+                                val completedTask = task.copy(progress = 100, speed = 0)
+                                onTaskProgress(completedTask, 100, 0)
                                 val file = File(task.filePath, task.fileName)
                                 if (file.exists()) {
-                                    onTaskComplete(task, file)
+                                    onTaskComplete(completedTask, file)
                                 }
                             }
                         }
