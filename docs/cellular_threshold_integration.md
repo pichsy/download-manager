@@ -148,6 +148,183 @@ DownloadManager.setNetworkConfig(NetworkDownloadConfig(
 
 ---
 
+## 三、Demo 对接流程
+
+### 1. MainActivity 初始化
+
+**路径**: `app/src/main/java/com/pichs/download/demo/MainActivity.kt`
+
+```kotlin
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // 1. 注册网络监听
+        NetworkMonitor(
+            onNetworkChanged = { isWifi ->
+                if (isWifi) {
+                    DownloadManager.onWifiConnected()
+                }
+                DownloadManager.onNetworkRestored()
+            },
+            onNetworkLost = {
+                DownloadManager.onWifiDisconnected()
+            }
+        ).register(this)
+        
+        // 2. 设置回调（必须在 restoreInterruptedTasks 之前）
+        DownloadManager.setCheckAfterCallback(MyCheckAfterCallback(this))
+        
+        // 3. 恢复中断的任务
+        DownloadManager.restoreInterruptedTasks()
+    }
+}
+```
+
+---
+
+### 2. MyCheckAfterCallback 实现
+
+**路径**: `app/src/main/java/com/pichs/download/demo/MyCheckAfterCallback.kt`
+
+```kotlin
+class MyCheckAfterCallback(
+    private val activity: FragmentActivity
+) : CheckAfterCallback {
+
+    private var pendingOnUseCellular: (() -> Unit)? = null
+    private var pendingOnConnectWifi: (() -> Unit)? = null
+    
+    init {
+        // 监听弹窗确认结果
+        activity.lifecycleScope.launch {
+            CellularConfirmViewModel.confirmEvent.collect { event ->
+                when (event) {
+                    is CellularConfirmEvent.Confirmed -> {
+                        pendingOnUseCellular?.invoke()
+                        pendingOnUseCellular = null
+                        pendingOnConnectWifi = null
+                    }
+                    is CellularConfirmEvent.Denied -> {
+                        pendingOnConnectWifi?.invoke()
+                        pendingOnUseCellular = null
+                        pendingOnConnectWifi = null
+                    }
+                }
+            }
+        }
+    }
+
+    override fun requestConfirmation(
+        scenario: NetworkScenario,
+        pendingTasks: List<DownloadTask>,
+        totalSize: Long,
+        onConnectWifi: () -> Unit,
+        onUseCellular: () -> Unit
+    ) {
+        when (scenario) {
+            NetworkScenario.CELLULAR_CONFIRMATION -> {
+                // 流量确认：弹窗
+                pendingOnUseCellular = onUseCellular
+                pendingOnConnectWifi = onConnectWifi
+                CellularConfirmDialogActivity.start(activity, totalSize, pendingTasks.size)
+            }
+            NetworkScenario.WIFI_ONLY_MODE -> {
+                // 仅WiFi模式：弹窗
+                pendingOnUseCellular = onUseCellular
+                pendingOnConnectWifi = onConnectWifi
+                CellularConfirmDialogActivity.start(
+                    activity, totalSize, pendingTasks.size, 
+                    CellularConfirmDialogActivity.MODE_WIFI_ONLY
+                )
+            }
+            NetworkScenario.NO_NETWORK -> {
+                // 无网络：Toast 提示
+                Toast.makeText(activity, "等待网络下载", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun showWifiOnlyHint(task: DownloadTask?) {
+        Toast.makeText(activity, "当前设置为仅 WiFi 下载", Toast.LENGTH_LONG).show()
+    }
+    
+    override fun showWifiDisconnectedHint(pausedCount: Int) {
+        if (pausedCount > 0) {
+            Toast.makeText(activity, "WiFi 已断开，$pausedCount 个任务已暂停", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+```
+
+---
+
+### 3. ViewModel 中的下载请求
+
+**路径**: `app/src/main/java/com/pichs/download/demo/ui/AppStoreViewModel.kt`
+
+> [!NOTE]
+> v2.1.1+ 后 `CheckBeforeResult.UserControlled` 不再返回，框架统一处理阈值判断。
+> 旧代码中的 `UserControlled` 分支可以保留（向后兼容），但实际不会执行。
+
+```kotlin
+fun requestDownload(context: Context, appInfo: UpdateAppInfo) {
+    viewModelScope.launch {
+        val result = DownloadManager.checkBeforeCreate(appInfo.size ?: 0L)
+
+        when (result) {
+            is CheckBeforeResult.Allow -> {
+                doStartDownload(context, appInfo)
+            }
+            is CheckBeforeResult.NoNetwork -> {
+                _uiEvent.emit(AppStoreUiEvent.ShowNoNetworkDialog(appInfo))
+            }
+            is CheckBeforeResult.WifiOnly -> {
+                _uiEvent.emit(AppStoreUiEvent.ShowWifiOnlyDialog(appInfo))
+            }
+            is CheckBeforeResult.NeedConfirmation -> {
+                // 需要确认（框架已根据阈值判断）
+                _uiEvent.emit(AppStoreUiEvent.ShowCellularConfirmDialog(appInfo, result.estimatedSize))
+            }
+            // 以下分支 v2.1.1+ 不再执行，可删除或保留兼容
+            is CheckBeforeResult.UserControlled -> {
+                // 旧逻辑，已废弃
+            }
+        }
+    }
+}
+```
+
+---
+
+### 4. 后台批量下载
+
+**路径**: `app/src/main/java/com/pichs/download/demo/BackgroundBatchDownloadHelper.kt`
+
+```kotlin
+suspend fun startBatchDownload(context: Context, apps: List<UpdateAppInfo>) {
+    val totalSize = apps.sumOf { it.size ?: 0L }
+    
+    when (val result = DownloadManager.checkBeforeCreate(totalSize, apps.size)) {
+        is CheckBeforeResult.Allow -> {
+            doStartBatchDownload(context, apps)
+        }
+        is CheckBeforeResult.NeedConfirmation -> {
+            // 框架已判断超阈值，需要弹窗
+            DownloadUiEventManager.emit(
+                DownloadUiEvent.ShowCellularConfirmDialog(
+                    totalSize = result.estimatedSize,
+                    count = apps.size,
+                    onConfirm = { doStartBatchDownload(context, apps, cellularConfirmed = true) }
+                )
+            )
+        }
+        // 其他场景类似处理...
+    }
+}
+
+---
+
 ## 三、迁移指南
 
 如果使用端之前使用了 `CellularPromptMode`，需要按以下对应关系迁移：

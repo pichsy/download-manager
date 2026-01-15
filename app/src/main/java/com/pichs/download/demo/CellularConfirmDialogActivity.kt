@@ -137,6 +137,7 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
                 // 或者跳转到系统数据流量设置
                 startActivity(Intent(Settings.ACTION_DATA_USAGE_SETTINGS))
             }
+            finishWithAnimation()
         }
     }
 
@@ -175,14 +176,14 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         lifecycleScope.launch {
             CellularConfirmViewModel.confirm()
         }
-        finishWithAnimation()
+        finishNoAnimation()
     }
 
     private fun handleDeny() {
         lifecycleScope.launch {
             CellularConfirmViewModel.deny()
         }
-        finishWithAnimation()
+        finishNoAnimation()
     }
 
     override fun onBackPressed() {
@@ -192,6 +193,11 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
     private fun finishWithAnimation() {
         finish()
         overridePendingTransition(R.anim.no_anim, R.anim.dialog_scale_out)
+    }
+    
+    private fun finishNoAnimation() {
+        finish()
+        overridePendingTransition(R.anim.no_anim, R.anim.no_anim)
     }
 
     private fun formatFileSize(bytes: Long): String = FormatUtils.formatFileSize(bytes)
