@@ -241,6 +241,48 @@ git clone https://github.com/pichsy/download-manager.git
 # 用 Android Studio 打开并运行 app 模块
 ```
 
+### Demo 应用中的 ExtraMeta 实现
+
+Demo 应用使用 `ExtraMeta` 数据类来管理业务相关信息（如应用包名、版本号等）：
+
+```kotlin
+// app/src/main/java/com/pichs/download/demo/ExtraMeta.kt
+data class ExtraMeta(
+    val name: String? = null,
+    val packageName: String? = null,
+    val versionCode: Long? = null,
+    val icon: String? = null,
+    val size: Long? = null
+) {
+    companion object {
+        fun fromJson(json: String?): ExtraMeta? {
+            if (json.isNullOrBlank()) return null
+            return GsonUtils.fromJson(json, ExtraMeta::class.java)
+        }
+    }
+    
+    fun toJson(): String = GsonUtils.toJson(this)
+}
+
+// 使用示例
+val meta = ExtraMeta(
+    packageName = "com.example.app",
+    versionCode = 100,
+    name = "示例应用"
+)
+
+DownloadManager.download(url)
+    .extras(meta.toJson())  // 存储到 extras 字段
+    .start()
+
+// 读取
+val meta = ExtraMeta.fromJson(task.extras)
+val pkg = meta?.packageName
+```
+
+> [!NOTE]
+> 这只是 Demo 应用的一种实现方式，**不是下载库的要求**。您可以用任何方式管理 `extras` 字段（原生 JSON、Gson、kotlinx.serialization 等）。
+
 ## 🎨 UI 集成指南
 
 ### RecyclerView 列表集成
@@ -687,6 +729,44 @@ data class DownloadTask(
 )
 ```
 
+> [!IMPORTANT]
+> **v2.1.2 破坏性变更**
+>
+> `packageName` 和 `storeVersionCode` 字段已从 `DownloadTask` 移除。
+>
+> **原因**：这两个字段属于应用管理业务逻辑，不是下载核心功能，应由使用方通过 `extras` 字段自行管理。
+>
+> **迁移方案**：使用 `extras` 字段存储业务数据（支持任意 JSON 格式）
+>
+> ```kotlin
+> // 示例：存储应用包名和版本号
+> val businessData = """
+>     {
+>         "packageName": "com.example.app",
+>         "versionCode": 100,
+>         "appName": "示例应用"
+>     }
+> """
+> 
+> DownloadManager.download(url)
+>     .extras(businessData)  // 存储到 extras 字段
+>     .start()
+> 
+> // 读取时自行解析（使用 Gson、kotlinx.serialization 等）
+> val json = JSONObject(task.extras)
+> val packageName = json.optString("packageName")
+> val versionCode = json.optLong("versionCode")
+> ```
+
+### 字段说明
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `extras` | `String?` | 扩展信息（JSON 格式），可存储任意业务数据 |
+| `desc` | `String?` | 任务描述 **[v2.1.2 新增]** |
+| `estimatedSize` | `Long` | 预估文件大小，用于创建前的流量判断 |
+| `cellularConfirmed` | `Boolean` | 是否已确认使用流量下载 |
+
 ### DownloadStatus
 
 | 状态 | 说明 |
@@ -1073,7 +1153,17 @@ NetworkMonitor(
 
 查看完整更新日志：[CHANGELOG.md](./CHANGELOG.md)
 
-### 最新版本 v2.1.1 (2026-01-15)
+### 最新版本 v2.1.2 (2026-01-16)
+
+- **移除业务层字段** - 从 `DownloadTask` 移除 `packageName` 和 `storeVersionCode`，使用 `extras` 字段管理
+- **新增 `desc` 字段** - 添加任务描述字段，用于存储任务相关说明
+- **优化流量计算逻辑** - `getTaskEffectiveSize()` 优先使用剩余大小（`totalSize - currentSize`），提供更准确的流量判断
+- **数据库升级** - 版本号升级到 v6（会自动重建数据库）
+
+> [!IMPORTANT]
+> **破坏性变更**：`DownloadTask` 中的 `packageName` 和 `storeVersionCode` 已移除。如需存储这些信息，请使用 `extras` 字段。
+
+### v2.1.1 (2026-01-15)
 
 - **新增流量阈值配置** - 使用 `cellularThreshold: Long` 替代 `CellularPromptMode` 枚举
 - **智能流量提醒** - 支持自定义阈值，超过阈值才弹窗确认
