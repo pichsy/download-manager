@@ -29,6 +29,7 @@
             android:layout_height="33dp"
             android:layout_marginStart="10dp"
             android:padding="3dp"
+            app:xp_colorFilter="#333333"
             android:src="@drawable/ic_back"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -149,370 +150,96 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/ll_pre_check_switch" />
 
-            <com.pichs.xwidget.radiogroup.XCardLinearRadioGroup
-                android:id="@+id/ll_download_group"
+            <com.pichs.xwidget.cardview.XCardConstraintLayout
+                android:id="@+id/cl_network_mode_choose"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="12dp"
                 android:background="#fff"
-                android:gravity="center_vertical"
-                android:orientation="vertical"
-                android:paddingTop="16dp"
+                android:padding="16dp"
                 app:layout_constraintTop_toBottomOf="@+id/tv_sub_title_download_settings"
-                app:xp_pressedAlpha=".8"
-                app:xp_radius="16dp">
-
-                <com.pichs.xwidget.view.XTextView
-                    android:id="@+id/tv_data_sync_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="15dp"
-                    android:text="自动同步数据"
-                    android:textColor="#7B7E91" />
-
-                <com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout
-                    android:id="@+id/radio_wifi_only"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="15dp"
-                    android:paddingVertical="12dp"
-                    app:xp_pressedAlpha="0.8">
-
-                    <com.pichs.xwidget.view.XTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="仅在Wifi下同步"
-                        android:textColor="#333333"
-                        android:textSize="14dp" />
-
-                    <Space
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <com.pichs.xwidget.radiobutton.XRadioImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_radio_btn_unchecked"
-                        app:xp_check_state_follow_parent="true"
-                        app:xp_checked_src="@drawable/ic_radio_btn_checked" />
-
-                </com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout>
-
-
-                <com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout
-                    android:id="@+id/radio_not_wifi_only"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="15dp"
-                    android:paddingVertical="12dp"
-                    app:xp_pressedAlpha="0.8">
-
-                    <com.pichs.xwidget.view.XTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="WiFi和移动网络下均可同步"
-                        android:textColor="#333333"
-                        android:textSize="14dp" />
-
-                    <Space
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <com.pichs.xwidget.radiobutton.XRadioImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:checked="true"
-                        android:src="@drawable/ic_radio_btn_unchecked"
-                        app:xp_check_state_follow_parent="true"
-                        app:xp_checked_src="@drawable/ic_radio_btn_checked" />
-
-                </com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout>
-            </com.pichs.xwidget.radiogroup.XCardLinearRadioGroup>
-
-            <com.pichs.xwidget.radiogroup.XCardLinearRadioGroup
-                android:id="@+id/ll_download_data_use_group"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="12dp"
-                android:background="#fff"
-                android:gravity="center_vertical"
-                android:orientation="vertical"
-                android:paddingTop="16dp"
-                app:layout_constraintTop_toBottomOf="@+id/ll_download_group"
-                app:xp_pressedAlpha=".8"
                 app:xp_radius="16dp">
 
                 <com.pichs.xwidget.view.XTextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="15dp"
-                    android:text="流量消耗提醒"
-                    android:textColor="#7B7E91" />
-
-                <com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout
-                    android:id="@+id/radio_tips_download_any_times"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="15dp"
-                    android:paddingVertical="12dp"
-                    app:xp_pressedAlpha="0.8">
-
-                    <com.pichs.xwidget.view.XTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="每次都提醒"
-                        android:textColor="#333333"
-                        android:textSize="14dp" />
-
-                    <Space
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <com.pichs.xwidget.radiobutton.XRadioImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:checked="true"
-                        android:src="@drawable/ic_radio_btn_unchecked"
-                        app:xp_check_state_follow_parent="true"
-                        app:xp_checked_src="@drawable/ic_radio_btn_checked" />
-
-                </com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout>
-
-
-                <com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout
-                    android:id="@+id/radio_download_tips_none"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="15dp"
-                    android:paddingVertical="12dp"
-                    app:xp_pressedAlpha="0.8">
-
-                    <com.pichs.xwidget.view.XTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="不提醒"
-                        android:textColor="#333333"
-                        android:textSize="14dp" />
-
-                    <Space
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <com.pichs.xwidget.radiobutton.XRadioImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_radio_btn_unchecked"
-                        app:xp_check_state_follow_parent="true"
-                        app:xp_checked_src="@drawable/ic_radio_btn_checked" />
-
-                </com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout>
-
-                <com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout
-                    android:id="@+id/radio_download_tips_smart"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="15dp"
-                    android:paddingVertical="12dp"
-                    app:xp_pressedAlpha="0.8">
-
-                    <com.pichs.xwidget.view.XTextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="智能提醒"
-                        android:textColor="#333333"
-                        android:textSize="14dp" />
-
-                    <Space
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
-
-                    <com.pichs.xwidget.radiobutton.XRadioImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_radio_btn_unchecked"
-                        app:xp_check_state_follow_parent="true"
-                        app:xp_checked_src="@drawable/ic_radio_btn_checked" />
-
-                </com.pichs.xwidget.radiobutton.XRadioRoundLinearLayout>
-
-            </com.pichs.xwidget.radiogroup.XCardLinearRadioGroup>
-
-            <com.pichs.xwidget.radiogroup.XCardConstraintRadioGroup
-                android:id="@+id/ll_download_data_limit_group"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="12dp"
-                android:background="#fff"
-                android:gravity="center_vertical"
-                android:orientation="vertical"
-                android:paddingHorizontal="15dp"
-                android:paddingTop="16dp"
-                android:paddingBottom="15dp"
-                app:layout_constraintTop_toBottomOf="@+id/ll_download_data_use_group"
-                app:xp_pressedAlpha=".8"
-                app:xp_radius="16dp">
-
-                <com.pichs.xwidget.view.XTextView
-                    android:id="@+id/tv_download_data_limit_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="15dp"
-                    android:text="流量提醒阈值"
-                    android:textColor="#7B7E91"
+                    android:text="自动更新应用"
+                    android:textColor="#000000"
+                    android:textSize="15dp"
+                    android:textStyle="normal"
+                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
-                <com.pichs.xwidget.radiobutton.XRadioRoundButton
-                    android:id="@+id/rb_download_20M"
-                    android:layout_width="0dp"
+                <com.pichs.xwidget.view.XImageView
+                    android:id="@+id/iv_network_mode_more"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="15dp"
-                    android:background="#EFF4FA"
-                    android:maxLines="1"
-                    android:paddingVertical="15dp"
-                    android:text="20M"
-                    android:textColor="#333"
-                    android:textSize="15dp"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/tv_download_data_limit_title"
-                    app:layout_constraintWidth_percent="0.284"
-                    app:xp_borderColor="#0000"
-                    app:xp_borderWidth="1dp"
-                    app:xp_checkedBackground="#fff"
-                    app:xp_checkedBorderColor="#3381FF"
-                    app:xp_checkedTextColor="#3381FF"
-                    app:xp_pressedAlpha="0.8"
-                    app:xp_radius="15dp" />
-
-                <com.pichs.xwidget.radiobutton.XRadioRoundButton
-                    android:id="@+id/rb_download_50M"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:background="#EFF4FA"
-                    android:maxLines="1"
-                    android:paddingVertical="15dp"
-                    android:text="50M"
-                    android:textColor="#333"
-                    android:textSize="15dp"
+                    android:src="@drawable/ic_more_arrow"
+                    android:tint="#7B7E91"
+                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <com.pichs.xwidget.view.XTextView
+                    android:id="@+id/tv_network_mode_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="wifi和流量"
+                    android:textColor="#7B7E91"
+                    android:textSize="14dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/iv_network_mode_more"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+            </com.pichs.xwidget.cardview.XCardConstraintLayout>
+
+            <com.pichs.xwidget.cardview.XCardConstraintLayout
+                android:id="@+id/cl_download_threshold_choose"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="16dp"
+                android:background="#fff"
+                android:padding="16dp"
+                app:layout_constraintTop_toBottomOf="@+id/cl_network_mode_choose"
+                app:xp_radius="16dp">
+
+                <com.pichs.xwidget.view.XTextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="流量下载提醒"
+                    android:textColor="#000000"
+                    android:textSize="15dp"
+                    android:textStyle="normal"
+                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="@+id/rb_download_20M"
-                    app:layout_constraintWidth_percent="0.284"
-                    app:xp_borderColor="#0000"
-                    app:xp_borderWidth="1dp"
-                    app:xp_checkedBackground="#fff"
-                    app:xp_checkedBorderColor="#3381FF"
-                    app:xp_checkedTextColor="#3381FF"
-                    app:xp_pressedAlpha="0.8"
-                    app:xp_radius="15dp" />
+                    app:layout_constraintTop_toTopOf="parent" />
 
-                <com.pichs.xwidget.radiobutton.XRadioRoundButton
-                    android:id="@+id/rb_download_100M"
-                    android:layout_width="0dp"
+                <com.pichs.xwidget.view.XImageView
+                    android:id="@+id/iv_threshold_more"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
-                    android:background="#EFF4FA"
-                    android:maxLines="1"
-                    android:paddingVertical="15dp"
-                    android:text="100M"
-                    android:textColor="#333"
-                    android:textSize="15dp"
+                    android:src="@drawable/ic_more_arrow"
+                    android:tint="#7B7E91"
+                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@+id/rb_download_20M"
-                    app:layout_constraintWidth_percent="0.284"
-                    app:xp_borderColor="#0000"
-                    app:xp_borderWidth="1dp"
-                    app:xp_checkedBackground="#fff"
-                    app:xp_checkedBorderColor="#3381FF"
-                    app:xp_checkedTextColor="#3381FF"
-                    app:xp_pressedAlpha="0.8"
-                    app:xp_radius="15dp" />
+                    app:layout_constraintTop_toTopOf="parent" />
 
-
-                <com.pichs.xwidget.radiobutton.XRadioRoundButton
-                    android:id="@+id/rb_download_200M"
-                    android:layout_width="0dp"
+                <com.pichs.xwidget.view.XTextView
+                    android:id="@+id/tv_download_threshold_value"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="15dp"
-                    android:background="#EFF4FA"
-                    android:maxLines="1"
-                    android:paddingVertical="15dp"
-                    android:text="200M"
-                    android:textColor="#333"
-                    android:textSize="15dp"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/rb_download_20M"
-                    app:layout_constraintWidth_percent="0.284"
-                    app:xp_borderColor="#0000"
-                    app:xp_borderWidth="1dp"
-                    app:xp_checkedBackground="#fff"
-                    app:xp_checkedBorderColor="#3381FF"
-                    app:xp_checkedTextColor="#3381FF"
-                    app:xp_pressedAlpha="0.8"
-                    app:xp_radius="15dp" />
+                    android:text="每次都提醒"
+                    android:textColor="#7B7E91"
+                    android:textSize="14dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/iv_threshold_more"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-                <com.pichs.xwidget.radiobutton.XRadioRoundButton
-                    android:id="@+id/rb_download_500M"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="15dp"
-                    android:background="#EFF4FA"
-                    android:maxLines="1"
-                    android:paddingVertical="15dp"
-                    android:text="500M"
-                    android:textColor="#333"
-                    android:textSize="15dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/rb_download_20M"
-                    app:layout_constraintWidth_percent="0.284"
-                    app:xp_borderColor="#0000"
-                    app:xp_borderWidth="1dp"
-                    app:xp_checkedBackground="#fff"
-                    app:xp_checkedBorderColor="#3381FF"
-                    app:xp_checkedTextColor="#3381FF"
-                    app:xp_pressedAlpha="0.8"
-                    app:xp_radius="15dp" />
-
-                <com.pichs.xwidget.radiobutton.XRadioRoundButton
-                    android:id="@+id/rb_download_1G"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="20dp"
-                    android:layout_marginTop="15dp"
-                    android:background="#EFF4FA"
-                    android:maxLines="1"
-                    android:paddingVertical="15dp"
-                    android:text="1G"
-                    android:textColor="#333"
-                    android:textSize="15dp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/rb_download_20M"
-                    app:layout_constraintWidth_percent="0.284"
-                    app:xp_borderColor="#0000"
-                    app:xp_borderWidth="1dp"
-                    app:xp_checkedBackground="#fff"
-                    app:xp_checkedBorderColor="#3381FF"
-                    app:xp_checkedTextColor="#3381FF"
-                    app:xp_pressedAlpha="0.8"
-                    app:xp_radius="15dp" />
-
-            </com.pichs.xwidget.radiogroup.XCardConstraintRadioGroup>
+            </com.pichs.xwidget.cardview.XCardConstraintLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
