@@ -679,7 +679,8 @@ data class DownloadTask(
     val priority: Int,
     val createTime: Long,
     val updateTime: Long,
-    val packageName: String? = null,
+    val extras: String? = null,
+    val desc: String? = null,
     val pauseReason: PauseReason? = null,
     val estimatedSize: Long = 0L,
     val cellularConfirmed: Boolean = false

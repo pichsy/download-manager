@@ -161,10 +161,20 @@ class NetworkRuleManager(
     }
     
     /**
-     * 获取任务的有效大小（优先使用 estimatedSize，否则使用 totalSize）
+     * 获取任务的有效大小（用于流量判断）
+     * 优先级：剩余待下载大小 > 预估大小 > 总大小
      */
     private fun getTaskEffectiveSize(task: DownloadTask): Long {
-        return if (task.estimatedSize > 0) task.estimatedSize else task.totalSize
+        return when {
+            // 1. 优先使用剩余大小（最准确）- 适用于恢复任务、WiFi断开等场景
+            task.totalSize > 0 && task.currentSize >= 0 -> {
+                (task.totalSize - task.currentSize).coerceAtLeast(0)
+            }
+            // 2. 其次使用预估大小（创建任务时 totalSize 还未获取）
+            task.estimatedSize > 0 -> task.estimatedSize
+            // 3. 最后使用总大小（兜底）
+            else -> task.totalSize
+        }
     }
     
     // ==================== 决策执行 ====================

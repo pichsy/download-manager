@@ -2,7 +2,6 @@ package com.pichs.download.core
 
 import com.pichs.download.config.DownloadConfig
 import com.pichs.download.config.Retention
-// 旧的监听器已移除，现在使用Flow监听器
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.model.NetworkDownloadConfig
@@ -1401,7 +1400,7 @@ object DownloadManager {
         val now = System.currentTimeMillis()
         var candidates = completed.asSequence()
         beforeTime?.let { t -> candidates = candidates.filter { it.updateTime <= t } }
-        byTag?.let { tag -> candidates = candidates.filter { it.extras?.contains(tag) == true || it.packageName == tag } }
+        byTag?.let { tag -> candidates = candidates.filter { it.extras?.contains(tag) == true } }
 
         retention?.let { r ->
             if (r.keepDays > 0) {

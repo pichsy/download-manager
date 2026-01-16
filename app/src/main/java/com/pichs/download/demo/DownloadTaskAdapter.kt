@@ -120,10 +120,10 @@ class DownloadTaskAdapter(
             }
 
             // 检查是否已安装且是最新版本
-            val pkg = task.packageName
+            val pkg = meta?.packageName
                 ?: AppUtils.getPackageNameForTask(itemView.context, task)
                 ?: ""
-            val storeVC = task.storeVersionCode ?: AppUtils.getStoreVersionCode(itemView.context, pkg)
+            val storeVC = meta?.versionCode ?: AppUtils.getStoreVersionCode(itemView.context, pkg)
             val showOpen = pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(itemView.context, pkg, storeVC)
 
             when (task.status) {

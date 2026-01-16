@@ -96,7 +96,7 @@ class DownloadingFragment : Fragment() {
         if (!iconUrl.isNullOrBlank()) {
             Glide.with(imageView).load(iconUrl).into(imageView)
         } else {
-            val pkg = meta?.packageName ?: task.packageName ?: ""
+            val pkg = meta?.packageName ?: ""
             if (pkg.isNotBlank()) {
                 runCatching { requireContext().packageManager.getApplicationIcon(pkg) }
                     .onSuccess { imageView.setImageDrawable(it) }

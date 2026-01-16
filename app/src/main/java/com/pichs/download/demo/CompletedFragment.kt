@@ -58,10 +58,11 @@ class CompletedFragment : Fragment() {
     }
 
     private fun handleAction(task: DownloadTask) {
-        val pkg = task.packageName
+        val meta = ExtraMeta.fromJson(task.extras)
+        val pkg = meta?.packageName
             ?: AppUtils.getPackageNameForTask(requireContext(), task)
             ?: ""
-        val storeVC = task.storeVersionCode ?: AppUtils.getStoreVersionCode(requireContext(), pkg)
+        val storeVC = meta?.versionCode ?: AppUtils.getStoreVersionCode(requireContext(), pkg)
         
         // 如果已安装且是最新版本，打开应用
         if (pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(requireContext(), pkg, storeVC)) {
@@ -103,7 +104,7 @@ class CompletedFragment : Fragment() {
         if (!iconUrl.isNullOrBlank()) {
             Glide.with(imageView).load(iconUrl).into(imageView)
         } else {
-            val pkg = meta?.packageName ?: task.packageName ?: ""
+            val pkg = meta?.packageName ?: ""
             if (pkg.isNotBlank()) {
                 runCatching { requireContext().packageManager.getApplicationIcon(pkg) }
                     .onSuccess { imageView.setImageDrawable(it) }

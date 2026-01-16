@@ -19,9 +19,9 @@ data class DownloadTask(
     val priority: Int,
     val createTime: Long,
     val updateTime: Long,
-    val packageName: String? = null,
-    val storeVersionCode: Long? = null,
     val extras: String? = null,
+    /** 任务描述 */
+    val desc: String? = null,
     val pauseReason: PauseReason? = null,
     /** 预估大小（字节），用于网络规则判断和弹窗显示 */
     val estimatedSize: Long = 0L,
