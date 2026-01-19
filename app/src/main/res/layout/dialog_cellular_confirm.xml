@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.pichs.xwidget.cardview.XCardConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardContent"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:layout_marginHorizontal="15dp"
+    android:layout_marginBottom="36dp"
+    android:background="#fff"
+    app:xp_backgroundGradientOrientation="vertical"
+    app:xp_radius="30dp">
+
+    <!-- 标题标签 -->
+    <com.pichs.xwidget.roundview.XRoundTextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="10dp"
+        android:text="流量安装提醒"
+        android:textColor="#000"
+        android:textSize="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/cardContent"
+        app:xp_borderColor="#E8D0D8"
+        app:xp_borderWidth="2dp"
+        app:xp_radius="10dp" />
+
+    <!-- 消息内容 -->
+    <com.pichs.xwidget.view.XTextView
+        android:id="@+id/tvMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="8dp"
+        android:text="该应用下载将消耗 1 MB 流量， 已预约 WLAN 下自动安装，是否直接安装?"
+        android:textColor="#000"
+        android:textSize="16dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+
+    <!-- 设置提醒链接 -->
+    <LinearLayout
+        android:id="@+id/llDoNotRemind"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvMessage">
+
+        <com.pichs.xwidget.view.XTextView
+            android:id="@+id/tvDoNotRemind"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="使用流量下载时每次都提醒"
+            android:textColor="#666"
+            android:textSize="13dp" />
+
+        <com.pichs.xwidget.view.XTextView
+            android:id="@+id/tvGoSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:paddingStart="3dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp"
+            android:text="去设置"
+            android:textColor="#03f"
+            android:textSize="13dp" />
+
+    </LinearLayout>
+
+    <!-- 底部按钮区域 -->
+    <LinearLayout
+        android:id="@+id/ll_bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="25dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/llDoNotRemind">
+
+        <!-- 取消按钮 -->
+        <com.pichs.xwidget.roundview.XRoundButton
+            android:id="@+id/btnCancel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:background="#e1e1e1"
+            android:paddingVertical="12dp"
+            android:text="取消"
+            android:textColor="#333"
+            android:textSize="15dp"
+            app:xp_radius="25dp" />
+
+        <!-- 直接安装按钮 -->
+        <com.pichs.xwidget.roundview.XRoundButton
+            android:id="@+id/btnUseCellular"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:paddingVertical="12dp"
+            android:text="直接安装"
+            android:textColor="#fff"
+            android:textSize="15dp"
+            app:xp_backgroundGradientColors="#0074ff"
+            app:xp_backgroundOrientation="vertical"
+            app:xp_radius="25dp" />
+    </LinearLayout>
+</com.pichs.xwidget.cardview.XCardConstraintLayout>

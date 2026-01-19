@@ -1,5 +1,6 @@
 package com.pichs.download.demo
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -16,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.ActivityCellularConfirmDialogBinding
 import com.pichs.download.model.CellularPromptMode
+import com.pichs.xbase.utils.UiKit
 import kotlinx.coroutines.launch
 
 /**
@@ -133,9 +135,9 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         // "去设置" 按钮点击
         binding.tvGoSettings.setOnClickListener {
             runCatching {
-                // TODO: 跳转到应用内的下载设置页面
-                // 或者跳转到系统数据流量设置
-                startActivity(Intent(Settings.ACTION_DATA_USAGE_SETTINGS))
+                startActivity(Intent().apply {
+                    setClassName(UiKit.getPackageName(), AppUseDataSettingsActivity::class.java.name)
+                })
             }
             finishWithAnimation()
         }
@@ -186,6 +188,7 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         finishNoAnimation()
     }
 
+    @SuppressLint("MissingSuperCall")
     override fun onBackPressed() {
         handleDeny()
     }
@@ -194,7 +197,7 @@ class CellularConfirmDialogActivity : AppCompatActivity() {
         finish()
         overridePendingTransition(R.anim.no_anim, R.anim.dialog_scale_out)
     }
-    
+
     private fun finishNoAnimation() {
         finish()
         overridePendingTransition(R.anim.no_anim, R.anim.no_anim)
