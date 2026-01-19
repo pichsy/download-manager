@@ -1,5 +1,7 @@
 package com.pichs.download.core
 
+import com.pichs.download.config.RetentionConfig
+import com.pichs.download.config.RetentionStats
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.store.TaskRepository
@@ -12,7 +14,8 @@ internal class RetentionManager(
     private val storageManager: StorageManager
 ) {
     
-    private val config = RetentionConfig()
+    // ✅ 改为 var，支持外部更新配置
+    internal var config = RetentionConfig()
     
     suspend fun executeRetentionPolicy() {
         withContext(Dispatchers.IO) {
@@ -23,10 +26,7 @@ internal class RetentionManager(
                 // 2. 按数量清理
                 cleanupByCount()
                 
-                // 3. 按标签清理
-                cleanupByTag()
-                
-                // 4. 按存储空间清理
+                // 3. 按存储空间清理
                 if (storageManager.isLowStorage.value) {
                     cleanupByStorage()
                 }
@@ -54,19 +54,23 @@ internal class RetentionManager(
     private suspend fun cleanupByTime() {
         val allTasks = repository.getAll()
         val now = System.currentTimeMillis()
+        val protectionPeriodMs = config.protectionPeriodHours * 60 * 60 * 1000L
         
         val tasksToClean = allTasks.filter { task ->
+            // ✅ 先检查是否在保护期内
+            val age = now - task.updateTime
+            if (age < protectionPeriodMs) {
+                return@filter false  // 保护期内，不清理
+            }
+            
             when (task.status) {
                 DownloadStatus.COMPLETED -> {
-                    val age = now - task.updateTime
                     age > config.keepCompletedDays * 24 * 60 * 60 * 1000L
                 }
                 DownloadStatus.FAILED -> {
-                    val age = now - task.updateTime
                     age > config.keepFailedDays * 24 * 60 * 60 * 1000L
                 }
                 DownloadStatus.CANCELLED -> {
-                    val age = now - task.updateTime
                     age > config.keepCancelledDays * 24 * 60 * 60 * 1000L
                 }
                 else -> false
@@ -80,12 +84,18 @@ internal class RetentionManager(
     
     private suspend fun cleanupByCount() {
         val allTasks = repository.getAll()
+        val now = System.currentTimeMillis()
+        val protectionPeriodMs = config.protectionPeriodHours * 60 * 60 * 1000L
         
-        // 按状态分组
-        val completedTasks = allTasks.filter { it.status == DownloadStatus.COMPLETED }
+        // ✅ 先过滤掉保护期内的任务，再按状态分组
+        val completedTasks = allTasks
+            .filter { it.status == DownloadStatus.COMPLETED }
+            .filter { now - it.updateTime >= protectionPeriodMs }  // 排除保护期
             .sortedByDescending { it.updateTime }
         
-        val failedTasks = allTasks.filter { it.status == DownloadStatus.FAILED }
+        val failedTasks = allTasks
+            .filter { it.status == DownloadStatus.FAILED }
+            .filter { now - it.updateTime >= protectionPeriodMs }  // 排除保护期
             .sortedByDescending { it.updateTime }
         
         // 保留最近N个，删除其余的
@@ -97,39 +107,15 @@ internal class RetentionManager(
         }
     }
     
-    private suspend fun cleanupByTag() {
-        val allTasks = repository.getAll()
-        
-        // 按标签分组
-        val tasksByTag = allTasks.groupBy { task ->
-            task.extras?.let { extras ->
-                // 从extras JSON中提取tag
-                try {
-                    val json = com.google.gson.Gson().fromJson<Map<String, Any>>(extras, Map::class.java)
-                    json["tag"] as? String
-                } catch (e: Exception) {
-                    null
-                }
-            } ?: "default"
-        }
-        
-        tasksByTag.forEach { (tag, tasks) ->
-            val tagConfig = config.tagConfigs[tag] ?: config.defaultTagConfig
-            val tasksToKeep = tasks.sortedByDescending { it.updateTime }.take(tagConfig.maxTasks)
-            val tasksToDelete = tasks - tasksToKeep.toSet()
-            
-            tasksToDelete.forEach { task ->
-                deleteTaskAndFile(task, "tag_based_cleanup")
-            }
-        }
-    }
-    
     private suspend fun cleanupByStorage() {
         val allTasks = repository.getAll()
+        val now = System.currentTimeMillis()
+        val protectionPeriodMs = config.protectionPeriodHours * 60 * 60 * 1000L
         
-        // 按优先级和大小排序，优先删除低优先级、大文件
+        // ✅ 按优先级和大小排序，优先删除低优先级、大文件，但排除保护期内的任务
         val tasksToDelete = allTasks
             .filter { it.status == DownloadStatus.COMPLETED }
+            .filter { now - it.updateTime >= protectionPeriodMs }  // 排除保护期
             .sortedWith(
                 compareBy<DownloadTask> { it.priority } // 低优先级在前
                     .thenByDescending { it.totalSize } // 大文件在前
@@ -199,33 +185,3 @@ internal class RetentionManager(
         )
     }
 }
-
-data class RetentionConfig(
-    val keepCompletedDays: Int = 30,
-    val keepFailedDays: Int = 7,
-    val keepCancelledDays: Int = 3,
-    val keepLatestCompleted: Int = 100,
-    val keepLatestFailed: Int = 20,
-    val maxTasksToDeleteOnLowStorage: Int = 10,
-    val tagConfigs: Map<String, TagConfig> = mapOf(
-        "critical" to TagConfig(maxTasks = 50, keepDays = 90),
-        "important" to TagConfig(maxTasks = 30, keepDays = 60),
-        "normal" to TagConfig(maxTasks = 20, keepDays = 30),
-        "background" to TagConfig(maxTasks = 10, keepDays = 7)
-    ),
-    val defaultTagConfig: TagConfig = TagConfig(maxTasks = 20, keepDays = 30)
-)
-
-data class TagConfig(
-    val maxTasks: Int,
-    val keepDays: Int
-)
-
-data class RetentionStats(
-    val totalTasks: Int,
-    val completedTasks: Int,
-    val failedTasks: Int,
-    val cancelledTasks: Int,
-    val totalSize: Long,
-    val oldestTask: Long
-)

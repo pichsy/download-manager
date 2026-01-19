@@ -2,6 +2,8 @@ package com.pichs.download.core
 
 import com.pichs.download.config.DownloadConfig
 import com.pichs.download.config.Retention
+import com.pichs.download.config.RetentionConfig
+import com.pichs.download.config.RetentionStats
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.model.NetworkDownloadConfig
@@ -700,6 +702,23 @@ object DownloadManager {
     
     // 保留策略 API
     suspend fun getRetentionStats(): RetentionStats? = retentionManager?.getRetentionStats()
+    
+    /**
+     * 设置保留策略配置
+     * @param config 保留策略配置，可设置保护期、保留天数、保留数量等
+     */
+    fun setRetentionConfig(config: RetentionConfig) {
+        retentionManager?.config = config
+        DownloadLog.d(TAG, "Retention配置已更新: protectionPeriodHours=${config.protectionPeriodHours}")
+    }
+    
+    /**
+     * 获取当前保留策略配置
+     */
+    fun getRetentionConfig(): RetentionConfig {
+        return retentionManager?.config ?: RetentionConfig()
+    }
+    
     fun executeRetentionPolicy() {
         scope.launch(dispatcherIO) {
             retentionManager?.executeRetentionPolicy()
@@ -1094,12 +1113,8 @@ object DownloadManager {
             task.status == DownloadStatus.PAUSED) {
             dispatcher.remove(task.id)
             scheduleNext()
-            // 若任务已完成，根据保留策略尝试清理
-            if (task.status == DownloadStatus.COMPLETED) {
-                scope.launch(dispatcherIO) { 
-                    retentionManager?.executeRetentionPolicy()
-                }
-            }
+            // ✅ 修复：移除自动清理触发，防止刚完成的任务被立即删除
+            // 清理策略应该由使用端在合适的时机手动调用（如应用启动时）
         }
     }
 

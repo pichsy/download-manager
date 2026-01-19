@@ -28,12 +28,26 @@ class App : Application() {
             defaultDownloadDirPath = "${this@App.getExternalFilesDir(null)?.absolutePath ?: cacheDir.absolutePath}/DownloadApks"
         }
         
+        // ✅ 配置 Retention Policy（可选）
+        // 设置保护期为 24 小时（默认48小时），刚下载完成的任务在24小时内不会被清理
+        DownloadManager.setRetentionConfig(
+            com.pichs.download.config.RetentionConfig(
+                protectionPeriodHours = 24,    // 保护期：24小时
+                keepCompletedDays = 30,       // 保留已完成任务30天
+                keepLatestCompleted = 100     // 最多保留100个已完成任务
+            )
+        )
+        
         // 应用启动时异步清理无效任务
         ProcessLifecycleOwner.get().lifecycleScope.launch {
             val cleanedCount = DownloadManager.validateAndCleanTasks()
             if (cleanedCount > 0) {
                 DownloadLog.d("App", "应用启动清理了 $cleanedCount 个无效任务")
             }
+            
+            // ✅ 执行 Retention Policy 清理过期任务（排除48小时内的新任务）
+            DownloadManager.executeRetentionPolicy()
+            DownloadLog.d("App", "应用启动时执行了 Retention Policy 清理")
         }
     }
 }

@@ -626,19 +626,125 @@ DownloadManager.cleanCompleted(
 )
 ```
 
-### 保留策略
+### 保留策略 (Retention Policy)
+
+自动管理已完成/失败任务的清理策略，防止数据库和存储空间无限增长。
+
+#### 核心机制
+
+**1. 保护期（Protection Period）**
+
+刚下载完成的任务在保护期内**绝对不会被删除**，确保有足够时间完成后续操作（如安装APK）。
 
 ```kotlin
-DownloadManager.config {
-    retention = Retention(
-        keepDays = 30,           // 保留 30 天
-        keepLatestCompleted = 100 // 最多保留 100 个已完成任务
+// 在 Application.onCreate() 中配置
+DownloadManager.setRetentionConfig(
+    RetentionConfig(
+        protectionPeriodHours = 24,  // ✅ 保护期：24小时（默认48小时）
+        keepCompletedDays = 30,       // 保留已完成任务30天
+        keepLatestCompleted = 100,    // 最多保留100个已完成任务
+        keepFailedDays = 7,           // 失败任务保留7天
+        keepLatestFailed = 20         // 最多保留20个失败任务
     )
-}
+)
+```
 
+**2. 清理策略**
+
+| 策略 | 说明 | 配置参数 |
+|------|------|---------|
+| 按时间 | 删除超过指定天数的任务 | `keepCompletedDays`, `keepFailedDays`, `keepCancelledDays` |
+| 按数量 | 保留最近N个任务，删除更早的 | `keepLatestCompleted`, `keepLatestFailed` |
+| 低存储 | 存储空间不足时优先删除大文件 | `maxTasksToDeleteOnLowStorage` |
+
+**3. 执行时机**
+
+> [!IMPORTANT]
+> **推荐做法**：在应用启动时执行清理，避免下载过程中的性能影响。
+
+```kotlin
+class App : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        DownloadManager.init(this)
+        
+        // 配置保留策略
+        DownloadManager.setRetentionConfig(
+            RetentionConfig(protectionPeriodHours = 24)
+        )
+        
+        // 应用启动时执行清理
+        lifecycleScope.launch {
+            DownloadManager.executeRetentionPolicy()
+        }
+    }
+}
+```
+
+**手动触发清理**：
+
+```kotlin
 // 执行清理策略
 DownloadManager.executeRetentionPolicy()
+
+// 获取统计信息
+val stats = DownloadManager.getRetentionStats()
+println("总任务数: ${stats.totalTasks}, 已完成: ${stats.completedTasks}")
 ```
+
+#### 配置参数说明
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `protectionPeriodHours` | `Int` | 48 | 保护期（小时），刚完成的任务在此期间不会被清理 |
+| `keepCompletedDays` | `Int` | 30 | 已完成任务的保留天数（超过则删除） |
+| `keepFailedDays` | `Int` | 7 | 失败任务的保留天数 |
+| `keepCancelledDays` | `Int` | 3 | 已取消任务的保留天数 |
+| `keepLatestCompleted` | `Int` | 100 | 保留最近N个已完成任务（排除保护期内的） |
+| `keepLatestFailed` | `Int` | 20 | 保留最近N个失败任务（排除保护期内的） |
+| `maxTasksToDeleteOnLowStorage` | `Int` | 10 | 低存储空间时单次最多删除的任务数 |
+
+#### 使用场景
+
+**场景1：APK下载完成后需要时间安装**
+
+```kotlin
+// 设置较长的保护期，确保APK在安装前不被删除
+DownloadManager.setRetentionConfig(
+    RetentionConfig(
+        protectionPeriodHours = 72,  // 72小时保护期
+        keepLatestCompleted = 50     // 只保留最近50个
+    )
+)
+```
+
+**场景2：快速清理，节省存储空间**
+
+```kotlin
+// 短保护期 + 少量保留
+DownloadManager.setRetentionConfig(
+    RetentionConfig(
+        protectionPeriodHours = 12,  // 12小时保护期
+        keepCompletedDays = 7,        // 7天后删除
+        keepLatestCompleted = 30      // 只保留30个
+    )
+)
+```
+
+**场景3：不同标签使用不同策略**
+
+```kotlin
+DownloadManager.setRetentionConfig(
+    RetentionConfig(
+        tagConfigs = mapOf(
+            "critical" to TagConfig(maxTasks = 50, keepDays = 90),  // 重要任务保留90天
+            "temporary" to TagConfig(maxTasks = 10, keepDays = 1)   // 临时任务只保留1天
+        )
+    )
+)
+```
+
+
 
 ### 批量操作
 
