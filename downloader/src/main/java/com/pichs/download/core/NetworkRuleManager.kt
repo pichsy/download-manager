@@ -396,40 +396,49 @@ class NetworkRuleManager(
     }
     
     private fun resumeWifiUnavailableTasks() {
-        InMemoryTaskStore.getAll()
+        val tasks = InMemoryTaskStore.getAll()
             .filter { it.status == DownloadStatus.PAUSED && it.pauseReason == PauseReason.WIFI_UNAVAILABLE }
-            .forEach { task ->
-                downloadManager.resume(task.id)
-            }
+        
+        if (tasks.isNotEmpty()) {
+            downloadManager.resumeTasks(tasks)
+            DownloadLog.d(TAG, "批量恢复 ${tasks.size} 个 WiFi 不可用暂停的任务")
+        }
     }
     
     private fun resumeCellularPendingTasks() {
-        InMemoryTaskStore.getAll()
+        val pendingTasks = InMemoryTaskStore.getAll()
             .filter { it.status == DownloadStatus.PAUSED && it.pauseReason == PauseReason.CELLULAR_PENDING }
-            .forEach { task ->
-                downloadManager.resume(task.id)
-            }
+        
+        if (pendingTasks.isNotEmpty()) {
+            // 批量恢复，只触发一次确认弹窗
+            downloadManager.resumeTasks(pendingTasks)
+            DownloadLog.d(TAG, "批量恢复 ${pendingTasks.size} 个等待流量确认的任务")
+        }
     }
     
     private fun resumeNetworkErrorTasks() {
-        InMemoryTaskStore.getAll()
+        val tasks = InMemoryTaskStore.getAll()
             .filter { it.status == DownloadStatus.PAUSED && it.pauseReason == PauseReason.NETWORK_ERROR }
-            .forEach { task ->
-                downloadManager.resume(task.id)
-            }
+        
+        if (tasks.isNotEmpty()) {
+            downloadManager.resumeTasks(tasks)
+            DownloadLog.d(TAG, "批量恢复 ${tasks.size} 个网络异常暂停的任务")
+        }
     }
     
     private fun resumeOtherSystemPausedTasks() {
-        InMemoryTaskStore.getAll()
+        val tasks = InMemoryTaskStore.getAll()
             .filter { 
                 it.status == DownloadStatus.PAUSED && 
                 (it.pauseReason == PauseReason.BATTERY_LOW || 
                  it.pauseReason == PauseReason.STORAGE_FULL || 
                  it.pauseReason == PauseReason.SYSTEM_RESOURCE_LOW)
             }
-            .forEach { task ->
-                downloadManager.resume(task.id)
-            }
+        
+        if (tasks.isNotEmpty()) {
+            downloadManager.resumeTasks(tasks)
+            DownloadLog.d(TAG, "批量恢复 ${tasks.size} 个系统原因暂停的任务")
+        }
     }
 }
 
