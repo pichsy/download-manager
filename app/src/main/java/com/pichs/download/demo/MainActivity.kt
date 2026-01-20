@@ -541,32 +541,21 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             val task = item.task ?: existing
             when (task?.status) {
                 DownloadStatus.DOWNLOADING -> {
+                    // 暂停任务，Flow监听器会自动更新UI
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
-                    vb.btnDownload.setText("继续")
-                    vb.btnDownload.setProgress(task.progress)
-                    vb.btnDownload.isEnabled = true
                 }
                 DownloadStatus.PAUSED -> {
                     if (!com.pichs.download.utils.NetworkUtils.isNetworkAvailable(this@MainActivity)) {
                         ToastUtils.show("网络不可用，请检查网络后重试")
-                    } else {
-                        if (DownloadManager.hasAvailableSlot()) {
-                            vb.btnDownload.setText("${task.progress}%")
-                            vb.btnDownload.setProgress(task.progress)
-                            item.task = task.copy(status = DownloadStatus.DOWNLOADING, updateTime = System.currentTimeMillis())
-                        } else {
-                            vb.btnDownload.setText("等待中")
-                            item.task = task.copy(status = DownloadStatus.WAITING, updateTime = System.currentTimeMillis())
-                        }
-                        vb.btnDownload.isEnabled = true
-                        DownloadManager.resume(task.id)
+                        return@launch
                     }
+                    // 直接调用resume，不要乐观更新UI
+                    // Flow监听器会在任务实际状态变化时自动更新UI
+                    DownloadManager.resume(task.id)
                 }
                 DownloadStatus.WAITING, DownloadStatus.PENDING -> {
+                    // 暂停任务，Flow监听器会自动更新UI
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
-                    vb.btnDownload.setText("继续")
-                    vb.btnDownload.isEnabled = true
-                    item.task = task.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
                 }
                 DownloadStatus.COMPLETED -> {
                     val file = File(task.filePath, task.fileName)

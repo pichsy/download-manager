@@ -5,6 +5,7 @@ import android.widget.Toast
 import com.pichs.download.core.CheckAfterCallback
 import com.pichs.download.core.NetworkScenario
 import com.pichs.download.model.DownloadTask
+import com.pichs.shanhai.base.utils.LogUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,11 +21,11 @@ class MyCheckAfterCallback(
 ) : CheckAfterCallback {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    
+
     // 待执行的回调
     private var pendingOnUseCellular: (() -> Unit)? = null
     private var pendingOnConnectWifi: (() -> Unit)? = null
-    
+
     init {
         // 监听确认事件
         scope.launch {
@@ -35,6 +36,7 @@ class MyCheckAfterCallback(
                         pendingOnUseCellular = null
                         pendingOnConnectWifi = null
                     }
+
                     is CellularConfirmEvent.Denied -> {
                         pendingOnConnectWifi?.invoke()
                         pendingOnUseCellular = null
@@ -55,27 +57,35 @@ class MyCheckAfterCallback(
         onConnectWifi: () -> Unit,
         onUseCellular: () -> Unit
     ) {
+        LogUtils.d(
+            "requestConfirmation called: " +
+                "scenario=$scenario, taskCount=${pendingTasks.size}, " +
+                "tasks=${pendingTasks.map { it.fileName }}"
+        )
+
         when (scenario) {
             NetworkScenario.CELLULAR_CONFIRMATION -> {
                 // 流量确认：弹窗
                 pendingOnUseCellular = onUseCellular
                 pendingOnConnectWifi = onConnectWifi
                 CellularConfirmDialog.show(
-                    totalSize, 
+                    totalSize,
                     pendingTasks.size,
                     CellularConfirmDialog.MODE_CELLULAR
                 ) ?: onConnectWifi() // 没有顶部 Activity 则直接等待 WiFi
             }
+
             NetworkScenario.WIFI_ONLY_MODE -> {
                 // 仅WiFi模式：弹窗
                 pendingOnUseCellular = onUseCellular
                 pendingOnConnectWifi = onConnectWifi
                 CellularConfirmDialog.show(
-                    totalSize, 
-                    pendingTasks.size, 
+                    totalSize,
+                    pendingTasks.size,
                     CellularConfirmDialog.MODE_WIFI_ONLY
                 ) ?: onConnectWifi() // 没有顶部 Activity 则直接等待 WiFi
             }
+
             NetworkScenario.NO_NETWORK -> {
                 // 无网络：Toast 提示
                 if (pendingTasks.isNotEmpty()) {
@@ -91,17 +101,17 @@ class MyCheckAfterCallback(
 
     override fun showWifiOnlyHint(task: DownloadTask?) {
         Toast.makeText(
-            applicationContext, 
-            "当前设置为仅 WiFi 下载，请连接 WiFi 后重试", 
+            applicationContext,
+            "当前设置为仅 WiFi 下载，请连接 WiFi 后重试",
             Toast.LENGTH_LONG
         ).show()
     }
-    
+
     override fun showWifiDisconnectedHint(pausedCount: Int) {
         if (pausedCount > 0) {
             Toast.makeText(
-                applicationContext, 
-                "WiFi 已断开，$pausedCount 个下载任务已暂停", 
+                applicationContext,
+                "WiFi 已断开，$pausedCount 个下载任务已暂停",
                 Toast.LENGTH_SHORT
             ).show()
         }
