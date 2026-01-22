@@ -66,7 +66,7 @@
 
 ```kotlin
 dependencies {
-    implementation("com.gitee.pichs:downloader:2.1.4")
+    implementation("com.gitee.pichs:downloader:2.1.5")
 }
 ```
 
