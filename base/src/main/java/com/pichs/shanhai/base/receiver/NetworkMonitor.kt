@@ -1,12 +1,13 @@
 package com.pichs.shanhai.base.receiver
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import android.os.Handler
-import android.os.Looper
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.pichs.xbase.utils.UiKit
@@ -16,13 +17,13 @@ import com.pichs.xbase.xlog.XLog
  * 网络监听器 - 使用 NetworkCallback 实现
  * 可以准确监听网络类型切换（WiFi ↔ 流量）
  */
+@SuppressLint("WrongConstant")
 class NetworkMonitor(
     private val onNetworkChanged: (isWifi: Boolean) -> Unit,
     private val onNetworkLost: () -> Unit
 ) {
 
-    private val context: Context = UiKit.getApplication()
-    private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private val connectivityManager by lazy { UiKit.getApplication().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager }
 
     private var currentIsWifi: Boolean? = null
     private var isRegistered = false
@@ -32,22 +33,26 @@ class NetworkMonitor(
     }
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
         override fun onAvailable(network: Network) {
             XLog.d("NetworkMonitor", "======> onAvailable: $network")
             checkNetworkType()
         }
 
+        @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
         override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
             XLog.d("NetworkMonitor", "======> onCapabilitiesChanged: $network, capabilities=$networkCapabilities")
             checkNetworkType()
         }
 
+        @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
         override fun onLost(network: Network) {
             XLog.d("NetworkMonitor", "======> onLost: $network")
             checkNetworkType()
         }
     }
 
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     private fun checkNetworkType() {
         val activeNetwork = connectivityManager.activeNetwork
         val capabilities = activeNetwork?.let { connectivityManager.getNetworkCapabilities(it) }
@@ -84,6 +89,7 @@ class NetworkMonitor(
     /**
      * 注册网络监听，绑定到 LifecycleOwner
      */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     fun register(lifecycleOwner: LifecycleOwner) {
         XLog.d("NetworkMonitor", "======> register() 被调用")
 

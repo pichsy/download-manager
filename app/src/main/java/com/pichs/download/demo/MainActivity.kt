@@ -65,6 +65,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     DownloadManager.onWifiConnected()
                 } else {
                     ToastUtils.show("数据流量已连接")
+                    DownloadManager.onWifiDisconnected()
                 }
                 DownloadManager.onNetworkRestored()
             },
@@ -159,11 +160,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     appList.forEach { item ->
                         val pkg = item.packageName.orEmpty()
                         val storeVC = item.versionCode
-                        item.isInstalled = pkg.isNotBlank() && 
-                            AppUtils.isInstalledAndUpToDate(this@MainActivity, pkg, storeVC)
+                        item.isInstalled = pkg.isNotBlank() &&
+                                AppUtils.isInstalledAndUpToDate(this@MainActivity, pkg, storeVC)
                     }
                 }
-                
+
                 urgentList.clear()
                 highList.clear()
                 normalList.clear()
@@ -174,10 +175,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             item.priority = DownloadPriority.URGENT.value
                             urgentList.add(item)
                         }
+
                         index < 15 -> {
                             item.priority = DownloadPriority.HIGH.value
                             highList.add(item)
                         }
+
                         else -> {
                             item.priority = DownloadPriority.NORMAL.value
                             normalList.add(item)
@@ -230,6 +233,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         }
                         CellularConfirmDialogActivity.start(this@MainActivity, event.totalSize, event.apps.size)
                     }
+
                     is UiEvent.ShowWifiOnlyDialog -> {
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.startDownloadAndPause(event.apps)
@@ -241,6 +245,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             CellularConfirmDialogActivity.MODE_WIFI_ONLY
                         )
                     }
+
                     is UiEvent.ShowNoNetworkDialog -> {
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.startDownloadAndPauseForNetwork(event.apps)
@@ -265,6 +270,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         CellularConfirmViewModel.pendingAction = event.onConfirm
                         CellularConfirmDialogActivity.start(this@MainActivity, event.totalSize, event.count)
                     }
+
                     is DownloadUiEvent.ShowWifiOnlyDialog -> {
                         CellularConfirmViewModel.pendingAction = event.onConfirm
                         CellularConfirmDialogActivity.start(
@@ -274,6 +280,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             CellularConfirmDialogActivity.MODE_WIFI_ONLY
                         )
                     }
+
                     is DownloadUiEvent.ShowNoNetworkDialog -> {
                         CellularConfirmViewModel.pendingAction = event.onConfirm
                         CellularConfirmDialogActivity.start(
@@ -299,15 +306,15 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
      */
     private fun downloadAllWithPriority() {
         ToastUtils.show("正在检查应用状态...")
-        
+
         lifecycleScope.launch(Dispatchers.IO) {
             // 在后台线程过滤，避免主线程 ANR
             val filteredNormal = normalList.filter { !isUpToDate(it) }
             val filteredHigh = highList.filter { !isUpToDate(it) }
             val filteredUrgent = urgentList.filter { !isUpToDate(it) }
-            
+
             val total = filteredNormal.size + filteredHigh.size + filteredUrgent.size
-            
+
             withContext(Dispatchers.Main) {
                 if (total == 0) {
                     ToastUtils.show("所有应用都已是最新版本")
@@ -315,27 +322,27 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 }
                 ToastUtils.show("开始下载：必装(${filteredUrgent.size}) + 推荐(${filteredHigh.size}) + 常用(${filteredNormal.size})")
             }
-            
+
             if (total == 0) return@launch
-            
+
             // 按优先级从低到高添加，测试抢占效果
             // 先添加常用应用（低优先级）
             filteredNormal.forEach { item ->
                 startDownloadWithPriority(item, DownloadPriority.NORMAL.value)
             }
-            
+
             // 再添加推荐应用（中优先级）
             filteredHigh.forEach { item ->
                 startDownloadWithPriority(item, DownloadPriority.HIGH.value)
             }
-            
+
             // 最后添加必装应用（高优先级）- 应该抢占低优先级
             filteredUrgent.forEach { item ->
                 startDownloadWithPriority(item, DownloadPriority.URGENT.value)
             }
         }
     }
-    
+
     /**
      * 检查应用是否已安装且是最新版本
      */
@@ -354,17 +361,19 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     DownloadManager.resume(existing.id)
                     return
                 }
+
                 DownloadStatus.COMPLETED -> {
                     val file = File(existing.filePath, existing.fileName)
                     if (file.exists()) return
                     DownloadManager.deleteTask(existing.id, deleteFile = false)
                 }
+
                 else -> {
                     DownloadManager.deleteTask(existing.id, deleteFile = false)
                 }
             }
         }
-        
+
         // 准备 extras，包含图标和包名信息
         val meta = ExtraMeta(
             name = item.name,
@@ -373,7 +382,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             icon = item.icon
         )
         val extrasJson = meta.toJson()
-        
+
         val task = DownloadManager.download(item.url)
             .fileName(item.name.replace(" ", "_") + ".apk")
             .priority(priority)
@@ -432,35 +441,37 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         } else {
             vb.ivCover.setImageResource(R.color.purple_200)
         }
-        
+
         // 应用名
         vb.tvAppName.text = item.name
-        
+
         // 优先级标签
         when (priority) {
             DownloadPriority.URGENT.value -> {
                 vb.tvPriority.text = "必装"
                 vb.tvPriority.setBackgroundColor(Color.parseColor("#FF5722"))
             }
+
             DownloadPriority.HIGH.value -> {
                 vb.tvPriority.text = "推荐"
                 vb.tvPriority.setBackgroundColor(Color.parseColor("#2196F3"))
             }
+
             else -> {
                 vb.tvPriority.text = "常用"
                 vb.tvPriority.setBackgroundColor(Color.parseColor("#607D8B"))
             }
         }
-        
+
         // 关联已有任务
         if (item.task == null) {
             val existingTask = DownloadManager.getTaskByUrl(item.url)
             if (existingTask != null) item.task = existingTask
         }
-        
+
         // 绑定按钮状态（复用现有逻辑）
         bindButtonUI(vb, item.task, item, checkInstalled = true)
-        
+
         // 点击事件
         vb.btnDownload.fastClick { handleClick(item, vb) }
         vb.ivCover.fastClick { openDetail(item) }
@@ -497,24 +508,29 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     vb.btnDownload.isEnabled = true
                 }
             }
+
             DownloadStatus.DOWNLOADING -> {
                 vb.btnDownload.setText("${task.progress}%")
                 vb.btnDownload.setProgress(task.progress)
                 vb.btnDownload.isEnabled = true
             }
+
             DownloadStatus.PAUSED -> {
                 vb.btnDownload.setText("继续")
                 vb.btnDownload.setProgress(task.progress)
                 vb.btnDownload.isEnabled = true
             }
+
             DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                 vb.btnDownload.setText("等待中")
                 vb.btnDownload.isEnabled = true
             }
+
             DownloadStatus.FAILED -> {
                 vb.btnDownload.setText("重试")
                 vb.btnDownload.isEnabled = true
             }
+
             else -> {
                 vb.btnDownload.setText("下载")
                 vb.btnDownload.setProgress(0)
@@ -544,6 +560,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     // 暂停任务，Flow监听器会自动更新UI
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
                 }
+
                 DownloadStatus.PAUSED -> {
                     if (!com.pichs.download.utils.NetworkUtils.isNetworkAvailable(this@MainActivity)) {
                         ToastUtils.show("网络不可用，请检查网络后重试")
@@ -553,10 +570,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     // Flow监听器会在任务实际状态变化时自动更新UI
                     DownloadManager.resume(task.id)
                 }
+
                 DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                     // 暂停任务，Flow监听器会自动更新UI
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
                 }
+
                 DownloadStatus.COMPLETED -> {
                     val file = File(task.filePath, task.fileName)
                     if (file.exists()) {
@@ -567,6 +586,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         startDownload(item, vb)
                     }
                 }
+
                 DownloadStatus.FAILED -> startDownload(item, vb)
                 else -> if (existing == null) {
                     startDownload(item, vb)
@@ -583,6 +603,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                                 bindButtonUI(vb, existing, item)
                             }
                         }
+
                         DownloadStatus.PAUSED -> DownloadManager.resume(existing.id)
                         else -> bindButtonUI(vb, existing, item)
                     }

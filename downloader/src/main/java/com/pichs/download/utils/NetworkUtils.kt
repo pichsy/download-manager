@@ -1,5 +1,6 @@
 package com.pichs.download.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -16,6 +17,7 @@ object NetworkUtils {
      * @param context 上下文
      * @return true 如果网络可用，false 否则
      */
+    @SuppressLint("WrongConstant")
     fun isNetworkAvailable(context: Context): Boolean {
         return try {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -41,6 +43,7 @@ object NetworkUtils {
      * @param context 上下文
      * @return true 如果连接到WiFi，false 否则
      */
+    @SuppressLint("WrongConstant")
     fun isWifiAvailable(context: Context): Boolean {
         return try {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -65,6 +68,7 @@ object NetworkUtils {
      * @param context 上下文
      * @return true 如果连接到移动网络，false 否则
      */
+    @SuppressLint("WrongConstant")
     fun isCellularAvailable(context: Context): Boolean {
         return try {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -89,6 +93,7 @@ object NetworkUtils {
      * @param context 上下文
      * @return true 如果连接到以太网，false 否则
      */
+    @SuppressLint("WrongConstant")
     fun isEthernetAvailable(context: Context): Boolean {
         return try {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -128,6 +133,7 @@ object NetworkUtils {
      * @param context 上下文
      * @return true 如果是计费网络，false 否则
      */
+    @SuppressLint("WrongConstant")
     fun isMeteredNetwork(context: Context): Boolean {
         return try {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
