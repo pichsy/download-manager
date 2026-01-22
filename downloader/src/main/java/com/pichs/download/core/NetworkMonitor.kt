@@ -42,11 +42,10 @@ internal class NetworkMonitor(private val context: Context) {
     }
     
     fun startMonitoring() {
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
         try {
-            connectivityManager.registerNetworkCallback(request, networkCallback)
+            // 使用 registerDefaultNetworkCallback 监听默认网络（实际用于下载的网络）
+            // 当从 WiFi 切换到蜂窝网络时，会自动触发回调
+            connectivityManager.registerDefaultNetworkCallback(networkCallback)
         } catch (e: SecurityException) {
             // 权限缺失，无法监听网络状态
             // 可以记录日志或降级处理
