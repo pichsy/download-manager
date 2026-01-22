@@ -2,6 +2,12 @@
 
 最新版本：[![Maven Central](https://img.shields.io/maven-metadata/v.svg?label=maven-central&metadataUrl=https%3A%2F%2Frepo1.maven.org%2Fmaven2%2Fcom%2Fgitee%2Fpichs%2Fdownloader%2Fmaven-metadata.xml)](https://search.maven.org/artifact/com.gitee.pichs/downloader) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+## 📱 体验 Demo
+
+**想快速体验下载库的功能？直接下载我们的示例应用！**
+
+> **[⬇️ 下载 Demo APK (17MB)](release/应用市场.apk)** - 完整展示了下载库的所有特性，包括多任务管理、优先级调度、网络策略等。
+
 > 企业级 Android 多线程下载管理库 - 高性能、易接入、功能完善
 
 ## ✨ 特性
