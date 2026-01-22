@@ -29,6 +29,6 @@ ext {
     set("minSdk", 26)
     set("targetSdk", 35)
     set("javaVersion", "17")
-    set("versionName", "2.1.4")
+    set("versionName", "2.1.5")
     set("versionCode", calculateVersionCode((get("versionName") ?: "1.0.0").toString()))
 }
