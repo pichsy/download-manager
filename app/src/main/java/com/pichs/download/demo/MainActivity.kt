@@ -82,9 +82,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 putExtra("packageName", packageName)
             })
         } else {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-            intent.data = Uri.parse("package:$packageName")
-            startActivity(intent)
+//            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+//            intent.data = Uri.parse("package:$packageName")
+//            startActivity(intent)
         }
 
 
@@ -213,18 +213,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             downloadAllWithPriority()
         }
 
-        // 暂停全部
-        binding.btnPauseAll.fastClick {
-            DownloadManager.pauseAll()
-            ToastUtils.show("已暂停全部任务")
-        }
-
-        // 恢复全部（测试优先级恢复顺序）
-        binding.btnResumeAll.fastClick {
-            DownloadManager.resumeAll()
-            ToastUtils.show("恢复全部 - 观察高优先级是否先执行")
-        }
-
         // 订阅 ViewModel 的 UI 事件
         lifecycleScope.launch {
             viewModel.uiEvent.collect { event ->
@@ -273,32 +261,49 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             val filteredHigh = highList.filter { !isUpToDate(it) }
             val filteredUrgent = urgentList.filter { !isUpToDate(it) }
 
-            val total = filteredNormal.size + filteredHigh.size + filteredUrgent.size
+            val allApps = filteredNormal + filteredHigh + filteredUrgent
+
+            if (allApps.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    ToastUtils.show("所有应用都已是最新版本")
+                }
+                return@launch
+            }
 
             withContext(Dispatchers.Main) {
-                if (total == 0) {
-                    ToastUtils.show("所有应用都已是最新版本")
-                    return@withContext
+//                ToastUtils.show("开始下载：必装(${filteredUrgent.size}) + 推荐(${filteredHigh.size}) + 常用(${filteredNormal.size})")
+
+                // ✅ 使用批量接口，统一网络检查（只弹一次确认框）
+                val builders = allApps.map { item ->
+                    val meta = ExtraMeta(
+                        name = item.name,
+                        packageName = item.packageName.orEmpty(),
+                        versionCode = item.versionCode,
+                        icon = item.icon
+                    )
+
+                    val priority = when (item.priority) {
+                        DownloadPriority.URGENT.value -> DownloadPriority.URGENT
+                        DownloadPriority.HIGH.value -> DownloadPriority.HIGH
+                        DownloadPriority.LOW.value -> DownloadPriority.LOW
+                        else -> DownloadPriority.NORMAL
+                    }
+
+                    DownloadManager.downloadWithPriority(item.url, priority)
+                        .fileName(item.name.replace(" ", "_") + ".apk")
+                        .estimatedSize(item.size)
+                        .extras(meta.toJson())
                 }
-                ToastUtils.show("开始下载：必装(${filteredUrgent.size}) + 推荐(${filteredHigh.size}) + 常用(${filteredNormal.size})")
-            }
 
-            if (total == 0) return@launch
+                // 批量启动（startTasks内部会自动做批量网络检查）
+                val tasks = DownloadManager.startTasks(builders)
 
-            // 按优先级从低到高添加，测试抢占效果
-            // 先添加常用应用（低优先级）
-            filteredNormal.forEach { item ->
-                startDownloadWithPriority(item, DownloadPriority.NORMAL.value)
-            }
+                // 更新 item.task
+                tasks.forEachIndexed { index, task ->
+                    allApps[index].task = task
+                }
 
-            // 再添加推荐应用（中优先级）
-            filteredHigh.forEach { item ->
-                startDownloadWithPriority(item, DownloadPriority.HIGH.value)
-            }
-
-            // 最后添加必装应用（高优先级）- 应该抢占低优先级
-            filteredUrgent.forEach { item ->
-                startDownloadWithPriority(item, DownloadPriority.URGENT.value)
+                DownloadLog.d("MainActivity", "批量下载已创建 ${tasks.size} 个任务")
             }
         }
     }
@@ -310,38 +315,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         val pkg = item.packageName.orEmpty()
         val storeVC = item.versionCode
         return pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(this, pkg, storeVC)
-    }
-
-    private fun startDownloadWithPriority(item: DownloadItem, priority: Int) {
-        val existing = DownloadManager.getTaskByUrl(item.url)
-        if (existing != null) {
-            when (existing.status) {
-                DownloadStatus.DOWNLOADING, DownloadStatus.WAITING, DownloadStatus.PENDING -> return
-                DownloadStatus.PAUSED -> {
-                    DownloadManager.resume(existing.id)
-                    return
-                }
-
-                DownloadStatus.COMPLETED -> {
-                    val file = File(existing.filePath, existing.fileName)
-                    if (file.exists()) return
-                    DownloadManager.deleteTask(existing.id, deleteFile = false)
-                }
-
-                else -> {
-                    DownloadManager.deleteTask(existing.id, deleteFile = false)
-                }
-            }
-        }
-
-        // 准备 extras，包含图标和包名信息
-        val meta = ExtraMeta(
-            name = item.name, packageName = item.packageName.orEmpty(), versionCode = item.versionCode, icon = item.icon
-        )
-        val extrasJson = meta.toJson()
-
-        val task = DownloadManager.download(item.url).fileName(item.name.replace(" ", "_") + ".apk").priority(priority).extras(extrasJson).start()
-        item.task = task
     }
 
     @SuppressLint("SetTextI18n")
@@ -423,17 +396,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         when (priority) {
             DownloadPriority.URGENT.value -> {
                 vb.tvPriority.text = "必装"
-                vb.tvPriority.setBackgroundColor(Color.parseColor("#FF5722"))
+                vb.tvPriority.setNormalBackgroundColor(Color.parseColor("#FF5722"))
             }
 
             DownloadPriority.HIGH.value -> {
                 vb.tvPriority.text = "推荐"
-                vb.tvPriority.setBackgroundColor(Color.parseColor("#2196F3"))
+                vb.tvPriority.setNormalBackgroundColor(Color.parseColor("#2196F3"))
             }
 
             else -> {
                 vb.tvPriority.text = "常用"
-                vb.tvPriority.setBackgroundColor(Color.parseColor("#607D8B"))
+                vb.tvPriority.setNormalBackgroundColor(Color.parseColor("#607D8B"))
             }
         }
 
@@ -524,8 +497,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 }
                 return@launch
             }
-            val existing = DownloadManager.getTaskByUrl(item.url)
-            val task = item.task ?: existing
+            // ✅ 始终获取最新任务状态，避免使用过期缓存
+            val task = DownloadManager.getTaskByUrl(item.url)
+            if (task != null) {
+                item.task = task  // ✅ 同步缓存
+            }
             when (task?.status) {
                 DownloadStatus.DOWNLOADING -> {
                     // 暂停任务，Flow监听器会自动更新UI
@@ -559,25 +535,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 }
 
                 DownloadStatus.FAILED -> startDownload(item, vb)
-                else -> if (existing == null) {
-                    startDownload(item, vb)
-                } else {
-                    when (existing.status) {
-                        DownloadStatus.CANCELLED, DownloadStatus.FAILED -> startDownload(item, vb)
-                        DownloadStatus.COMPLETED -> {
-                            val f = File(existing.filePath, existing.fileName)
-                            if (!f.exists()) {
-                                DownloadManager.deleteTask(existing.id, deleteFile = false)
-                                item.task = null
-                                startDownload(item, vb)
-                            } else {
-                                bindButtonUI(vb, existing, item)
-                            }
-                        }
 
-                        DownloadStatus.PAUSED -> DownloadManager.resume(existing.id)
-                        else -> bindButtonUI(vb, existing, item)
-                    }
+                else -> {
+                    // 没有任务，开始新下载
+                    startDownload(item, vb)
                 }
             }
         }
