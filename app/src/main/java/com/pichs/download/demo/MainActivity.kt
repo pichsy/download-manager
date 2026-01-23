@@ -6,9 +6,7 @@ import android.content.res.Configuration
 import android.net.Uri
 import androidx.core.content.FileProvider
 import com.bumptech.glide.Glide
-import com.drake.brv.utils.linear
 import com.drake.brv.utils.setup
-import com.hjq.permissions.XXPermissions
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.core.DownloadPriority
 import com.pichs.download.model.DownloadStatus
@@ -19,7 +17,6 @@ import kotlinx.coroutines.withContext
 import androidx.lifecycle.lifecycleScope
 import androidx.activity.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.hjq.permissions.Permission
 import com.pichs.download.demo.databinding.ActivityMainBinding
 import com.pichs.download.demo.databinding.ItemHorizontalAppBinding
 import com.pichs.download.utils.DownloadLog
@@ -32,8 +29,9 @@ import java.io.File
 import android.provider.Settings
 import android.graphics.Color
 import com.pichs.download.demo.floatwindow.FloatBallView
-import com.pichs.download.demo.ui.AppStoreActivity
+import com.pichs.shanhai.base.utils.LogUtils
 import kotlinx.coroutines.delay
+import kotlin.jvm.java
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
 
@@ -57,87 +55,93 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     val REMOVE_PERMISSIONS = "com.gankao.dpc.request.REMOVE_PERMISSIONS"
 
     override fun afterOnCreate() {
-        NetworkMonitor(
-            onNetworkChanged = { isWifi ->
-                DownloadLog.d("网络类型变化，isWifi=$isWifi")
-                if (isWifi) {
-                    ToastUtils.show("WIFI已连接")
-                    DownloadManager.onWifiConnected()
-                } else {
-                    ToastUtils.show("数据流量已连接")
-                    DownloadManager.onWifiDisconnected()
-                }
-                DownloadManager.onNetworkRestored()
-            },
-            onNetworkLost = {
-                DownloadLog.d("网络断开")
-                ToastUtils.show("网络已断开")
-                DownloadManager.onWifiDisconnected()
+        NetworkMonitor(onNetworkChanged = { isWifi ->
+            DownloadLog.d("网络类型变化，isWifi=$isWifi")
+            if (isWifi) {
+                ToastUtils.show("WIFI已连接")
+            } else {
+                ToastUtils.show("数据流量已连接")
             }
-        ).register(this)
+            // 统一调用 onNetworkRestored，内部会判断当前网络类型并做对应处理
+            DownloadManager.onNetworkRestored()
+        }, onNetworkLost = {
+            DownloadLog.d("网络断开")
+            ToastUtils.show("网络已断开")
+            // 网络断开时不需要调用任何方法
+            // 正在下载的任务会因为网络失败而自动暂停
+        }).register(this)
 
-        binding.tvTitle.fastClick {
-            startActivity(Intent(this, AppStoreActivity::class.java))
-        }
+        binding.tvTitle.fastClick {}
 
         binding.ivDownloadSettings.fastClick {
             startActivity(Intent(this, AppUseDataSettingsActivity::class.java))
         }
 
-        lifecycleScope.launch {
-            sendBroadcast(Intent(GRANT_PERMISSIONS).apply {
+        if (Settings.canDrawOverlays(this@MainActivity)) {
+            showFloatBall()
+            sendBroadcast(Intent(REMOVE_PERMISSIONS).apply {
                 putExtra("packageName", packageName)
             })
-
-            delay(5000)
-
-            requestPermissions(
-                arrayOf(
-                    android.Manifest.permission.ACCESS_FINE_LOCATION,
-                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
-                    android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-                    android.Manifest.permission.READ_PHONE_STATE,
-                    android.Manifest.permission.READ_PHONE_NUMBERS,
-                    android.Manifest.permission.CALL_PHONE,
-                    android.Manifest.permission.ANSWER_PHONE_CALLS,
-                    android.Manifest.permission.READ_CALL_LOG,
-                    android.Manifest.permission.WRITE_CALL_LOG,
-                    android.Manifest.permission.READ_SMS,
-                    android.Manifest.permission.SEND_SMS,
-                    android.Manifest.permission.RECEIVE_SMS,
-                    android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                    android.Manifest.permission.READ_MEDIA_IMAGES,
-                    android.Manifest.permission.READ_MEDIA_VIDEO,
-                    android.Manifest.permission.READ_MEDIA_AUDIO,
-                    android.Manifest.permission.CAMERA,
-                    android.Manifest.permission.RECORD_AUDIO,
-                    android.Manifest.permission.READ_CONTACTS,
-                    android.Manifest.permission.WRITE_CONTACTS,
-                    android.Manifest.permission.READ_CALENDAR,
-                    android.Manifest.permission.WRITE_CALENDAR,
-                    android.Manifest.permission.BLUETOOTH_CONNECT,
-                    android.Manifest.permission.BLUETOOTH_SCAN,
-                    android.Manifest.permission.BLUETOOTH_ADVERTISE,
-                    android.Manifest.permission.NEARBY_WIFI_DEVICES,
-                    android.Manifest.permission.POST_NOTIFICATIONS,
-                    android.Manifest.permission.SYSTEM_ALERT_WINDOW,
-                    "com.android.permission.GET_INSTALLED_APPS",
-                ), 1002
-            )
-
-            if (Settings.canDrawOverlays(this@MainActivity)) {
-                showFloatBall()
-                delay(3000)
-                sendBroadcast(Intent(REMOVE_PERMISSIONS).apply {
-                    putExtra("packageName", packageName)
-                })
-            } else {
-                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                intent.data = Uri.parse("package:$packageName")
-                startActivity(intent)
-            }
+        } else {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+            intent.data = Uri.parse("package:$packageName")
+            startActivity(intent)
         }
+
+//            lifecycleScope.launch {
+//                sendBroadcast(Intent(GRANT_PERMISSIONS).apply {
+//                    putExtra("packageName", packageName)
+//                })
+
+//                delay(5000)
+
+//                requestPermissions(
+//                    arrayOf(
+//                        android.Manifest.permission.ACCESS_FINE_LOCATION,
+//                        android.Manifest.permission.ACCESS_COARSE_LOCATION,
+//                        android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+//                        android.Manifest.permission.READ_PHONE_STATE,
+//                        android.Manifest.permission.READ_PHONE_NUMBERS,
+//                        android.Manifest.permission.CALL_PHONE,
+//                        android.Manifest.permission.ANSWER_PHONE_CALLS,
+//                        android.Manifest.permission.READ_CALL_LOG,
+//                        android.Manifest.permission.WRITE_CALL_LOG,
+//                        android.Manifest.permission.READ_SMS,
+//                        android.Manifest.permission.SEND_SMS,
+//                        android.Manifest.permission.RECEIVE_SMS,
+//                        android.Manifest.permission.READ_EXTERNAL_STORAGE,
+//                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+//                        android.Manifest.permission.READ_MEDIA_IMAGES,
+//                        android.Manifest.permission.READ_MEDIA_VIDEO,
+//                        android.Manifest.permission.READ_MEDIA_AUDIO,
+//                        android.Manifest.permission.CAMERA,
+//                        android.Manifest.permission.RECORD_AUDIO,
+//                        android.Manifest.permission.READ_CONTACTS,
+//                        android.Manifest.permission.WRITE_CONTACTS,
+//                        android.Manifest.permission.READ_CALENDAR,
+//                        android.Manifest.permission.WRITE_CALENDAR,
+//                        android.Manifest.permission.BLUETOOTH_CONNECT,
+//                        android.Manifest.permission.BLUETOOTH_SCAN,
+//                        android.Manifest.permission.BLUETOOTH_ADVERTISE,
+//                        android.Manifest.permission.NEARBY_WIFI_DEVICES,
+//                        android.Manifest.permission.POST_NOTIFICATIONS,
+//                        android.Manifest.permission.SYSTEM_ALERT_WINDOW,
+//                        "com.android.permission.GET_INSTALLED_APPS",
+//                    ), 1002
+//                )
+
+//                if (Settings.canDrawOverlays(this@MainActivity)) {
+//                    showFloatBall()
+//                    delay(3000)
+//                    sendBroadcast(Intent(REMOVE_PERMISSIONS).apply {
+//                        putExtra("packageName", packageName)
+//                    })
+//                } else {
+//                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+//                    intent.data = Uri.parse("package:$packageName")
+//                    startActivity(intent)
+//                }
+//            }
 
         initListener()
         initCategoryLists()
@@ -160,8 +164,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     appList.forEach { item ->
                         val pkg = item.packageName.orEmpty()
                         val storeVC = item.versionCode
-                        item.isInstalled = pkg.isNotBlank() &&
-                                AppUtils.isInstalledAndUpToDate(this@MainActivity, pkg, storeVC)
+                        item.isInstalled = pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(this@MainActivity, pkg, storeVC)
                     }
                 }
 
@@ -195,7 +198,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         }
     }
 
-    private var isFirstNetRegister = true
 
     private fun initListener() {
         DownloadLog.d("MainActivity", "======> initListener() 开始执行")
@@ -231,64 +233,21 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.confirmBatchDownload(event.apps)
                         }
-                        CellularConfirmDialogActivity.start(this@MainActivity, event.totalSize, event.apps.size)
+                        CellularConfirmDialog.show(event.totalSize, event.apps.size)
                     }
 
                     is UiEvent.ShowWifiOnlyDialog -> {
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.startDownloadAndPause(event.apps)
                         }
-                        CellularConfirmDialogActivity.start(
-                            this@MainActivity,
-                            event.totalSize,
-                            event.apps.size,
-                            CellularConfirmDialogActivity.MODE_WIFI_ONLY
-                        )
+                        CellularConfirmDialog.show(event.totalSize, event.apps.size, CellularConfirmDialog.MODE_WIFI_ONLY)
                     }
 
                     is UiEvent.ShowNoNetworkDialog -> {
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.startDownloadAndPauseForNetwork(event.apps)
                         }
-                        CellularConfirmDialogActivity.start(
-                            this@MainActivity,
-                            event.totalSize,
-                            event.apps.size,
-                            CellularConfirmDialogActivity.MODE_NO_NETWORK
-                        )
-                    }
-                }
-            }
-        }
-
-        // 订阅全局下载 UI 事件
-        lifecycleScope.launch {
-            DownloadUiEventManager.uiEvent.collect { event ->
-                when (event) {
-                    is DownloadUiEvent.ShowToast -> ToastUtils.show(event.message)
-                    is DownloadUiEvent.ShowCellularConfirmDialog -> {
-                        CellularConfirmViewModel.pendingAction = event.onConfirm
-                        CellularConfirmDialogActivity.start(this@MainActivity, event.totalSize, event.count)
-                    }
-
-                    is DownloadUiEvent.ShowWifiOnlyDialog -> {
-                        CellularConfirmViewModel.pendingAction = event.onConfirm
-                        CellularConfirmDialogActivity.start(
-                            this@MainActivity,
-                            event.totalSize,
-                            event.count,
-                            CellularConfirmDialogActivity.MODE_WIFI_ONLY
-                        )
-                    }
-
-                    is DownloadUiEvent.ShowNoNetworkDialog -> {
-                        CellularConfirmViewModel.pendingAction = event.onConfirm
-                        CellularConfirmDialogActivity.start(
-                            this@MainActivity,
-                            event.totalSize,
-                            event.count,
-                            CellularConfirmDialogActivity.MODE_NO_NETWORK
-                        )
+                        CellularConfirmDialog.show(event.totalSize, event.apps.size, CellularConfirmDialog.MODE_NO_NETWORK)
                     }
                 }
             }
@@ -376,18 +335,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
         // 准备 extras，包含图标和包名信息
         val meta = ExtraMeta(
-            name = item.name,
-            packageName = item.packageName.orEmpty(),
-            versionCode = item.versionCode,
-            icon = item.icon
+            name = item.name, packageName = item.packageName.orEmpty(), versionCode = item.versionCode, icon = item.icon
         )
         val extrasJson = meta.toJson()
 
-        val task = DownloadManager.download(item.url)
-            .fileName(item.name.replace(" ", "_") + ".apk")
-            .priority(priority)
-            .extras(extrasJson)
-            .start()
+        val task = DownloadManager.download(item.url).fileName(item.name.replace(" ", "_") + ".apk").priority(priority).extras(extrasJson).start()
         item.task = task
     }
 
@@ -403,6 +355,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 val vb = getBinding<ItemHorizontalAppBinding>()
                 bindHorizontalItem(vb, item, DownloadPriority.URGENT.value)
             }
+            onPayload {
+                val payload = it.firstOrNull() as? String?
+                if (payload.isNullOrEmpty()) return@onPayload
+                val item = getModel<DownloadItem>()
+                val vb = getBinding<ItemHorizontalAppBinding>()
+
+            }
         }.models = urgentList
 
         // 推荐应用列表（横向）
@@ -415,6 +374,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 val vb = getBinding<ItemHorizontalAppBinding>()
                 bindHorizontalItem(vb, item, DownloadPriority.HIGH.value)
             }
+            onPayload {
+                val payload = it.firstOrNull() as? String?
+                if (payload.isNullOrEmpty()) return@onPayload
+                val item = getModel<DownloadItem>()
+                val vb = getBinding<ItemHorizontalAppBinding>()
+
+            }
         }.models = highList
 
         // 常用应用列表（横向）
@@ -426,6 +392,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 val item = getModel<DownloadItem>()
                 val vb = getBinding<ItemHorizontalAppBinding>()
                 bindHorizontalItem(vb, item, DownloadPriority.NORMAL.value)
+            }
+            onPayload {
+                val payload = it.firstOrNull() as? String?
+                if (payload.isNullOrEmpty()) return@onPayload
+                val item = getModel<DownloadItem>()
+                val vb = getBinding<ItemHorizontalAppBinding>()
+
             }
         }.models = normalList
     }
@@ -481,10 +454,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
      * 统一的按钮状态绑定方法（复用现有逻辑）
      */
     private fun bindButtonUI(
-        vb: ItemHorizontalAppBinding,
-        task: DownloadTask?,
-        item: DownloadItem? = null,
-        checkInstalled: Boolean = false
+        vb: ItemHorizontalAppBinding, task: DownloadTask?, item: DownloadItem? = null, checkInstalled: Boolean = false
     ) {
         // 使用缓存的安装状态，避免主线程查询 PackageManager
         if (checkInstalled && item != null && item.isInstalled) {

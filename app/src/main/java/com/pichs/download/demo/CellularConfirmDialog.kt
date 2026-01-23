@@ -62,12 +62,8 @@ class CellularConfirmDialog(
                 Log.w(TAG, "show: topActivity is null, cannot show dialog")
                 return null
             }
-            if (topActivity.isFinishing) {
-                Log.w(TAG, "show: topActivity is finishing, class=${topActivity.javaClass.simpleName}")
-                return null
-            }
-            if (topActivity.isDestroyed) {
-                Log.w(TAG, "show: topActivity is destroyed, class=${topActivity.javaClass.simpleName}")
+            if (topActivity.isFinishing || topActivity.isDestroyed) {
+                Log.w(TAG, "show: topActivity is finishing or is destroyed, class=${topActivity.javaClass.simpleName}")
                 return null
             }
             return try {

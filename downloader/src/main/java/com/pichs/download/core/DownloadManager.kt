@@ -757,7 +757,13 @@ object DownloadManager {
             ?: com.pichs.download.model.CheckBeforeResult.Allow
     }
 
-    // 网络恢复相关API
+    /**
+     * 网络状态变化时调用（推荐使用）
+     * 统一入口，内部会判断当前网络类型并做对应处理：
+     * - WiFi 可用：恢复所有网络相关暂停的任务
+     * - 仅流量可用：恢复已确认流量的任务，未确认的触发确认流程
+     * - 无网络：不做任何处理
+     */
     fun onNetworkRestored() {
         networkAutoResumeManager?.onNetworkRestored()
     }
@@ -828,19 +834,14 @@ object DownloadManager {
     }
     
     /**
-     * WiFi 连接事件（使用端调用）
+     * 获取决策回调（内部使用）
      */
-    fun onWifiConnected() {
-        networkRuleManager?.onWifiConnected()
+    internal fun getCheckAfterCallback(): CheckAfterCallback? {
+        return networkRuleManager?.checkAfterCallback
     }
     
-    /**
-     * WiFi 断开事件（使用端调用）
-     */
-    fun onWifiDisconnected() {
-        networkRuleManager?.onWifiDisconnected()
-    }
-    
+
+
     /**
      * 前置检查：检查是否可以创建新下载任务
      * 在创建任务前调用，判断网络状态和配置

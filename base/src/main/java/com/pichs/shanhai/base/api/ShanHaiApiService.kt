@@ -19,10 +19,6 @@ interface ShanHaiApiService {
 
     @POST(ShanHaiApi.DESTROY_ACCOUNT)
     suspend fun destroyAccount(): BaseData<Any>?
-
-    @POST(ShanHaiApi.LOAD_UPDATE_APP_LIST)
-    suspend fun loadUpdateAppList(@Body body: UpdateAppBody): BaseResponse<MutableList<UpdateAppInfo>>?
-
 }
 
 @Keep

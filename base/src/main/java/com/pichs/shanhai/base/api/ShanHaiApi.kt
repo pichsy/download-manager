@@ -6,12 +6,8 @@ import okhttp3.Interceptor
 
 object ShanHaiApi : BaseApi<ShanHaiApiService>() {
 
-//    private const val BASE_URL_TEST = "http://172.16.100.17:8080/"
-    private const val BASE_URL_RELEASE = "https://api.gankao.com/"
-
-
-    // 加载更新的设备信息
-     const val LOAD_UPDATE_APP_LIST = "api-mdm/dpc/loadUpdateAppListForAiPhone"
+    private const val BASE_URL_TEST = "http://172.16.100.17:8080/"
+    private const val BASE_URL_RELEASE = "http://172.16.100.17:8080/"
 
     override fun getReleaseBaseUrl(): String {
         return BASE_URL_RELEASE

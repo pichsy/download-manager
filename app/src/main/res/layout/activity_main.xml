@@ -23,19 +23,17 @@
             android:id="@+id/tv_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingVertical="6dp"
-            android:layout_marginStart="12dp"
             android:gravity="center"
-            android:text="应用商店"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
+            android:text="应用商店"
             android:textColor="#000"
             android:textSize="17sp"
             android:textStyle="bold"
-            app:xp_radius="120dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:xp_radius="120dp" />
 
         <com.pichs.xwidget.view.XImageView
             android:id="@+id/iv_download_manager"
@@ -149,33 +147,33 @@
                 android:layout_marginTop="32dp"
                 android:layout_marginEnd="16dp"
                 android:gravity="center"
+                android:paddingHorizontal="16dp"
                 android:text="一键下载全部（测试优先级）"
                 android:textColor="#fff"
                 android:textSize="14dp"
                 android:textStyle="bold"
-                app:xp_radius="25dp"
-                android:paddingHorizontal="16dp"
-                app:xp_backgroundStartColor="#FF5722"
                 app:xp_backgroundEndColor="#E91E63"
-                app:xp_backgroundOrientation="horizontal" />
+                app:xp_backgroundOrientation="horizontal"
+                app:xp_backgroundStartColor="#FF5722"
+                app:xp_radius="25dp" />
 
             <com.pichs.xwidget.roundview.XRoundButton
                 android:id="@+id/btn_pause_all"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:paddingHorizontal="16dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="12dp"
                 android:layout_marginEnd="16dp"
                 android:gravity="center"
+                android:paddingHorizontal="16dp"
                 android:text="暂停全部"
                 android:textColor="#fff"
                 android:textSize="14dp"
                 android:textStyle="bold"
-                app:xp_radius="25dp"
-                app:xp_backgroundStartColor="#607D8B"
                 app:xp_backgroundEndColor="#455A64"
-                app:xp_backgroundOrientation="horizontal" />
+                app:xp_backgroundOrientation="horizontal"
+                app:xp_backgroundStartColor="#607D8B"
+                app:xp_radius="25dp" />
 
             <com.pichs.xwidget.roundview.XRoundButton
                 android:id="@+id/btn_resume_all"
@@ -184,16 +182,16 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="12dp"
                 android:layout_marginEnd="16dp"
-                android:paddingHorizontal="16dp"
                 android:gravity="center"
+                android:paddingHorizontal="16dp"
                 android:text="恢复全部（测试恢复顺序）"
                 android:textColor="#fff"
                 android:textSize="14dp"
                 android:textStyle="bold"
-                app:xp_radius="25dp"
-                app:xp_backgroundStartColor="#4CAF50"
                 app:xp_backgroundEndColor="#2E7D32"
-                app:xp_backgroundOrientation="horizontal" />
+                app:xp_backgroundOrientation="horizontal"
+                app:xp_backgroundStartColor="#4CAF50"
+                app:xp_radius="25dp" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
