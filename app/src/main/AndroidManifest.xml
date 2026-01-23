@@ -190,7 +190,7 @@
             android:launchMode="standard" />
 
         <activity
-            android:name="com.pichs.download.demo.AppUseDataSettingsActivity"
+            android:name="com.pichs.download.demo.CellularSettingsActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|fontScale|density|colorMode|navigation|layoutDirection|uiMode|screenLayout|smallestScreenSize"
             android:exported="true"
             android:launchMode="standard" />

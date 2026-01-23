@@ -1,15 +1,15 @@
 package com.pichs.download.demo
 
 import com.pichs.download.core.DownloadManager
-import com.pichs.download.demo.databinding.ActivityAppUseDataSettingsBinding
+import com.pichs.download.demo.databinding.ActivityCellularSettingsBinding
 import com.pichs.download.model.CellularThreshold
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.utils.toast.ToastUtils
 import com.pichs.xbase.clickhelper.fastClick
 
-class AppUseDataSettingsActivity : BaseActivity<ActivityAppUseDataSettingsBinding>() {
+class CellularSettingsActivity : BaseActivity<ActivityCellularSettingsBinding>() {
 
-    companion object {
+    companion object Companion {
         private const val PREFS_NAME = "app_settings_cache"
     }
 

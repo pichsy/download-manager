@@ -2,7 +2,6 @@ package com.pichs.download.demo
 
 import android.content.Context
 import android.content.Intent
-import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.animation.Animation
@@ -137,7 +136,7 @@ class CellularConfirmDialog(
         binding.tvGoSettings.fastClick {
             runCatching {
                 context.startActivity(Intent().apply {
-                    setClassName(UiKit.getPackageName(), AppUseDataSettingsActivity::class.java.name)
+                    setClassName(UiKit.getPackageName(), CellularSettingsActivity::class.java.name)
                 })
             }
             dismiss()

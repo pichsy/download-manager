@@ -358,7 +358,7 @@ binding.llDownloadDataUseGroup.setOnRadioCheckedListener { _, _, isChecked, posi
 
 ## 五、智能阈值缓存
 
-**路径**: `app/src/main/java/com/pichs/download/demo/AppUseDataSettingsActivity.kt`
+**路径**: `app/src/main/java/com/pichs/download/demo/CellularSettingsActivity.kt`
 
 当用户选择"智能提醒"模式并选择了阈值后，即使切换到其他模式（每次提醒/不再提醒），也会记住上次选择的阈值。下次再切换回"智能提醒"时，自动恢复上次的选择。
 

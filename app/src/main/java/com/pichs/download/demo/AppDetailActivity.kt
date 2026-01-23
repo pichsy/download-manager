@@ -13,11 +13,11 @@ import com.pichs.download.model.DownloadTask
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import com.pichs.download.demo.databinding.ActivityAppDetailBinding
+import com.pichs.shanhai.base.base.BaseActivity
 import java.io.File
 
-class AppDetailActivity : AppCompatActivity() {
+class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
 
-    private lateinit var binding: ActivityAppDetailBinding
 
     private var url: String = ""
     private var name: String = ""
@@ -34,10 +34,7 @@ class AppDetailActivity : AppCompatActivity() {
     private var task: DownloadTask? = null
     private val flowListener = DownloadManager.flowListener
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityAppDetailBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+    override fun afterOnCreate() {
 
         url = intent.getStringExtra("url") ?: ""
         name = intent.getStringExtra("name") ?: ""
@@ -82,9 +79,11 @@ class AppDetailActivity : AppCompatActivity() {
                 this.task = t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
                 bindButtonUI(this.task)
             }
+
             DownloadStatus.PAUSED -> {
                 DownloadManager.resume(t.id)
             }
+
             DownloadStatus.PENDING, DownloadStatus.WAITING -> {
                 // 等待中可暂停：从队列移出
                 DownloadManager.pause(t.id)
@@ -92,6 +91,7 @@ class AppDetailActivity : AppCompatActivity() {
                 this.task = t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
                 bindButtonUI(this.task)
             }
+
             DownloadStatus.COMPLETED -> {
                 // 对齐首页：优先打开已安装；否则检查文件健康，健康则安装，否则触发重新下载
                 val pkg = packageNameStr
@@ -110,10 +110,12 @@ class AppDetailActivity : AppCompatActivity() {
                     startOrRestartDownload(dir)
                 }
             }
+
             DownloadStatus.FAILED -> {
                 // 失败重试
                 DownloadManager.resume(t.id)
             }
+
             else -> {}
         }
     }
@@ -124,20 +126,24 @@ class AppDetailActivity : AppCompatActivity() {
     private fun requestDownloadWithPreCheck(dir: String) {
         lifecycleScope.launch {
             val result = DownloadManager.checkBeforeCreate(size)
-            
+
             when (result) {
                 is com.pichs.download.model.CheckBeforeResult.Allow -> {
                     doStartDownload(dir)
                 }
+
                 is com.pichs.download.model.CheckBeforeResult.NoNetwork -> {
                     showNoNetworkDialog(dir)
                 }
+
                 is com.pichs.download.model.CheckBeforeResult.WifiOnly -> {
                     showWifiOnlyDialog(dir)
                 }
+
                 is com.pichs.download.model.CheckBeforeResult.NeedConfirmation -> {
                     showCellularConfirmDialog(dir, result.estimatedSize)
                 }
+
                 is com.pichs.download.model.CheckBeforeResult.UserControlled -> {
                     if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
                         showCellularConfirmDialog(dir, result.estimatedSize)
@@ -148,22 +154,22 @@ class AppDetailActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun showNoNetworkDialog(dir: String) {
         CellularConfirmViewModel.pendingAction = {
             doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.NETWORK_ERROR)
         }
-        CellularConfirmDialog.show( size, 1, CellularConfirmDialog.MODE_NO_NETWORK)
+        CellularConfirmDialog.show(size, 1, CellularConfirmDialog.MODE_NO_NETWORK)
 
     }
-    
+
     private fun showWifiOnlyDialog(dir: String) {
         CellularConfirmViewModel.pendingAction = {
             doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE)
         }
         CellularConfirmDialog.show(size, 1, CellularConfirmDialog.MODE_WIFI_ONLY)
     }
-    
+
     private fun showCellularConfirmDialog(dir: String, totalSize: Long) {
         // 创建临时 DownloadItem 用于弹窗
         val item = DownloadItem(
@@ -177,7 +183,7 @@ class AppDetailActivity : AppCompatActivity() {
         CellularConfirmViewModel.pendingAction = {
             doStartDownload(dir, cellularConfirmed = true)
         }
-        CellularConfirmDialog.show( totalSize, 1)
+        CellularConfirmDialog.show(totalSize, 1)
     }
 
     private fun doStartDownload(dir: String, cellularConfirmed: Boolean = false) {
@@ -200,7 +206,7 @@ class AppDetailActivity : AppCompatActivity() {
             .start()
         bindButtonUI(task)
     }
-    
+
     private fun doStartDownloadAndPause(dir: String, pauseReason: com.pichs.download.model.PauseReason) {
         val storeVC = CatalogRepository.getStoreVersionCode(this, packageNameStr) ?: 0L
         val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
@@ -218,12 +224,12 @@ class AppDetailActivity : AppCompatActivity() {
             .estimatedSize(size)
             .extras(extrasJson)
             .start()
-        
+
         // 立即暂停，设置暂停原因
         DownloadManager.pauseTask(newTask.id, pauseReason)
         task = newTask.copy(status = DownloadStatus.PAUSED, pauseReason = pauseReason)
         bindButtonUI(task)
-        
+
         val msg = when (pauseReason) {
             com.pichs.download.model.PauseReason.NETWORK_ERROR -> "已加入下载队列，等待网络连接"
             com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE -> "已加入下载队列，等待WiFi连接"
@@ -231,7 +237,7 @@ class AppDetailActivity : AppCompatActivity() {
         }
         android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()
     }
-    
+
     private fun startOrRestartDownload(dir: String) {
         requestDownloadWithPreCheck(dir)
     }
@@ -243,22 +249,25 @@ class AppDetailActivity : AppCompatActivity() {
             binding.btnDownload.isEnabled = true
             return
         }
-        
+
         when (task?.status) {
             DownloadStatus.DOWNLOADING -> {
                 binding.btnDownload.setText("${task.progress}%")
                 binding.btnDownload.setProgress(task.progress)
                 binding.btnDownload.isEnabled = true
             }
+
             DownloadStatus.PAUSED -> {
                 binding.btnDownload.setText("继续")
                 binding.btnDownload.setProgress(task.progress)
                 binding.btnDownload.isEnabled = true
             }
+
             DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                 binding.btnDownload.setText("等待中")
                 binding.btnDownload.isEnabled = true
             }
+
             DownloadStatus.COMPLETED -> {
                 val health = task.let { AppUtils.checkFileHealth(it) }
                 if (health == AppUtils.FileHealth.OK) {
@@ -271,10 +280,12 @@ class AppDetailActivity : AppCompatActivity() {
                     binding.btnDownload.isEnabled = true
                 }
             }
+
             DownloadStatus.FAILED -> {
                 binding.btnDownload.setText("重试")
                 binding.btnDownload.isEnabled = true
             }
+
             else -> {
                 binding.btnDownload.setText("下载")
                 binding.btnDownload.setProgress(0)

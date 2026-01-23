@@ -30,8 +30,6 @@ import android.provider.Settings
 import android.graphics.Color
 import com.pichs.download.demo.floatwindow.FloatBallView
 import com.pichs.shanhai.base.receiver.InstallBroadcastReceiver
-import com.pichs.shanhai.base.utils.LogUtils
-import kotlinx.coroutines.delay
 import kotlin.jvm.java
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
@@ -75,7 +73,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         binding.tvTitle.fastClick {}
 
         binding.ivDownloadSettings.fastClick {
-            startActivity(Intent(this, AppUseDataSettingsActivity::class.java))
+            startActivity(Intent(this, CellularSettingsActivity::class.java))
         }
 
         if (Settings.canDrawOverlays(this@MainActivity)) {
