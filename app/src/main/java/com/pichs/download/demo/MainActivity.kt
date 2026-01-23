@@ -219,24 +219,24 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 when (event) {
                     is UiEvent.ShowToast -> ToastUtils.show(event.message)
                     is UiEvent.ShowCellularConfirmDialog -> {
-                        CellularConfirmViewModel.pendingAction = {
-                            viewModel.confirmBatchDownload(event.apps)
-                        }
-                        CellularConfirmDialog.show(event.totalSize, event.apps.size)
+//                        CellularConfirmViewModel.pendingAction = {
+//                            viewModel.confirmBatchDownload(event.apps)
+//                        }
+//                        CellularConfirmDialog.show(event.totalSize, event.apps.size)
                     }
 
                     is UiEvent.ShowWifiOnlyDialog -> {
-                        CellularConfirmViewModel.pendingAction = {
-                            viewModel.startDownloadAndPause(event.apps)
-                        }
-                        CellularConfirmDialog.show(event.totalSize, event.apps.size, CellularConfirmDialog.MODE_WIFI_ONLY)
+//                        CellularConfirmViewModel.pendingAction = {
+//                            viewModel.startDownloadAndPause(event.apps)
+//                        }
+//                        CellularConfirmDialog.show(event.totalSize, event.apps.size, CellularConfirmDialog.MODE_WIFI_ONLY)
                     }
 
                     is UiEvent.ShowNoNetworkDialog -> {
-                        CellularConfirmViewModel.pendingAction = {
-                            viewModel.startDownloadAndPauseForNetwork(event.apps)
-                        }
-                        CellularConfirmDialog.show(event.totalSize, event.apps.size, CellularConfirmDialog.MODE_NO_NETWORK)
+//                        CellularConfirmViewModel.pendingAction = {
+//                            viewModel.startDownloadAndPauseForNetwork(event.apps)
+//                        }
+//                        CellularConfirmDialog.show(event.totalSize, event.apps.size, CellularConfirmDialog.MODE_NO_NETWORK)
                     }
                 }
             }
@@ -331,10 +331,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
             onPayload {
                 val payload = it.firstOrNull() as? String?
-                if (payload.isNullOrEmpty()) return@onPayload
-                val item = getModel<DownloadItem>()
-                val vb = getBinding<ItemHorizontalAppBinding>()
-
+                if (payload == "PROGRESS_UPDATE") {
+                    val item = getModel<DownloadItem>()
+                    val vb = getBinding<ItemHorizontalAppBinding>()
+                    // ✅ 只更新进度相关的UI，不重新加载图片等
+                    bindButtonUI(vb, item.task, item, checkInstalled = false)
+                }
             }
         }.models = urgentList
 
@@ -350,10 +352,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
             onPayload {
                 val payload = it.firstOrNull() as? String?
-                if (payload.isNullOrEmpty()) return@onPayload
-                val item = getModel<DownloadItem>()
-                val vb = getBinding<ItemHorizontalAppBinding>()
-
+                if (payload == "PROGRESS_UPDATE") {
+                    val item = getModel<DownloadItem>()
+                    val vb = getBinding<ItemHorizontalAppBinding>()
+                    // ✅ 只更新进度相关的UI，不重新加载图片等
+                    bindButtonUI(vb, item.task, item, checkInstalled = false)
+                }
             }
         }.models = highList
 
@@ -369,10 +373,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
             onPayload {
                 val payload = it.firstOrNull() as? String?
-                if (payload.isNullOrEmpty()) return@onPayload
-                val item = getModel<DownloadItem>()
-                val vb = getBinding<ItemHorizontalAppBinding>()
-
+                if (payload == "PROGRESS_UPDATE") {
+                    val item = getModel<DownloadItem>()
+                    val vb = getBinding<ItemHorizontalAppBinding>()
+                    // ✅ 只更新进度相关的UI，不重新加载图片等
+                    bindButtonUI(vb, item.task, item, checkInstalled = false)
+                }
             }
         }.models = normalList
     }
@@ -535,8 +541,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 }
 
                 DownloadStatus.FAILED -> startDownload(item, vb)
-
-                else -> {
+                null -> {
                     // 没有任务，开始新下载
                     startDownload(item, vb)
                 }
@@ -629,7 +634,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         if (idx >= 0) {
             (list as MutableList)[idx].task = task
             rv.post {
-                rv.adapter?.notifyItemChanged(idx)
+                // ✅ 传入 payload，触发 onPayload 回调进行局部刷新
+                rv.adapter?.notifyItemChanged(idx, "PROGRESS_UPDATE")
             }
         }
     }

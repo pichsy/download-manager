@@ -6,17 +6,17 @@
     android:layout_height="wrap_content"
     android:layout_gravity="bottom"
     android:layout_marginHorizontal="15dp"
-    android:layout_marginBottom="36dp"
+    android:layout_marginBottom="16dp"
     android:background="#fff"
     app:xp_backgroundGradientOrientation="vertical"
-    app:xp_radius="30dp">
+    app:xp_radius="25dp">
 
     <!-- 标题标签 -->
     <com.pichs.xwidget.roundview.XRoundTextView
         android:id="@+id/tvTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:paddingHorizontal="24dp"
         android:paddingVertical="10dp"
         android:text="流量安装提醒"
@@ -34,8 +34,8 @@
         android:id="@+id/tvMessage"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="24dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="4dp"
         android:text="该应用下载将消耗 1 MB 流量， 已预约 WLAN 下自动安装，是否直接安装?"
         android:textColor="#000"
         android:textSize="16dp"
@@ -47,8 +47,8 @@
         android:id="@+id/llDoNotRemind"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="6dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         app:layout_constraintStart_toStartOf="parent"
@@ -83,8 +83,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="25dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="10dp"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -98,12 +98,19 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
-            android:background="#e1e1e1"
+            android:background="#0000"
             android:paddingVertical="12dp"
             android:text="取消"
             android:textColor="#333"
-            android:textSize="15dp"
+            android:textSize="16dp"
+            app:xp_pressedBackground="#e1e1e1"
             app:xp_radius="25dp" />
+
+        <View
+            android:layout_width="1px"
+            android:layout_height="22dp"
+            android:layout_gravity="center_vertical"
+            android:background="#999" />
 
         <!-- 直接安装按钮 -->
         <com.pichs.xwidget.roundview.XRoundButton
@@ -112,12 +119,12 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:paddingVertical="12dp"
+            android:background="#0000"
+            android:paddingVertical="10dp"
             android:text="直接安装"
-            android:textColor="#fff"
-            android:textSize="15dp"
-            app:xp_backgroundGradientColors="#0074ff"
-            app:xp_backgroundOrientation="vertical"
+            android:textColor="#03f"
+            android:textSize="16dp"
+            app:xp_pressedBackground="#e1e1e1"
             app:xp_radius="25dp" />
     </LinearLayout>
 </com.pichs.xwidget.cardview.XCardConstraintLayout>

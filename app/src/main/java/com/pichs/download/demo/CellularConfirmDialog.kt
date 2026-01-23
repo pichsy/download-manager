@@ -25,7 +25,10 @@ import razerdp.util.animation.ScaleConfig
  * 使用 BasePopupWindow 实现
  */
 class CellularConfirmDialog(
-    context: Context, private val totalSize: Long, private val taskCount: Int, private val mode: Int = MODE_CELLULAR
+    context: Context,
+    private val totalSize: Long,
+    private val taskCount: Int,
+    private val mode: Int = MODE_CELLULAR
 ) : BasePopupWindow(context) {
 
     companion object {
@@ -54,27 +57,27 @@ class CellularConfirmDialog(
          */
         fun show(totalSize: Long, taskCount: Int, mode: Int) {
             if (totalSize <= 0L || taskCount == 0) {
-                Log.w(TAG, "show: totalSize==${totalSize}, taskCount==${taskCount}, cannot show dialog ")
+                Log.w(TAG, "CellularConfirmDialog show: totalSize==${totalSize}, taskCount==${taskCount}, cannot show dialog ")
                 return
             }
             val topActivity = StackManager.get().getTopActivity()
             if (topActivity == null) {
-                Log.w(TAG, "show: topActivity is null, cannot show dialog")
+                Log.w(TAG, "CellularConfirmDialog show: topActivity is null, cannot show dialog")
                 return
             }
             if (topActivity.isFinishing || topActivity.isDestroyed) {
-                Log.w(TAG, "show: topActivity is finishing or is destroyed, class=${topActivity.javaClass.simpleName}")
+                Log.w(TAG, "CellularConfirmDialog show: topActivity is finishing or is destroyed, class=${topActivity.javaClass.simpleName}")
                 return
             }
             try {
                 topActivity.runOnUiThread {
-                    Log.d(TAG, "show: showing dialog on ${topActivity.javaClass.simpleName}")
+                    Log.d(TAG, "CellularConfirmDialog show: showing dialog on ${topActivity.javaClass.simpleName}")
                     CellularConfirmDialog(topActivity, totalSize, taskCount, mode).apply {
                         showPopupWindow()
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "show: failed to show dialog", e)
+                Log.e(TAG, "CellularConfirmDialog show: failed to show dialog", e)
             }
         }
     }
@@ -103,24 +106,32 @@ class CellularConfirmDialog(
 
     private fun setupContent() {
         val sizeText = FormatUtils.formatFileSize(totalSize)
+        val countText = if (taskCount > 1) {
+            "下载${taskCount}个应用，预计消耗${sizeText}流量，已预约WLAN下自动安装，是否直接安装?"
+        } else {
+            "该应用下载将消耗${sizeText}流量，已预约WLAN下自动安装，是否直接安装?"
+        }
 
         when (mode) {
             MODE_NO_NETWORK -> {
                 binding.tvTitle.text = "网络连接提醒"
-                binding.tvMessage.text = "该应用下载将消耗 $sizeText 流量，暂无网络连接，是否等待网络？"
+                binding.tvMessage.text = "暂无网络连接，将下载${taskCount}个应用，共$sizeText"
                 binding.btnUseCellular.text = "等待网络"
+                binding.btnCancel.text = "连接网络"
             }
 
             MODE_WIFI_ONLY -> {
                 binding.tvTitle.text = "流量安装提醒"
-                binding.tvMessage.text = "该应用下载将消耗 $sizeText 流量，已预约 WLAN 下自动安装，是否直接安装？"
+                binding.tvMessage.text = countText
                 binding.btnUseCellular.text = "直接安装"
+                binding.btnCancel.text = "等待WLAN"
             }
 
             else -> {
                 binding.tvTitle.text = "流量安装提醒"
-                binding.tvMessage.text = "该应用下载将消耗 $sizeText 流量，已预约 WLAN 下自动安装，是否直接安装？"
+                binding.tvMessage.text = countText
                 binding.btnUseCellular.text = "直接安装"
+                binding.btnCancel.text = "等待WLAN"
             }
         }
     }

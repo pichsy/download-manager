@@ -68,6 +68,7 @@ class MyCheckAfterCallback(
                 // 流量确认：弹窗
                 pendingOnUseCellular = onUseCellular
                 pendingOnConnectWifi = onConnectWifi
+                LogUtils.d("MyCheckAfterCallback requestConfirmation: showing dialog CELLULAR_CONFIRMATION")
                 CellularConfirmDialog.show(
                     totalSize,
                     pendingTasks.size,
@@ -79,6 +80,7 @@ class MyCheckAfterCallback(
                 // 仅WiFi模式：弹窗
                 pendingOnUseCellular = onUseCellular
                 pendingOnConnectWifi = onConnectWifi
+                LogUtils.d("MyCheckAfterCallback requestConfirmation: showing dialog WIFI_ONLY_MODE")
                 CellularConfirmDialog.show(
                     totalSize,
                     pendingTasks.size,
