@@ -29,6 +29,7 @@ import java.io.File
 import android.provider.Settings
 import android.graphics.Color
 import com.pichs.download.demo.floatwindow.FloatBallView
+import com.pichs.shanhai.base.receiver.InstallBroadcastReceiver
 import com.pichs.shanhai.base.utils.LogUtils
 import kotlinx.coroutines.delay
 import kotlin.jvm.java
@@ -87,6 +88,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             intent.data = Uri.parse("package:$packageName")
             startActivity(intent)
         }
+
+
+        InstallBroadcastReceiver().register(this)
 
 //            lifecycleScope.launch {
 //                sendBroadcast(Intent(GRANT_PERMISSIONS).apply {
@@ -201,7 +205,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     private fun initListener() {
         DownloadLog.d("MainActivity", "======> initListener() 开始执行")
-        CellularThresholdManager.init(this)
 
         binding.ivDownloadManager.setOnClickListener {
             startActivity(Intent(this, DownloadManagerActivity::class.java))

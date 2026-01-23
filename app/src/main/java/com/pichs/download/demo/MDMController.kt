@@ -20,10 +20,10 @@ object MDMController {
         try {
             // 假装进行静默安装 且正在安装，通过监听安装广播来处理安装后的状态更新
             LogUtils.d(" MDMController", "installSilent: $apkPath")
-            UiKit.sendBroadcastSafely(Intent(INSTALL).apply {
-                putExtra("install_path", apkPath)
-                setPackage("com.gankaos.ai.dpc")
-            })
+//            UiKit.sendBroadcastSafely(Intent(INSTALL).apply {
+//                putExtra("install_path", apkPath)
+//                setPackage("com.gankaos.ai.dpc")
+//            })
         } catch (e: Exception) {
             e.printStackTrace()
         }

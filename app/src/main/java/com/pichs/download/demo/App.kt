@@ -18,7 +18,6 @@ class App : Application() {
         UiKit.init(this)
         BaseMMKVHelper.init(this)
         // 初始化阈值管理器
-        CellularThresholdManager.init(this)
         LogUtils.setLogEnable(true)
         ToastUtils.init(this)
         DownloadManager.init(this)

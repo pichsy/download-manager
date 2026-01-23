@@ -153,14 +153,15 @@ class AppDetailActivity : AppCompatActivity() {
         CellularConfirmViewModel.pendingAction = {
             doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.NETWORK_ERROR)
         }
-        CellularConfirmDialogActivity.start(this, size, 1, CellularConfirmDialogActivity.MODE_NO_NETWORK)
+        CellularConfirmDialog.show( size, 1, CellularConfirmDialog.MODE_NO_NETWORK)
+
     }
     
     private fun showWifiOnlyDialog(dir: String) {
         CellularConfirmViewModel.pendingAction = {
             doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE)
         }
-        CellularConfirmDialogActivity.start(this, size, 1, CellularConfirmDialogActivity.MODE_WIFI_ONLY)
+        CellularConfirmDialog.show(size, 1, CellularConfirmDialog.MODE_WIFI_ONLY)
     }
     
     private fun showCellularConfirmDialog(dir: String, totalSize: Long) {
@@ -176,7 +177,7 @@ class AppDetailActivity : AppCompatActivity() {
         CellularConfirmViewModel.pendingAction = {
             doStartDownload(dir, cellularConfirmed = true)
         }
-        CellularConfirmDialogActivity.start(this, totalSize, 1)
+        CellularConfirmDialog.show( totalSize, 1)
     }
 
     private fun doStartDownload(dir: String, cellularConfirmed: Boolean = false) {

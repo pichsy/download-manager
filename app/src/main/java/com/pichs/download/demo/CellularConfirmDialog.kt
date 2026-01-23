@@ -26,10 +26,7 @@ import razerdp.util.animation.ScaleConfig
  * 使用 BasePopupWindow 实现
  */
 class CellularConfirmDialog(
-    context: Context,
-    private val totalSize: Long,
-    private val taskCount: Int,
-    private val mode: Int = MODE_CELLULAR
+    context: Context, private val totalSize: Long, private val taskCount: Int, private val mode: Int = MODE_CELLULAR
 ) : BasePopupWindow(context) {
 
     companion object {
@@ -47,7 +44,7 @@ class CellularConfirmDialog(
         /**
          * 显示确认弹窗（默认流量确认模式）
          */
-        fun show(totalSize: Long, taskCount: Int): CellularConfirmDialog? {
+        fun show(totalSize: Long, taskCount: Int) {
             return show(totalSize, taskCount, MODE_CELLULAR)
         }
 
@@ -56,24 +53,25 @@ class CellularConfirmDialog(
          * @param mode 弹窗模式
          * @return CellularConfirmDialog? 如果没有顶部 Activity 或 Activity 无效则返回 null
          */
-        fun show(totalSize: Long, taskCount: Int, mode: Int): CellularConfirmDialog? {
+        fun show(totalSize: Long, taskCount: Int, mode: Int) {
             val topActivity = StackManager.get().getTopActivity()
             if (topActivity == null) {
                 Log.w(TAG, "show: topActivity is null, cannot show dialog")
-                return null
+                return
             }
             if (topActivity.isFinishing || topActivity.isDestroyed) {
                 Log.w(TAG, "show: topActivity is finishing or is destroyed, class=${topActivity.javaClass.simpleName}")
-                return null
+                return
             }
-            return try {
-                Log.d(TAG, "show: showing dialog on ${topActivity.javaClass.simpleName}")
-                CellularConfirmDialog(topActivity, totalSize, taskCount, mode).apply {
-                    showPopupWindow()
+            try {
+                topActivity.runOnUiThread {
+                    Log.d(TAG, "show: showing dialog on ${topActivity.javaClass.simpleName}")
+                    CellularConfirmDialog(topActivity, totalSize, taskCount, mode).apply {
+                        showPopupWindow()
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "show: failed to show dialog", e)
-                null
             }
         }
     }
