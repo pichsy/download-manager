@@ -7,6 +7,7 @@ import com.pichs.download.core.DownloadManager
 import com.pichs.download.core.DownloadPriority
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.utils.DownloadLog
+import com.pichs.shanhai.base.utils.LogUtils
 import com.pichs.xbase.utils.GsonUtils
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -134,17 +135,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _uiEvent.emit(UiEvent.ShowCellularConfirmDialog(appsToDownload, result.estimatedSize))
                 }
 
-                is com.pichs.download.model.CheckBeforeResult.UserControlled -> {
-                    // 用户控制模式，使用端判断阈值
-                    if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
-                        _uiEvent.emit(UiEvent.ShowCellularConfirmDialog(appsToDownload, result.estimatedSize))
-                    } else {
-                        // 未超阈值，静默下载
-                        DownloadLog.d("模拟批量下载", "智能提醒：未超阈值，静默下载")
-                        startBatchDownload(appsToDownload, cellularConfirmed = true)
-                        _uiEvent.emit(UiEvent.ShowToast("批量下载已开始：${appsToDownload.size} 个应用"))
-                    }
+                else -> {
+                    LogUtils.d("CellularConfirmDialog， 9999 AppDetail else result=${result}----- 5")
                 }
+//                is com.pichs.download.model.CheckBeforeResult.UserControlled -> {
+//                    // 用户控制模式，使用端判断阈值
+//                    if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
+//                        _uiEvent.emit(UiEvent.ShowCellularConfirmDialog(appsToDownload, result.estimatedSize))
+//                    } else {
+//                        // 未超阈值，静默下载
+//                        DownloadLog.d("模拟批量下载", "智能提醒：未超阈值，静默下载")
+//                        startBatchDownload(appsToDownload, cellularConfirmed = true)
+//                        _uiEvent.emit(UiEvent.ShowToast("批量下载已开始：${appsToDownload.size} 个应用"))
+//                    }
+//                }
             }
         }
     }
@@ -250,13 +254,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _uiEvent.emit(UiEvent.ShowCellularConfirmDialog(listOf(item), result.estimatedSize))
                 }
 
-                is com.pichs.download.model.CheckBeforeResult.UserControlled -> {
-                    if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
-                        _uiEvent.emit(UiEvent.ShowCellularConfirmDialog(listOf(item), result.estimatedSize))
-                    } else {
-                        doStartDownload(item, cellularConfirmed = true)
-                    }
+                else -> {
+
                 }
+//                is com.pichs.download.model.CheckBeforeResult.UserControlled -> {
+//                    if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
+//                        _uiEvent.emit(UiEvent.ShowCellularConfirmDialog(listOf(item), result.estimatedSize))
+//                    } else {
+//                        doStartDownload(item, cellularConfirmed = true)
+//                    }
+//                }
             }
         }
     }

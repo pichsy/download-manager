@@ -16,8 +16,4 @@ sealed class CheckBeforeResult {
     
     /** 需要用户确认 */
     data class NeedConfirmation(val estimatedSize: Long) : CheckBeforeResult()
-    
-    /** 用户控制模式，由使用端判断阈值 */
-    @Deprecated("框架已支持阈值判断，使用 cellularThreshold 配置替代，此类型不再返回")
-    data class UserControlled(val estimatedSize: Long) : CheckBeforeResult()
 }

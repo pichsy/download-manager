@@ -11,6 +11,7 @@ import com.pichs.shanhai.base.utils.DayNightUtils
 import com.pichs.shanhai.base.utils.NavigationBarUtils
 import com.pichs.xbase.binding.BindingActivity
 import com.pichs.xbase.binding.ViewBindingUtil
+import com.pichs.xbase.stack.StackManager
 import com.pichs.xbase.utils.StatusBarUtils
 import com.pichs.xwidget.view.XFrameLayout
 
@@ -86,6 +87,11 @@ abstract class BaseActivity<ViewBinder : ViewBinding> : BindingActivity<ViewBind
         onSystemUISettings()
     }
 
+    override fun onDestroy() {
+        onRemoveActivity()
+        super.onDestroy()
+    }
+
     /**
      * 设置沉浸式状态栏
      */
@@ -103,5 +109,14 @@ abstract class BaseActivity<ViewBinder : ViewBinding> : BindingActivity<ViewBind
         super.onConfigurationChanged(newConfig)
         resetNavigationBar()
     }
+
+    override fun onAddActivity() {
+        StackManager.get().addActivity(this)
+    }
+
+    override fun onRemoveActivity() {
+        StackManager.get().removeActivity(this)
+    }
+
 
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import com.pichs.download.demo.databinding.ActivityAppDetailBinding
 import com.pichs.shanhai.base.base.BaseActivity
+import com.pichs.shanhai.base.utils.LogUtils
 import java.io.File
 
 class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
@@ -129,27 +130,28 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
 
             when (result) {
                 is com.pichs.download.model.CheckBeforeResult.Allow -> {
+                    LogUtils.d("CellularConfirmDialog， AppDetail CheckBeforeResult.Allow ----- 1")
                     doStartDownload(dir)
                 }
 
                 is com.pichs.download.model.CheckBeforeResult.NoNetwork -> {
+                    LogUtils.d("CellularConfirmDialog， AppDetail CheckBeforeResult.NoNetwork ----- 2")
+
                     showNoNetworkDialog(dir)
                 }
 
                 is com.pichs.download.model.CheckBeforeResult.WifiOnly -> {
+                    LogUtils.d("CellularConfirmDialog， AppDetail CheckBeforeResult.WifiOnly ----- 3")
+
                     showWifiOnlyDialog(dir)
                 }
 
                 is com.pichs.download.model.CheckBeforeResult.NeedConfirmation -> {
+                    LogUtils.d("CellularConfirmDialog， AppDetail CheckBeforeResult.NeedConfirmation ----- 4")
                     showCellularConfirmDialog(dir, result.estimatedSize)
                 }
-
-                is com.pichs.download.model.CheckBeforeResult.UserControlled -> {
-                    if (CellularThresholdManager.shouldPrompt(result.estimatedSize)) {
-                        showCellularConfirmDialog(dir, result.estimatedSize)
-                    } else {
-                        doStartDownload(dir, cellularConfirmed = true)
-                    }
+                else -> {
+                    LogUtils.d("CellularConfirmDialog， AppDetail else result=${result}----- 5")
                 }
             }
         }

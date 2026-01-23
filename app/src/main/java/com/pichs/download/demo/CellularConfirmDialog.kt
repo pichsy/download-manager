@@ -53,6 +53,10 @@ class CellularConfirmDialog(
          * @return CellularConfirmDialog? 如果没有顶部 Activity 或 Activity 无效则返回 null
          */
         fun show(totalSize: Long, taskCount: Int, mode: Int) {
+            if (totalSize <= 0L || taskCount == 0) {
+                Log.w(TAG, "show: totalSize==${totalSize}, taskCount==${taskCount}, cannot show dialog ")
+                return
+            }
             val topActivity = StackManager.get().getTopActivity()
             if (topActivity == null) {
                 Log.w(TAG, "show: topActivity is null, cannot show dialog")
