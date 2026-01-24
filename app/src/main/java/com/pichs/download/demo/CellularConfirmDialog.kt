@@ -28,7 +28,9 @@ class CellularConfirmDialog(
     context: Context,
     private val totalSize: Long,
     private val taskCount: Int,
-    private val mode: Int = MODE_CELLULAR
+    private val mode: Int = MODE_CELLULAR,
+    private val onConfirm: ((Boolean) -> Unit)? = null,
+    private val onCancel: (() -> Unit)? = null
 ) : BasePopupWindow(context) {
 
     companion object {
@@ -44,19 +46,12 @@ class CellularConfirmDialog(
         const val MODE_NO_NETWORK = 2
 
         /**
-         * 显示确认弹窗（默认流量确认模式）
-         */
-        fun show(totalSize: Long, taskCount: Int) {
-            return show(totalSize, taskCount, MODE_CELLULAR)
-        }
-
-        /**
          * 显示确认弹窗
          * @param mode 弹窗模式
          * @return CellularConfirmDialog? 如果没有顶部 Activity 或 Activity 无效则返回 null
          */
-        fun show(totalSize: Long, taskCount: Int, mode: Int) {
-            if (totalSize <= 0L || taskCount == 0) {
+        fun show(totalSize: Long, taskCount: Int, mode: Int, onConfirm: ((Boolean) -> Unit)? = null, onCancel: (() -> Unit)? = null) {
+            if (totalSize <= 0L && taskCount == 0) {
                 Log.w(TAG, "CellularConfirmDialog show: totalSize==${totalSize}, taskCount==${taskCount}, cannot show dialog ")
                 return
             }
@@ -69,12 +64,29 @@ class CellularConfirmDialog(
                 Log.w(TAG, "CellularConfirmDialog show: topActivity is finishing or is destroyed, class=${topActivity.javaClass.simpleName}")
                 return
             }
+            // 传递 null，触发 ViewModel fallback
+            show(topActivity, totalSize, taskCount, mode, onConfirm, onCancel)
+        }
+
+        /**
+         * 显示确认弹窗（带回调，支持直接传入 Context）
+         * @param context 上下文（通常是 Activity）
+         * @param onConfirm 回调 (true=确认/使用流量, false=取消/等待WiFi)。如果是 null，则使用 CellularConfirmViewModel。
+         */
+        private fun show(
+            context: Context,
+            totalSize: Long,
+            taskCount: Int,
+            mode: Int,
+            onConfirm: ((Boolean) -> Unit)? = null,
+            onCancel: (() -> Unit)? = null
+        ) {
+            if (totalSize <= 0L && taskCount == 0 || context !is android.app.Activity || context.isFinishing || context.isDestroyed) {
+                return
+            }
             try {
-                topActivity.runOnUiThread {
-                    Log.d(TAG, "CellularConfirmDialog show: showing dialog on ${topActivity.javaClass.simpleName}")
-                    CellularConfirmDialog(topActivity, totalSize, taskCount, mode).apply {
-                        showPopupWindow()
-                    }
+                context.runOnUiThread {
+                    CellularConfirmDialog(context, totalSize, taskCount, mode, onConfirm, onCancel).showPopupWindow()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "CellularConfirmDialog show: failed to show dialog", e)
@@ -159,15 +171,23 @@ class CellularConfirmDialog(
     }
 
     private fun handleConfirm() {
-        dialogScope.launch {
-            CellularConfirmViewModel.confirm()
+        if (onConfirm != null) {
+            onConfirm.invoke(true)
+        } else {
+            dialogScope.launch {
+                CellularConfirmViewModel.confirm()
+            }
         }
         dismiss()
     }
 
     private fun handleDeny() {
-        dialogScope.launch {
-            CellularConfirmViewModel.deny()
+        if (onCancel != null) {
+            onCancel.invoke()
+        } else {
+            dialogScope.launch {
+                CellularConfirmViewModel.deny()
+            }
         }
         dismiss()
     }

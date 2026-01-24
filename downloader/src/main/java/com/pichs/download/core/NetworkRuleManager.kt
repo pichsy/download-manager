@@ -106,20 +106,21 @@ class NetworkRuleManager(
      * @return 检查结果
      */
     fun checkBeforeCreate(totalSize: Long, count: Int = 1): CheckBeforeResult {
-        // 如果未启用创建前检查，直接返回 Allow
-        if (!config.checkBeforeCreate) {
-            DownloadLog.d(TAG, "创建前检查未启用，直接允许下载")
-            return CheckBeforeResult.Allow
-        }
-        
+        // 优先检查网络连接（硬性条件）
         val isWifi = NetworkUtils.isWifiAvailable(context)
         val isCellular = NetworkUtils.isCellularAvailable(context)
         
         DownloadLog.d(TAG, "创建前检查: wifi=$isWifi, cellular=$isCellular, size=$totalSize, count=$count")
         
-        // 无网络
+        // 无网络：直接拒绝，不论配置如何
         if (!isWifi && !isCellular) {
             return CheckBeforeResult.NoNetwork
+        }
+
+        // 如果未启用创建前检查，且网络正常，则直接允许下载
+        if (!config.checkBeforeCreate) {
+            DownloadLog.d(TAG, "创建前检查未启用，且网络正常，直接允许下载")
+            return CheckBeforeResult.Allow
         }
         
         // WiFi 可用，直接允许

@@ -252,11 +252,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
      * 在后台线程执行，避免主线程 ANR
      * 过滤掉已安装且是最新版本的应用
      */
+    /**
+     * 一键下载全部（优化的智能逻辑）
+     * 1. 过滤已安装.
+     * 2. 分类：已在队列的不动，暂停的恢复，不存在/失败的创建.
+     * 3. 网络检查：流量弹窗，无网弹窗.
+     */
     private fun downloadAllWithPriority() {
         ToastUtils.show("正在检查应用状态...")
 
         lifecycleScope.launch(Dispatchers.IO) {
-            // 在后台线程过滤，避免主线程 ANR
+            // 1. 过滤已安装
             val filteredNormal = normalList.filter { !isUpToDate(it) }
             val filteredHigh = highList.filter { !isUpToDate(it) }
             val filteredUrgent = urgentList.filter { !isUpToDate(it) }
@@ -270,42 +276,159 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 return@launch
             }
 
-            withContext(Dispatchers.Main) {
-//                ToastUtils.show("开始下载：必装(${filteredUrgent.size}) + 推荐(${filteredHigh.size}) + 常用(${filteredNormal.size})")
+            // 2. 分类处理 (Resume vs Create)
+            val tasksToResume = mutableListOf<DownloadTask>()
+            val itemsToCreate = mutableListOf<DownloadItem>()
+            var totalSize = 0L
 
-                // ✅ 使用批量接口，统一网络检查（只弹一次确认框）
-                val builders = allApps.map { item ->
-                    val meta = ExtraMeta(
-                        name = item.name,
-                        packageName = item.packageName.orEmpty(),
-                        versionCode = item.versionCode,
-                        icon = item.icon
-                    )
-
-                    val priority = when (item.priority) {
-                        DownloadPriority.URGENT.value -> DownloadPriority.URGENT
-                        DownloadPriority.HIGH.value -> DownloadPriority.HIGH
-                        DownloadPriority.LOW.value -> DownloadPriority.LOW
-                        else -> DownloadPriority.NORMAL
+            for (item in allApps) {
+                // 始终获取最新状态
+                val existingTask = DownloadManager.getTaskByUrl(item.url)
+                
+                if (existingTask == null) {
+                    itemsToCreate.add(item)
+                    totalSize += item.size
+                } else {
+                    when (existingTask.status) {
+                        DownloadStatus.DOWNLOADING, DownloadStatus.WAITING, DownloadStatus.PENDING -> {
+                            // 已经在队列中，忽略
+                        }
+                        DownloadStatus.PAUSED -> {
+                            tasksToResume.add(existingTask)
+                            // 计算剩余大小
+                            val effective = if (existingTask.totalSize > 0) {
+                                (existingTask.totalSize - existingTask.currentSize).coerceAtLeast(0)
+                            } else {
+                                item.size
+                            }
+                            totalSize += effective
+                        }
+                        DownloadStatus.COMPLETED -> {
+                            val file = File(existingTask.filePath, existingTask.fileName)
+                            if (!file.exists()) {
+                                // 文件丢失，重新下载
+                                DownloadManager.deleteTask(existingTask.id, false)
+                                itemsToCreate.add(item)
+                                totalSize += item.size
+                            }
+                        }
+                        DownloadStatus.FAILED, DownloadStatus.CANCELLED -> {
+                            // 失败或取消，重新下载
+                            DownloadManager.deleteTask(existingTask.id, false)
+                            itemsToCreate.add(item)
+                            totalSize += item.size
+                        }
                     }
-
-                    DownloadManager.downloadWithPriority(item.url, priority)
-                        .fileName(item.name.replace(" ", "_") + ".apk")
-                        .estimatedSize(item.size)
-                        .extras(meta.toJson())
                 }
+            }
 
-                // 批量启动（startTasks内部会自动做批量网络检查）
-                val tasks = DownloadManager.startTasks(builders)
-
-                // 更新 item.task
-                tasks.forEachIndexed { index, task ->
-                    allApps[index].task = task
+            if (tasksToResume.isEmpty() && itemsToCreate.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    ToastUtils.show("任务都在下载队列中")
                 }
+                return@launch
+            }
 
-                DownloadLog.d("MainActivity", "批量下载已创建 ${tasks.size} 个任务")
+            // 3. 网络检查与执行
+            withContext(Dispatchers.Main) {
+                val isWifi = com.pichs.download.utils.NetworkUtils.isWifiAvailable(this@MainActivity)
+                val isCellular = com.pichs.download.utils.NetworkUtils.isCellularAvailable(this@MainActivity)
+                val count = tasksToResume.size + itemsToCreate.size
+
+                when {
+                    isWifi -> {
+                        // WiFi 直接开干
+                        executeBatchDownload(tasksToResume, itemsToCreate, cellularConfirmed = false)
+                    }
+                    isCellular -> {
+                        // 流量弹窗
+                        CellularConfirmDialog.show(
+                            totalSize = totalSize,
+                            taskCount = count,
+                            mode = CellularConfirmDialog.MODE_CELLULAR,
+                            onConfirm = { useCellular ->
+                                if (useCellular) {
+                                    // 用户同意使用流量
+                                    executeBatchDownload(tasksToResume, itemsToCreate, cellularConfirmed = true)
+                                } else {
+                                    // 用户选择去连WiFi -> 暂不操作，等待用户连网后再次点击
+                                    ToastUtils.show("请连接WiFi后重试")
+                                }
+                            }
+                        )
+                    }
+                    else -> {
+                        // 无网络弹窗
+                        CellularConfirmDialog.show(
+                            totalSize = totalSize,
+                            taskCount = count,
+                            mode = CellularConfirmDialog.MODE_NO_NETWORK,
+                            onConfirm = { a ->
+                                // 用户选择"等待网络" -> 创建并暂停
+                                executeBatchDownload(tasksToResume, itemsToCreate, cellularConfirmed = false)
+                            }
+                        )
+                    }
+                }
             }
         }
+    }
+
+    /**
+     * 执行批量下载操作
+     */
+    private fun executeBatchDownload(
+        resumeList: List<DownloadTask>, 
+        createList: List<DownloadItem>, 
+        cellularConfirmed: Boolean
+    ) {
+        // 1. 恢复任务
+        if (resumeList.isNotEmpty()) {
+            resumeList.forEach { task ->
+                if (cellularConfirmed) {
+                    DownloadManager.updateTaskCellularConfirmed(task.id, true)
+                }
+                DownloadManager.resume(task.id)
+            }
+        }
+
+        // 2. 创建新任务
+        if (createList.isNotEmpty()) {
+            val builders = createList.map { item ->
+                val meta = ExtraMeta(
+                    name = item.name,
+                    packageName = item.packageName.orEmpty(),
+                    versionCode = item.versionCode,
+                    icon = item.icon
+                )
+
+                val priority = when (item.priority) {
+                    DownloadPriority.URGENT.value -> DownloadPriority.URGENT
+                    DownloadPriority.HIGH.value -> DownloadPriority.HIGH
+                    DownloadPriority.LOW.value -> DownloadPriority.LOW
+                    else -> DownloadPriority.NORMAL
+                }
+
+                DownloadManager.downloadWithPriority(item.url, priority)
+                    .fileName(item.name.replace(" ", "_") + ".apk")
+                    .estimatedSize(item.size)
+                    .extras(meta.toJson())
+                    .cellularConfirmed(cellularConfirmed) // 预设流量确认标记
+            }
+
+            val tasks = DownloadManager.startTasks(builders)
+            
+            // 更新 item 绑定
+            tasks.forEach { task ->
+                val item = createList.find { it.url == task.url }
+                if (item != null) item.task = task
+            }
+            
+            DownloadLog.d("MainActivity", "批量新建了 ${tasks.size} 个任务")
+        }
+        
+        val total = resumeList.size + createList.size
+        // ToastUtils.show("已开始下载 $total 个应用") 
     }
 
     /**
