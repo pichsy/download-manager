@@ -14,6 +14,7 @@ import com.pichs.download.demo.databinding.FragmentDownloadListBinding
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import com.pichs.shanhai.base.api.entity.qiniuHostUrl
+import com.pichs.shanhai.base.utils.LogUtils
 import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 import kotlinx.coroutines.launch
 
@@ -27,8 +28,6 @@ class CompletedFragment : Fragment() {
 
     private val completed = mutableListOf<DownloadTask>()
     private lateinit var adapter: DownloadTaskAdapter
-
-    private val flowListener = DownloadManager.flowListener
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -46,24 +45,36 @@ class CompletedFragment : Fragment() {
         refreshList()
     }
 
+    override fun onResume() {
+        super.onResume()
+        android.util.Log.d("DownloadDemo", "CompletedFragment: onResume - refreshing list")
+        refreshList()
+    }
+
     private fun setupRecycler() {
         adapter = DownloadTaskAdapter(
-            onAction = { task -> handleAction(task) },
+            onButtonClick = { task -> handleClickItem(task) },
             onLoadIcon = { imageView, task -> loadIcon(imageView, task) }
         )
+        adapter.onDelete = { task ->
+            DeleteConfirmDialog(requireContext()) {
+                DownloadManager.deleteTask(task.id, deleteFile = true)
+                removeFromList(task.id)
+            }.showPopupWindow()
+        }
         binding.recyclerView.setItemAnimatorDisable()
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         adapter.setHasStableIds(true)
         binding.recyclerView.adapter = adapter
     }
 
-    private fun handleAction(task: DownloadTask) {
+    private fun handleClickItem(task: DownloadTask) {
         val meta = ExtraMeta.fromJson(task.extras)
         val pkg = meta?.packageName
             ?: AppUtils.getPackageNameForTask(requireContext(), task)
             ?: ""
         val storeVC = meta?.versionCode ?: AppUtils.getStoreVersionCode(requireContext(), pkg)
-        
+
         // 如果已安装且是最新版本，打开应用
         if (pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(requireContext(), pkg, storeVC)) {
             if (!AppUtils.openApp(requireContext(), pkg)) {
@@ -80,14 +91,10 @@ class CompletedFragment : Fragment() {
             // 文件缺失或损坏，删除旧任务并重新下载
             viewLifecycleOwner.lifecycleScope.launch {
                 DownloadManager.deleteTask(task.id, deleteFile = true)
-                val idx = completed.indexOfFirst { it.id == task.id }
-                if (idx >= 0) {
-                    completed.removeAt(idx)
-                    adapter.notifyItemRemoved(idx)
-                    updateEmptyState()
-                }
+                removeFromList(task.id)
+
                 // 重新创建下载任务
-                val dir = requireContext().externalCacheDir?.absolutePath 
+                val dir = requireContext().externalCacheDir?.absolutePath
                     ?: requireContext().cacheDir.absolutePath
                 DownloadManager.download(task.url)
                     .path(dir)
@@ -95,6 +102,17 @@ class CompletedFragment : Fragment() {
                     .start()
                 Toast.makeText(requireContext(), "开始重新下载", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun removeFromList(taskId: String) {
+        val idx = completed.indexOfFirst { it.id == taskId }
+        if (idx >= 0) {
+            android.util.Log.d("DownloadDemo", "CompletedFragment: removing task $taskId")
+            val task = completed[idx]
+            completed.removeAt(idx)
+            adapter.removeItem(task)
+            updateEmptyState()
         }
     }
 
@@ -118,12 +136,16 @@ class CompletedFragment : Fragment() {
     private fun refreshList() {
         viewLifecycleOwner.lifecycleScope.launch {
             val all = DownloadManager.getAllTasks()
-                .filter { it.status == DownloadStatus.COMPLETED }
+            android.util.Log.d("DownloadDemo", "CompletedFragment: getAllTasks size=${all.size}")
+
+            val filtered = all.filter { it.status == DownloadStatus.COMPLETED }
                 .sortedByDescending { it.updateTime }
                 .distinctBy { it.id }
 
+            android.util.Log.d("DownloadDemo", "CompletedFragment: completed size=${filtered.size}")
+
             completed.clear()
-            completed.addAll(all)
+            completed.addAll(filtered)
             adapter.submit(completed)
             updateEmptyState()
         }
@@ -135,9 +157,10 @@ class CompletedFragment : Fragment() {
     }
 
     private fun bindListeners() {
-        flowListener.bindToLifecycle(
+        DownloadManager.flowListener.bindToLifecycle(
             lifecycleOwner = viewLifecycleOwner,
             onTaskComplete = { task, file ->
+                LogUtils.d("DownloadDemo", "CompletedFragment:bindListeners onTaskComplete： task=${task.fileName}, file=${file.absolutePath}")
                 if (!isAdded) return@bindToLifecycle
                 refreshList()
             }
@@ -148,8 +171,8 @@ class CompletedFragment : Fragment() {
         val file = java.io.File(task.filePath, task.fileName)
         if (!file.exists()) return
         val uri = androidx.core.content.FileProvider.getUriForFile(
-            requireContext(), 
-            "${requireContext().packageName}.fileprovider", 
+            requireContext(),
+            "${requireContext().packageName}.fileprovider",
             file
         )
         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {

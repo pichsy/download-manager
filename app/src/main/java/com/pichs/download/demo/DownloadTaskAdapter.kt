@@ -15,9 +15,12 @@ import com.pichs.xwidget.view.XTextView
  * 下载任务通用 Adapter
  */
 class DownloadTaskAdapter(
-    private val onAction: (DownloadTask) -> Unit,
+    private val onButtonClick: (DownloadTask) -> Unit,
     private val onLoadIcon: (ImageView, DownloadTask) -> Unit
 ) : RecyclerView.Adapter<DownloadTaskAdapter.TaskViewHolder>() {
+
+    // 删除回调
+    var onDelete: ((DownloadTask) -> Unit)? = null
 
     private val data = mutableListOf<DownloadTask>()
 
@@ -43,6 +46,14 @@ class DownloadTaskAdapter(
         }
     }
 
+    fun removeItem(task: DownloadTask) {
+        val idx = data.indexOfFirst { it.id == task.id }
+        if (idx >= 0) {
+            data.removeAt(idx)
+            notifyItemRemoved(idx)
+        }
+    }
+
     override fun getItemId(position: Int): Long {
         return data.getOrNull(position)?.id?.hashCode()?.toLong() ?: RecyclerView.NO_ID
     }
@@ -50,7 +61,7 @@ class DownloadTaskAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
         val v = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_download_task, parent, false)
-        return TaskViewHolder(v, onAction, onLoadIcon)
+        return TaskViewHolder(v, onButtonClick, onLoadIcon, onDelete)
     }
 
     override fun getItemCount(): Int = data.size
@@ -69,21 +80,24 @@ class DownloadTaskAdapter(
 
     class TaskViewHolder(
         itemView: View,
-        private val onAction: (DownloadTask) -> Unit,
-        private val onLoadIcon: (ImageView, DownloadTask) -> Unit
+        private val onButtonClick: (DownloadTask) -> Unit,
+        private val onLoadIcon: (ImageView, DownloadTask) -> Unit,
+        private val onDelete: ((DownloadTask) -> Unit)?
     ) : RecyclerView.ViewHolder(itemView) {
 
         private val ivCover: XCardImageView = itemView.findViewById(R.id.iv_cover)
         private val title: XTextView = itemView.findViewById(R.id.tv_title)
         private val tvSpeed: XTextView = itemView.findViewById(R.id.tvSpeed)
-        private val tvHint: XTextView = itemView.findViewById(R.id.tvHint)
         private val btn: ProgressButton = itemView.findViewById(R.id.btn_download)
 
         private var currentTask: DownloadTask? = null
 
         init {
             btn.setOnClickListener {
-                currentTask?.let { task -> onAction(task) }
+                currentTask?.let { task -> onButtonClick(task) }
+            }
+            itemView.findViewById<View>(R.id.iv_delete).setOnClickListener {
+                currentTask?.let { task -> onDelete?.invoke(task) }
             }
         }
 
@@ -113,11 +127,6 @@ class DownloadTaskAdapter(
 
             // 文件健康检查
             val health = AppUtils.checkFileHealth(task)
-            tvHint.visibility = View.GONE
-            if (task.status == DownloadStatus.COMPLETED && health != AppUtils.FileHealth.OK) {
-                tvHint.text = if (health == AppUtils.FileHealth.MISSING) "文件缺失" else "文件损坏"
-                tvHint.visibility = View.VISIBLE
-            }
 
             // 检查是否已安装且是最新版本
             val pkg = meta?.packageName
@@ -137,15 +146,15 @@ class DownloadTaskAdapter(
                 DownloadStatus.PAUSED -> {
                     btn.setText("继续")
                     btn.isEnabled = true
-                    tvSpeed.visibility = View.GONE
-                    tvSpeed.text = ""
+                    tvSpeed.visibility = View.VISIBLE
+                    tvSpeed.text = "已暂停"
                 }
 
                 DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                     btn.setText("等待中")
                     btn.isEnabled = true
-                    tvSpeed.visibility = View.GONE
-                    tvSpeed.text = ""
+                    tvSpeed.visibility = View.VISIBLE
+                    tvSpeed.text = "等待中"
                 }
 
                 DownloadStatus.FAILED -> {

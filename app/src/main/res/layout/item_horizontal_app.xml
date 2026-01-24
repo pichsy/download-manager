@@ -54,13 +54,13 @@
         android:layout_height="26dp"
         android:layout_marginTop="6dp"
         android:text="下载"
-        android:textColor="#fff"
+        android:textColor="#000"
         android:textSize="11sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/tv_app_name"
-        app:pb_backgroundColor="#1A1A1A"
-        app:pb_progressColor="#6161FF"
+        app:pb_backgroundColor="#d9d2e9"
+        app:pb_progressColor="#196ef5"
         app:pb_radius="13dp" />
 
 </com.pichs.xwidget.cardview.XCardConstraintLayout>

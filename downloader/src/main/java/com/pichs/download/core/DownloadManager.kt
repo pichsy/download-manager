@@ -31,7 +31,10 @@ object DownloadManager {
     private val config = DownloadConfig()
 
     // Flow监听器（新方式）
-    val flowListener = FlowDownloadListener()
+    val flowDownloadListener = FlowDownloadListener()
+    
+    @Deprecated("请示用新的变量：flowDownloadListener 更加贴切直观，用法一样")
+    val flowListener = flowDownloadListener
 
     // 简单内存任务表，后续接入数据库
     // private val tasks = ConcurrentHashMap<String, DownloadTask>()
@@ -113,7 +116,25 @@ object DownloadManager {
 
     // 任务管理（使用缓存管理器）
     suspend fun getTask(taskId: String): DownloadTask? = cacheManager?.getTask(taskId)
-    suspend fun getAllTasks(): List<DownloadTask> = cacheManager?.getAllTasks()?.sortedBy { it.createTime } ?: emptyList()
+    
+    /**
+     * 获取所有任务（包含内存中最新状态）
+     * 解决数据库异步写入导致的状态延迟问题
+     */
+    suspend fun getAllTasks(): List<DownloadTask> {
+        val dbTasks = cacheManager?.getAllTasks() ?: emptyList()
+        val memTasks = InMemoryTaskStore.getAll()
+        
+        if (memTasks.isEmpty()) return dbTasks.sortedBy { it.createTime }
+        
+        // 内存中的状态覆盖数据库状态
+        val mergedMap = dbTasks.associateBy { it.id }.toMutableMap()
+        memTasks.forEach { task ->
+            mergedMap[task.id] = task
+        }
+        
+        return mergedMap.values.sortedBy { it.createTime }
+    }
     suspend fun getRunningTasks(): List<DownloadTask> = cacheManager?.getAllTasks()?.filter { it.status == DownloadStatus.DOWNLOADING } ?: emptyList()
 
     // 队列可视化（可选）：仅用于调试或UI展示
