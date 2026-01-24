@@ -102,8 +102,8 @@ class DownloadRequestBuilder {
             speed = 0L,
             status = DownloadStatus.PENDING,
             priority = priority,
-            createTime = System.currentTimeMillis(),
-            updateTime = System.currentTimeMillis(),
+            createTime = com.pichs.download.utils.TimeUtils.currentMicros(),
+            updateTime = com.pichs.download.utils.TimeUtils.currentMicros(),
             extras = extras,
             estimatedSize = estimatedSize,
             cellularConfirmed = cellularConfirmed
@@ -132,8 +132,8 @@ class DownloadRequestBuilder {
             speed = 0L,
             status = DownloadStatus.PENDING,
             priority = priority,
-            createTime = System.currentTimeMillis(),
-            updateTime = System.currentTimeMillis(),
+            createTime = com.pichs.download.utils.TimeUtils.currentMicros(),
+            updateTime = com.pichs.download.utils.TimeUtils.currentMicros(),
             extras = extras,
             estimatedSize = estimatedSize,
             cellularConfirmed = cellularConfirmed

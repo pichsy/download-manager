@@ -29,7 +29,7 @@ internal class AtomicCommitManager(private val repository: TaskRepository) {
                     progress = 100,
                     currentSize = task.totalSize,
                     speed = 0,
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 
                 repository.save(completedTask)
@@ -81,7 +81,7 @@ internal class AtomicCommitManager(private val repository: TaskRepository) {
             try {
                 val failedTask = task.copy(
                     status = DownloadStatus.FAILED,
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 
                 repository.save(failedTask)
@@ -130,7 +130,7 @@ internal class AtomicCommitManager(private val repository: TaskRepository) {
             try {
                 val cancelledTask = task.copy(
                     status = DownloadStatus.CANCELLED,
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 
                 repository.save(cancelledTask)

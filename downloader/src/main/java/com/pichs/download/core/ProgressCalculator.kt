@@ -86,7 +86,7 @@ class ProgressCalculator {
                 totalSize = totalSize,
                 currentSize = totalDownloaded,
                 speed = smoothedSpeed,
-                updateTime = now
+                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
             )
             
             DownloadLog.d("ProgressCalculator", "计算进度: ${task.id} - 进度: $progress%, 速度: ${smoothedSpeed}bytes/s, 已下载: $totalDownloaded/$totalSize")
@@ -171,7 +171,7 @@ class ProgressCalculator {
             totalSize = totalSize,
             currentSize = totalDownloaded,
             speed = 0,
-            updateTime = System.currentTimeMillis()
+            updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
         )
     }
 }

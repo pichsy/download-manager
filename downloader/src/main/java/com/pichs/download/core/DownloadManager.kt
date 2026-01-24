@@ -125,7 +125,7 @@ object DownloadManager {
                             val waitingTask = task.copy(
                                 status = DownloadStatus.WAITING,
                                 pauseReason = null,
-                                updateTime = System.currentTimeMillis()
+                                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                             )
                             tasksToResume.add(waitingTask)
                             DownloadLog.d(TAG, "网络已连接，准备恢复任务: ${task.id}")
@@ -141,7 +141,7 @@ object DownloadManager {
                             val waitingTask = task.copy(
                                 status = DownloadStatus.WAITING,
                                 pauseReason = null,
-                                updateTime = System.currentTimeMillis()
+                                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                             )
                             tasksToResume.add(waitingTask)
                             DownloadLog.d(TAG, "存储空间恢复，准备恢复任务: ${task.id}")
@@ -367,7 +367,7 @@ object DownloadManager {
                             val waitingTask = task.copy(
                                 status = DownloadStatus.WAITING,
                                 speed = 0L,
-                                updateTime = now
+                                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                             )
                             InMemoryTaskStore.put(waitingTask)
                             tasksToResume.add(waitingTask)
@@ -391,7 +391,7 @@ object DownloadManager {
                                         val waitingTask = task.copy(
                                             status = DownloadStatus.WAITING,
                                             pauseReason = null,
-                                            updateTime = now
+                                            updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                                         )
                                         InMemoryTaskStore.put(waitingTask)
                                         tasksToResume.add(waitingTask)
@@ -405,7 +405,7 @@ object DownloadManager {
                                         val waitingTask = task.copy(
                                             status = DownloadStatus.WAITING,
                                             pauseReason = null,
-                                            updateTime = now
+                                            updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                                         )
                                         InMemoryTaskStore.put(waitingTask)
                                         tasksToResume.add(waitingTask)
@@ -419,7 +419,7 @@ object DownloadManager {
                                         val waitingTask = task.copy(
                                             status = DownloadStatus.WAITING,
                                             pauseReason = null,
-                                            updateTime = now
+                                            updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                                         )
                                         InMemoryTaskStore.put(waitingTask)
                                         tasksToResume.add(waitingTask)
@@ -431,7 +431,7 @@ object DownloadManager {
                                     val waitingTask = task.copy(
                                         status = DownloadStatus.WAITING,
                                         pauseReason = null,
-                                        updateTime = now
+                                        updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                                     )
                                     InMemoryTaskStore.put(waitingTask)
                                     tasksToResume.add(waitingTask)
@@ -556,7 +556,7 @@ object DownloadManager {
                     status = DownloadStatus.WAITING,
                     pauseReason = null,
                     speed = 0L,
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 InMemoryTaskStore.put(pending)
                 repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
@@ -580,7 +580,7 @@ object DownloadManager {
                         status = DownloadStatus.WAITING,
                         pauseReason = null,
                         speed = 0L,
-                        updateTime = System.currentTimeMillis()
+                        updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                     )
                     InMemoryTaskStore.put(pending)
                     repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
@@ -607,7 +607,7 @@ object DownloadManager {
                                 status = DownloadStatus.WAITING,
                                 pauseReason = null,
                                 speed = 0L,
-                                updateTime = System.currentTimeMillis()
+                                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                             )
                             InMemoryTaskStore.put(confirmed)
                             repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(confirmed) } }
@@ -625,7 +625,7 @@ object DownloadManager {
                             status = DownloadStatus.WAITING,
                             pauseReason = null,
                             speed = 0L,
-                            updateTime = System.currentTimeMillis()
+                            updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                         )
                         InMemoryTaskStore.put(pending)
                         repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
@@ -642,7 +642,7 @@ object DownloadManager {
                         sortedTasks.forEach { task ->
                             updateTaskInternal(task.copy(
                                 pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR,
-                                updateTime = System.currentTimeMillis()
+                                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                             ))
                         }
                         // 通知使用端
@@ -660,7 +660,7 @@ object DownloadManager {
                         sortedTasks.forEach { task ->
                             updateTaskInternal(task.copy(
                                 pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE,
-                                updateTime = System.currentTimeMillis()
+                                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                             ))
                         }
                         networkRuleManager?.checkAfterCallback?.showWifiOnlyHint(firstTask)
@@ -885,7 +885,7 @@ object DownloadManager {
      */
     fun updateTaskCellularConfirmed(taskId: String, confirmed: Boolean) {
         val task = InMemoryTaskStore.get(taskId) ?: return
-        val updated = task.copy(cellularConfirmed = confirmed, updateTime = System.currentTimeMillis())
+        val updated = task.copy(cellularConfirmed = confirmed, updateTime = com.pichs.download.utils.TimeUtils.currentMicros())
         InMemoryTaskStore.put(updated)
         repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(updated) } }
         DownloadLog.d(TAG, "任务 $taskId cellularConfirmed 更新为 $confirmed")
@@ -986,7 +986,7 @@ object DownloadManager {
         if (!config.checkAfterCreate) {
             tasks.forEach { task ->
                 dispatcher.enqueue(task)
-                updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
+                updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = com.pichs.download.utils.TimeUtils.currentMicros()))
             }
             scheduleNext()
             return
@@ -999,7 +999,7 @@ object DownloadManager {
                 // 允许下载，全部入队
                 tasks.forEach { task ->
                     dispatcher.enqueue(task)
-                    updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
+                    updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = com.pichs.download.utils.TimeUtils.currentMicros()))
                 }
                 // 触发调度，开始下载
                 scheduleNext()
@@ -1007,7 +1007,7 @@ object DownloadManager {
             is CheckAfterResult.NeedConfirmation -> {
                 // 需要确认：暂停所有任务，通过回调弹窗
                 tasks.forEach { task ->
-                    updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = System.currentTimeMillis()))
+                    updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.CELLULAR_PENDING, updateTime = com.pichs.download.utils.TimeUtils.currentMicros()))
                 }
                 
                 // 调用决策回调弹窗
@@ -1033,7 +1033,7 @@ object DownloadManager {
                     DownloadLog.w(TAG, "未设置 decisionCallback，直接放行 ${tasks.size} 个任务")
                     tasks.forEach { task ->
                         dispatcher.enqueue(task)
-                        updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = System.currentTimeMillis()))
+                        updateTaskInternal(task.copy(status = DownloadStatus.WAITING, speed = 0L, updateTime = com.pichs.download.utils.TimeUtils.currentMicros()))
                     }
                     scheduleNext()
                 }
@@ -1043,7 +1043,7 @@ object DownloadManager {
                     DenyReason.NO_NETWORK -> {
                         // 无网络，暂停所有任务
                         tasks.forEach { task ->
-                            updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR, updateTime = System.currentTimeMillis()))
+                            updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR, updateTime = com.pichs.download.utils.TimeUtils.currentMicros()))
                         }
                         // 调用回调通知使用端（使用端可以显示 Toast）
                         networkRuleManager?.checkAfterCallback?.requestConfirmation(
@@ -1057,7 +1057,7 @@ object DownloadManager {
                     DenyReason.WIFI_ONLY_MODE -> {
                         // 仅 WiFi 模式，暂停所有任务
                         tasks.forEach { task ->
-                            updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE, updateTime = System.currentTimeMillis()))
+                            updateTaskInternal(task.copy(status = DownloadStatus.PAUSED, pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE, updateTime = com.pichs.download.utils.TimeUtils.currentMicros()))
                         }
                         networkRuleManager?.checkAfterCallback?.showWifiOnlyHint(firstTask)
                     }
@@ -1171,7 +1171,7 @@ object DownloadManager {
                 status = DownloadStatus.PAUSED, 
                 pauseReason = pauseReason,
                 speed = 0L, 
-                updateTime = System.currentTimeMillis()
+                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
             )
             updateTaskInternal(paused)
             DownloadLog.d("DownloadManager", "任务暂停: $taskId, 原因: $pauseReason")
@@ -1181,7 +1181,7 @@ object DownloadManager {
                 status = DownloadStatus.PAUSED, 
                 pauseReason = pauseReason,
                 speed = 0L, 
-                updateTime = System.currentTimeMillis()
+                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
             )
             updateTaskInternal(paused)
             DownloadLog.d("DownloadManager", "DOWNLOADING任务暂停: $taskId, 原因: $pauseReason, 状态: ${paused.status}")
@@ -1206,7 +1206,7 @@ object DownloadManager {
                 status = DownloadStatus.WAITING, 
                 pauseReason = null,
                 speed = 0L, 
-                updateTime = System.currentTimeMillis()
+                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
             )
             InMemoryTaskStore.put(pending)
             repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
@@ -1225,7 +1225,7 @@ object DownloadManager {
                     status = DownloadStatus.WAITING, 
                     pauseReason = null,
                     speed = 0L, 
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 InMemoryTaskStore.put(pending)
                 repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
@@ -1251,7 +1251,7 @@ object DownloadManager {
                         pauseReason = null,
                         cellularConfirmed = true,
                         speed = 0L, 
-                        updateTime = System.currentTimeMillis()
+                        updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                     )
                     InMemoryTaskStore.put(pending)
                     repository?.let { repo -> scope.launch(Dispatchers.IO) { repo.save(pending) } }
@@ -1265,12 +1265,12 @@ object DownloadManager {
                 when (decision.reason) {
                     DenyReason.NO_NETWORK -> {
                         // 无网络，保持暂停状态
-                        val paused = t.copy(pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR, updateTime = System.currentTimeMillis())
+                        val paused = t.copy(pauseReason = com.pichs.download.model.PauseReason.NETWORK_ERROR, updateTime = com.pichs.download.utils.TimeUtils.currentMicros())
                         updateTaskInternal(paused)
                     }
                     DenyReason.WIFI_ONLY_MODE -> {
                         // 仅 WiFi 模式，保持暂停并提示
-                        val paused = t.copy(pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE, updateTime = System.currentTimeMillis())
+                        val paused = t.copy(pauseReason = com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE, updateTime = com.pichs.download.utils.TimeUtils.currentMicros())
                         updateTaskInternal(paused)
                         showWifiOnlyHint(t)
                     }

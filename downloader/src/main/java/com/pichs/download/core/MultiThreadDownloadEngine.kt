@@ -71,7 +71,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                         status = DownloadStatus.PAUSED,
                         pauseReason = pauseReason,
                         speed = 0L,
-                        updateTime = System.currentTimeMillis()
+                        updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                     )
                     DownloadManager.updateTaskInternal(paused)
                     DownloadLog.d("MultiThreadDownloadEngine", "任务因 $pauseReason 暂停: ${validatedTask.id}")
@@ -79,7 +79,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     // 其他异常 → 真正的失败
                     val failed = validatedTask.copy(
                         status = DownloadStatus.FAILED,
-                        updateTime = System.currentTimeMillis()
+                        updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                     )
                     DownloadManager.updateTaskInternal(failed)
                     DownloadLog.d("MultiThreadDownloadEngine", "任务失败: ${validatedTask.id}")
@@ -112,7 +112,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     currentSize = 0,
                     progress = 0,
                     totalSize = 0,  // 重新获取文件大小
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 
                 // 更新到数据库（不影响UI，因为引擎会立即开始下载）
@@ -143,7 +143,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     currentSize = 0,
                     progress = 0,
                     totalSize = 0,
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 
                 DownloadManager.updateTaskInternal(resetTask)
@@ -169,7 +169,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     currentSize = 0,
                     progress = 0,
                     totalSize = 0,
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 
                 DownloadManager.updateTaskInternal(resetTask)
@@ -192,7 +192,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 val task = DownloadManager.getTaskImmediate(taskId) ?: return@runBlocking
                 // 如果任务已经是 PAUSED 且已有明确的 pauseReason（例如 NETWORK_ERROR/USER_MANUAL），不要覆盖
                 if (task.status != DownloadStatus.PAUSED || task.pauseReason == null) {
-                    val paused = task.copy(status = DownloadStatus.PAUSED, updateTime = System.currentTimeMillis())
+                    val paused = task.copy(status = DownloadStatus.PAUSED, updateTime = com.pichs.download.utils.TimeUtils.currentMicros())
                     DownloadManager.updateTaskInternal(paused)
                     DownloadLog.d("MultiThreadDownloadEngine", "引擎暂停任务: $taskId, 状态: ${paused.status}")
                 } else {
@@ -229,7 +229,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     status = DownloadStatus.WAITING,
                     pauseReason = null,  // 不是暂停，是等待
                     speed = 0L,
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 DownloadManager.updateTaskInternal(waiting)
                 DownloadLog.d("MultiThreadDownloadEngine", "任务被抢占，改为等待中: $taskId")
@@ -246,7 +246,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             ctl.tempFile?.let { FileUtils.deleteFile(it.absolutePath) }
             runBlocking {
                 val task = DownloadManager.getTask(taskId) ?: return@runBlocking
-                val cancelled = task.copy(status = DownloadStatus.CANCELLED, updateTime = System.currentTimeMillis())
+                val cancelled = task.copy(status = DownloadStatus.CANCELLED, updateTime = com.pichs.download.utils.TimeUtils.currentMicros())
                 DownloadManager.updateTaskInternal(cancelled)
                 // 清理进度计算器中的数据
                 progressCalculator.clearTaskProgress(taskId)
@@ -286,7 +286,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 totalSize = header.contentLength,
                 currentSize = header.contentLength,
                 speed = 0,
-                updateTime = System.currentTimeMillis()
+                updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
             )
             DownloadManager.updateTaskInternal(completed)
             DownloadManager.emitProgress(completed, 100, 0)
@@ -353,7 +353,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
             ProgressCalculatorManager.clearCalculator(task.id)
         } else {
             DownloadLog.e("MultiThreadDownloadEngine", "文件合并失败: ${task.id}")
-            val failed = task.copy(status = DownloadStatus.FAILED, updateTime = now)
+            val failed = task.copy(status = DownloadStatus.FAILED, updateTime = com.pichs.download.utils.TimeUtils.currentMicros())
             DownloadManager.updateTaskInternal(failed)
             
             // 清理进度计算器中的数据
@@ -522,7 +522,7 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                     totalSize = if (effectiveTotal > 0) effectiveTotal else task.totalSize,
                     currentSize = currentSize,
                     speed = 0L, // 暂停时速度归零
-                    updateTime = System.currentTimeMillis()
+                    updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
                 )
                 DownloadManager.updateTaskInternal(pausedTask)
                 
