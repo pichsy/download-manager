@@ -54,6 +54,13 @@ internal class MultiThreadDownloadEngine : DownloadEngine {
                 DownloadLog.d("MultiThreadDownloadEngine", "下载被取消: ${validatedTask.id}")
                 // ignore
             } catch (e: Throwable) {
+                // ✅ 关键修复：检查是否是主动暂停/取消引发的异常
+                // 防止主动停止导致的 Socket 关闭等异常被误判为网络错误，从而触发自动恢复
+                if (ctl.paused.get() || ctl.cancelled.get()) {
+                    DownloadLog.d("MultiThreadDownloadEngine", "捕获到异常但任务已暂停/取消，忽略异常: ${e.message}")
+                    return@launch
+                }
+
                 DownloadLog.e("MultiThreadDownloadEngine", "下载异常: ${validatedTask.id}", e)
                 
                 // 根据异常类型决定任务状态

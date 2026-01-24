@@ -1237,10 +1237,19 @@ object DownloadManager {
             is CheckAfterResult.NeedConfirmation -> {
                 // 需要用户确认
                 requestCellularConfirmation(listOf(t)) {
+                    // ✅ 防止用户在弹窗期间手动暂停了任务
+                    val current = InMemoryTaskStore.get(t.id) ?: t
+                    if (current.status == DownloadStatus.PAUSED && current.pauseReason == com.pichs.download.model.PauseReason.USER_MANUAL) {
+                        DownloadLog.d("DownloadManager", "任务已被手动暂停，仅更新流量确认标记: ${t.id}")
+                        updateTaskCellularConfirmed(t.id, true)
+                        return@requestCellularConfirmation
+                    }
+
                     // 用户确认后恢复
                     val pending = t.copy(
                         status = DownloadStatus.WAITING, 
                         pauseReason = null,
+                        cellularConfirmed = true,
                         speed = 0L, 
                         updateTime = System.currentTimeMillis()
                     )

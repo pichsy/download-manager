@@ -510,8 +510,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             }
             when (task?.status) {
                 DownloadStatus.DOWNLOADING -> {
-                    // 暂停任务，Flow监听器会自动更新UI
+                    // 暂停任务
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
+                    // ✅ 乐观更新：立即更新UI为暂停状态
+                    val pausedTask = task.copy(status = DownloadStatus.PAUSED)
+                    updateItemTask(pausedTask)
                 }
 
                 DownloadStatus.PAUSED -> {
@@ -525,8 +528,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 }
 
                 DownloadStatus.WAITING, DownloadStatus.PENDING -> {
-                    // 暂停任务，Flow监听器会自动更新UI
+                    // 暂停任务
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
+                    // ✅ 乐观更新：立即更新UI为暂停状态
+                    val pausedTask = task.copy(status = DownloadStatus.PAUSED)
+                    updateItemTask(pausedTask)
                 }
 
                 DownloadStatus.COMPLETED -> {
@@ -544,6 +550,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 null -> {
                     // 没有任务，开始新下载
                     startDownload(item, vb)
+                }
+                else -> {
+
                 }
             }
         }
