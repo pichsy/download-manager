@@ -22,6 +22,8 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
     private var packageNameStr: String = ""
     private var appSize: Long = 0L
     private var icon: String? = null
+    private var priority: Int = com.pichs.download.core.DownloadPriority.NORMAL.value
+
     private fun canOpenInstalled(): Boolean {
         val pkg = packageNameStr
         if (pkg.isBlank()) return false
@@ -39,6 +41,7 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
         packageNameStr = intent.getStringExtra("packageName") ?: ""
         appSize = intent.getLongExtra("size", 0L)
         icon = intent.getStringExtra("icon")
+        priority = intent.getIntExtra("priority", com.pichs.download.core.DownloadPriority.NORMAL.value)
 
         initUI()
         initDownloadState()
@@ -219,8 +222,10 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
                 .fileName(name)
                 .estimatedSize(appSize)
                 .extras(extrasJson)
+                .priority(priority)
                 .cellularConfirmed(cellularConfirmed)
                 .start()
+
 
             // 刷新任务状态（start() 返回的可能是旧状态）
             task = DownloadManager.getTask(task?.id ?: "") ?: task
@@ -245,6 +250,7 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
             .fileName(name)
             .estimatedSize(appSize)
             .extras(extrasJson)
+            .priority(priority)
             .start()
 
         // 立即暂停，设置暂停原因

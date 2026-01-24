@@ -779,6 +779,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             putExtra("packageName", item.packageName)
             putExtra("size", item.size)
             putExtra("icon", item.icon)
+            putExtra("priority", item.priority)
         }
         startActivity(i)
     }

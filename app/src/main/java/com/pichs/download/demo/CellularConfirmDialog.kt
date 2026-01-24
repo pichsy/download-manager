@@ -73,6 +73,7 @@ class CellularConfirmDialog(
          * @param context 上下文（通常是 Activity）
          * @param onConfirm 回调 (true=确认/使用流量, false=取消/等待WiFi)。如果是 null，则使用 CellularConfirmViewModel。
          */
+        @Deprecated("别再调用这个方法了，废弃了，也是私有方法，再调用腿给你打断")
         private fun show(
             context: Context,
             totalSize: Long,
