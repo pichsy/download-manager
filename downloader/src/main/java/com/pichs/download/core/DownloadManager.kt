@@ -63,6 +63,8 @@ object DownloadManager {
     private var networkRuleManager: NetworkRuleManager? = null
     @Volatile
     private var appContext: android.content.Context? = null
+    @Volatile
+    private var isRestored: Boolean = false
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val dispatcherIO: CoroutineDispatcher = Dispatchers.IO
@@ -122,6 +124,12 @@ object DownloadManager {
      * 解决数据库异步写入导致的状态延迟问题
      */
     suspend fun getAllTasks(): List<DownloadTask> {
+        // 优化：如果已经完成从数据库的恢复，直接使用内存数据作为“真理”
+        // 避免每次都进行数据库 I/O 和合并计算
+        if (isRestored) {
+            return InMemoryTaskStore.getAll().sortedBy { it.createTime }
+        }
+
         val dbTasks = cacheManager?.getAllTasks() ?: emptyList()
         val memTasks = InMemoryTaskStore.getAll()
         
@@ -409,6 +417,10 @@ object DownloadManager {
 
                 // 更新 StateFlow
                 _tasksState.value = InMemoryTaskStore.getAll().sortedBy { it.createTime }
+                
+                // 标记已完成恢复，后续读取将全走内存
+                isRestored = true
+                DownloadLog.d(TAG, "任务恢复流程结束，isRestored = true")
 
             } catch (e: Exception) {
                 DownloadLog.e(TAG, "恢复中断任务时发生异常", e)
