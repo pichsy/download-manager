@@ -31,10 +31,3 @@ data class NetworkDownloadConfig(
     /** 创建后检查 */
     val checkAfterCreate: Boolean = true
 )
-
-// 保留旧枚举用于兼容，标记废弃
-@Deprecated("使用 cellularThreshold 替代", ReplaceWith("CellularThreshold"))
-@Keep
-enum class CellularPromptMode {
-    ALWAYS, NEVER, USER_CONTROLLED
-}
