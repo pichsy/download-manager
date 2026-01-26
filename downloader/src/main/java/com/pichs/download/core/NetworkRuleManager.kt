@@ -30,7 +30,7 @@ class NetworkRuleManager(
     private val mainHandler = Handler(Looper.getMainLooper())
     
     /** 决策回调（使用端设置） */
-    var checkAfterCallback: CheckAfterCallback? = null
+    var checkAfterCallback: CheckAfterCallback? = DefaultCheckAfterCallback()
     
     /** 当前配置 */
     var config: NetworkDownloadConfig = loadConfig()

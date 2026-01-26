@@ -1,5 +1,6 @@
 package com.pichs.download.core
 
+import android.content.Context
 import com.pichs.download.config.DownloadConfig
 import com.pichs.download.config.Retention
 import com.pichs.download.config.RetentionConfig
@@ -32,7 +33,7 @@ object DownloadManager {
 
     // Flow监听器（新方式）
     val flowDownloadListener = FlowDownloadListener()
-    
+
     @Deprecated("请示用新的变量：flowDownloadListener 更加贴切直观，用法一样")
     val flowListener = flowDownloadListener
 
@@ -45,24 +46,34 @@ object DownloadManager {
 
     @Volatile
     private var scheduler: DownloadScheduler? = null
+
     @Volatile
     private var repository: TaskRepository? = null
+
     @Volatile
     private var chunkManager: ChunkManager? = null
+
     @Volatile
     private var atomicCommitManager: AtomicCommitManager? = null
+
     @Volatile
     private var storageManager: StorageManager? = null
+
     @Volatile
     private var cacheManager: CacheManager? = null
+
     @Volatile
     private var retentionManager: RetentionManager? = null
+
     @Volatile
     private var networkAutoResumeManager: NetworkAutoResumeManager? = null
+
     @Volatile
     private var networkRuleManager: NetworkRuleManager? = null
+
     @Volatile
     private var appContext: android.content.Context? = null
+
     @Volatile
     private var isRestored: Boolean = false
 
@@ -86,6 +97,10 @@ object DownloadManager {
     internal fun getTaskHeaders(taskId: String): Map<String, String> = taskHeaders[taskId] ?: emptyMap()
 
     internal fun getChunkManager(): ChunkManager? = chunkManager
+
+    fun getContext(): Context? {
+        return appContext
+    }
 
     // 初始化：App 启动时调用，用于恢复历史任务
     fun init(context: android.content.Context) {
@@ -118,7 +133,7 @@ object DownloadManager {
 
     // 任务管理（使用缓存管理器）
     suspend fun getTask(taskId: String): DownloadTask? = cacheManager?.getTask(taskId)
-    
+
     /**
      * 获取所有任务（包含内存中最新状态）
      * 解决数据库异步写入导致的状态延迟问题
@@ -132,17 +147,18 @@ object DownloadManager {
 
         val dbTasks = cacheManager?.getAllTasks() ?: emptyList()
         val memTasks = InMemoryTaskStore.getAll()
-        
+
         if (memTasks.isEmpty()) return dbTasks.sortedBy { it.createTime }
-        
+
         // 内存中的状态覆盖数据库状态
         val mergedMap = dbTasks.associateBy { it.id }.toMutableMap()
         memTasks.forEach { task ->
             mergedMap[task.id] = task
         }
-        
+
         return mergedMap.values.sortedBy { it.createTime }
     }
+
     suspend fun getRunningTasks(): List<DownloadTask> = cacheManager?.getAllTasks()?.filter { it.status == DownloadStatus.DOWNLOADING } ?: emptyList()
 
     // 队列可视化（可选）：仅用于调试或UI展示
@@ -208,8 +224,8 @@ object DownloadManager {
 
         // ✅ 返回最新的任务状态（从内存重新加载）
         // checkAfterCreate 可能会修改任务状态（如无网络时设为 PAUSED）
-        return tasks.map { task -> 
-            com.pichs.download.store.InMemoryTaskStore.get(task.id) ?: task 
+        return tasks.map { task ->
+            com.pichs.download.store.InMemoryTaskStore.get(task.id) ?: task
         }
     }
 
@@ -417,7 +433,7 @@ object DownloadManager {
 
                 // 更新 StateFlow
                 _tasksState.value = InMemoryTaskStore.getAll().sortedBy { it.createTime }
-                
+
                 // 标记已完成恢复，后续读取将全走内存
                 isRestored = true
                 DownloadLog.d(TAG, "任务恢复流程结束，isRestored = true")
