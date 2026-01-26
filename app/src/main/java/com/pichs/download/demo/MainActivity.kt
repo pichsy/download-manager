@@ -284,7 +284,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             for (item in allApps) {
                 // 始终获取最新状态
                 val existingTask = DownloadManager.getTaskByUrl(item.url)
-                
+
                 if (existingTask == null) {
                     itemsToCreate.add(item)
                     totalSize += item.size
@@ -293,6 +293,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         DownloadStatus.DOWNLOADING, DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                             // 已经在队列中，忽略
                         }
+
                         DownloadStatus.PAUSED -> {
                             tasksToResume.add(existingTask)
                             // 计算剩余大小
@@ -303,6 +304,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                             }
                             totalSize += effective
                         }
+
                         DownloadStatus.COMPLETED -> {
                             val file = File(existingTask.filePath, existingTask.fileName)
                             if (!file.exists()) {
@@ -312,6 +314,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                                 totalSize += item.size
                             }
                         }
+
                         DownloadStatus.FAILED, DownloadStatus.CANCELLED -> {
                             // 失败或取消，重新下载
                             DownloadManager.deleteTask(existingTask.id, false)
@@ -340,13 +343,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                         // WiFi 直接开干
                         executeBatchDownload(tasksToResume, itemsToCreate, cellularConfirmed = false)
                     }
+
                     isCellular -> {
                         // 流量弹窗
                         CellularConfirmDialog.show(
-                            totalSize = totalSize,
-                            taskCount = count,
-                            mode = CellularConfirmDialog.MODE_CELLULAR,
-                            onConfirm = { useCellular ->
+                            totalSize = totalSize, taskCount = count, mode = CellularConfirmDialog.MODE_CELLULAR, onConfirm = { useCellular ->
                                 if (useCellular) {
                                     // 用户同意使用流量
                                     executeBatchDownload(tasksToResume, itemsToCreate, cellularConfirmed = true)
@@ -354,20 +355,16 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                                     // 用户选择去连WiFi -> 暂不操作，等待用户连网后再次点击
                                     ToastUtils.show("请连接WiFi后重试")
                                 }
-                            }
-                        )
+                            })
                     }
+
                     else -> {
                         // 无网络弹窗
                         CellularConfirmDialog.show(
-                            totalSize = totalSize,
-                            taskCount = count,
-                            mode = CellularConfirmDialog.MODE_NO_NETWORK,
-                            onConfirm = { a ->
+                            totalSize = totalSize, taskCount = count, mode = CellularConfirmDialog.MODE_NO_NETWORK, onConfirm = { a ->
                                 // 用户选择"等待网络" -> 创建并暂停
                                 executeBatchDownload(tasksToResume, itemsToCreate, cellularConfirmed = false)
-                            }
-                        )
+                            })
                     }
                 }
             }
@@ -378,9 +375,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
      * 执行批量下载操作
      */
     private fun executeBatchDownload(
-        resumeList: List<DownloadTask>, 
-        createList: List<DownloadItem>, 
-        cellularConfirmed: Boolean
+        resumeList: List<DownloadTask>, createList: List<DownloadItem>, cellularConfirmed: Boolean
     ) {
         // 1. 恢复任务
         if (resumeList.isNotEmpty()) {
@@ -396,10 +391,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         if (createList.isNotEmpty()) {
             val builders = createList.map { item ->
                 val meta = ExtraMeta(
-                    name = item.name,
-                    packageName = item.packageName.orEmpty(),
-                    versionCode = item.versionCode,
-                    icon = item.icon
+                    name = item.name, packageName = item.packageName.orEmpty(), versionCode = item.versionCode, icon = item.icon
                 )
 
                 val priority = when (item.priority) {
@@ -409,24 +401,21 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     else -> DownloadPriority.NORMAL
                 }
 
-                DownloadManager.downloadWithPriority(item.url, priority)
-                    .fileName(item.name.replace(" ", "_") + ".apk")
-                    .estimatedSize(item.size)
-                    .extras(meta.toJson())
-                    .cellularConfirmed(cellularConfirmed) // 预设流量确认标记
+                DownloadManager.downloadWithPriority(item.url, priority).fileName(item.name.replace(" ", "_") + ".apk").estimatedSize(item.size)
+                    .extras(meta.toJson()).cellularConfirmed(cellularConfirmed) // 预设流量确认标记
             }
 
             val tasks = DownloadManager.startTasks(builders)
-            
+
             // 更新 item 绑定
             tasks.forEach { task ->
                 val item = createList.find { it.url == task.url }
                 if (item != null) item.task = task
             }
-            
+
             DownloadLog.d("MainActivity", "批量新建了 ${tasks.size} 个任务")
         }
-        
+
         val total = resumeList.size + createList.size
         // ToastUtils.show("已开始下载 $total 个应用") 
     }
@@ -674,6 +663,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     // 没有任务，开始新下载
                     startDownload(item, vb)
                 }
+
                 else -> {
 
                 }
@@ -705,9 +695,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private fun bindFlowListener() {
         flowListener.bindToLifecycle(lifecycleOwner = this, onTaskProgress = { task, progress, speed ->
             if (isDestroyed) return@bindToLifecycle
+            DownloadLog.d("MainActivity", "✅ MainActivity 收到完成回调-onTaskProgress: ${task.fileName}，task=${task.status}, progress=${progress}")
             updateItemTaskWithProgress(task, progress, speed)
             updateFloatBallProgress(task, progress, speed)
         }, onTaskComplete = { task, file ->
+            DownloadLog.d("MainActivity", "✅ MainActivity 收到完成回调: ${task.fileName}")
             if (isDestroyed) return@bindToLifecycle
             updateItemTask(task)
         }, onTaskError = { task, error ->
@@ -745,16 +737,26 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private val progressUpdateInterval = 300L
 
     private fun updateItemTaskWithProgress(task: DownloadTask, progress: Int, speed: Long) {
-        if (progress < 100 && task.status != DownloadStatus.COMPLETED) {
-            val now = System.currentTimeMillis()
-            val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
-            if (now - lastUpdateTime < progressUpdateInterval) {
-                return
-            }
-            lastProgressUpdateTimeMap[task.id] = now
-        } else {
+        // 关键修复：当进度达到100或任务完成时，必须强制刷新，忽略防抖
+        // 之前的逻辑可能在99%时触发了防抖，而在100%到来时虽然通过了if判断，但可能有并发更新问题
+        // 这里显式放行所有完成态的更新
+        if (progress >= 100 || task.status == DownloadStatus.COMPLETED) {
             lastProgressUpdateTimeMap.remove(task.id)
+            // 此时应该触发全量刷新而不是 payload 刷新，因为需要改变按钮状态（从进度条变安装按钮）
+            // 但为了复用逻辑，我们在 Adapter 里处理了 payload 的完成态
+            updateListItemWithProgress(urgentList, binding.rvUrgent, task)
+            updateListItemWithProgress(highList, binding.rvHigh, task)
+            updateListItemWithProgress(normalList, binding.rvNormal, task)
+            return
         }
+
+        // --- 以下是未完成时的防抖逻辑 ---
+        val now = System.currentTimeMillis()
+        val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
+        if (now - lastUpdateTime < progressUpdateInterval) {
+            return
+        }
+        lastProgressUpdateTimeMap[task.id] = now
 
         updateListItemWithProgress(urgentList, binding.rvUrgent, task)
         updateListItemWithProgress(highList, binding.rvHigh, task)
@@ -764,7 +766,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private fun updateListItemWithProgress(list: List<DownloadItem>, rv: androidx.recyclerview.widget.RecyclerView, task: DownloadTask) {
         val idx = list.indexOfFirst { it.url == task.url }
         if (idx >= 0) {
-            (list as MutableList)[idx].task = task
+            val currentItem = (list as MutableList)[idx]
+            // 防御性检查：如果UI上已经是完成状态，且当前更新的不是完成状态（比如迟到的99%），则忽略
+            if (currentItem.task?.status == DownloadStatus.COMPLETED && task.status != DownloadStatus.COMPLETED) {
+                return
+            }
+
+            currentItem.task = task
             rv.post {
                 // ✅ 传入 payload，触发 onPayload 回调进行局部刷新
                 rv.adapter?.notifyItemChanged(idx, "PROGRESS_UPDATE")

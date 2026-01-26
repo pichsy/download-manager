@@ -1076,7 +1076,8 @@ object DownloadManager {
         if (current != null) {
             val isStopped = current.status == DownloadStatus.PAUSED ||
                     current.status == DownloadStatus.CANCELLED ||
-                    current.status == DownloadStatus.FAILED
+                    current.status == DownloadStatus.FAILED ||
+                    current.status == DownloadStatus.COMPLETED
             val isReportingRunning = task.status == DownloadStatus.DOWNLOADING
 
             if (isStopped && isReportingRunning) {

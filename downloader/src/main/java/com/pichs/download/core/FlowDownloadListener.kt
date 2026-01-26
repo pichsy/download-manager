@@ -138,7 +138,10 @@ class FlowDownloadListener {
                                 launch {
                                     observeTaskProgress(task.id).collect { (progress, speed) ->
                                         val latestTask = DownloadManager.getTask(task.id)
-                                        if (latestTask != null && latestTask.status == com.pichs.download.model.DownloadStatus.DOWNLOADING) {
+                                        // 双重锁定：既检查内存中的最新状态，也检查本监听器是否已处理过完成状态
+                                        if (latestTask != null && 
+                                            latestTask.status == com.pichs.download.model.DownloadStatus.DOWNLOADING &&
+                                            lastStatusMap[task.id] != com.pichs.download.model.DownloadStatus.COMPLETED) {
                                             onTaskProgress(latestTask, progress, speed)
                                         }
                                     }

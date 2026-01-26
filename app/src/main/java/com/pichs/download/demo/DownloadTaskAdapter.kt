@@ -200,6 +200,11 @@ class DownloadTaskAdapter(
 
         fun updateProgress(task: DownloadTask) {
             currentTask = task
+            // 如果任务已完成（哪怕是在进度更新的payload里），直接刷新整个UI以显示"安装"按钮
+            if (task.status == DownloadStatus.COMPLETED) {
+                bind(task)
+                return
+            }
             btn.setProgress(task.progress)
             btn.setText("${task.progress}%")
             tvSpeed.text = com.pichs.download.utils.SpeedUtils.formatDownloadSpeed(task.speed)
