@@ -5,159 +5,23 @@
     android:layout_height="match_parent"
     android:background="@color/root_background_color">
 
-    <com.pichs.xwidget.view.XStatusBarView
-        android:id="@+id/status_bar_view"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/root_background_color"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <com.pichs.xwidget.cardview.XCardConstraintLayout
-        android:id="@+id/toolBar"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@color/root_background_color"
-        app:layout_constraintTop_toBottomOf="@+id/status_bar_view">
-
-        <com.pichs.xwidget.roundview.XRoundButton
-            android:id="@+id/tv_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:text="应用商店"
-            android:textColor="#000"
-            android:textSize="17sp"
-            android:textStyle="bold"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:xp_radius="120dp" />
-
-        <com.pichs.xwidget.view.XImageView
-            android:id="@+id/iv_download_manager"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="16dp"
-            android:padding="6dp"
-            android:src="@drawable/ic_download_manager"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:xp_colorFilter="@color/tool_bar_text_color"
-            app:xp_pressedScale="0.94" />
-
-        <com.pichs.xwidget.view.XImageView
-            android:id="@+id/iv_download_settings"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="16dp"
-            android:src="@drawable/ic_download_settings"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/iv_download_manager"
-            app:layout_constraintTop_toTopOf="parent"
-            app:xp_colorFilter="@color/tool_bar_text_color"
-            app:xp_pressedScale="0.94" />
-
-
-        <!-- 一键下载测试按钮 -->
-        <com.pichs.xwidget.roundview.XRoundButton
-            android:id="@+id/btn_download_all"
-            android:layout_width="wrap_content"
-            android:layout_height="34dp"
-            android:layout_marginEnd="16dp"
-            android:gravity="center"
-            android:paddingHorizontal="16dp"
-            android:text="一键下载"
-            android:textColor="#fff"
-            android:textSize="12dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/iv_download_settings"
-            app:layout_constraintTop_toTopOf="parent"
-            app:xp_backgroundEndColor="#E91E63"
-            app:xp_backgroundOrientation="horizontal"
-            app:xp_backgroundStartColor="#FF5722"
-            app:xp_radius="25dp" />
-
-    </com.pichs.xwidget.cardview.XCardConstraintLayout>
-
-    <androidx.core.widget.NestedScrollView
+    <FrameLayout
+        android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:fillViewport="true"
+        app:layout_constraintBottom_toTopOf="@+id/nav_view"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/nav_view"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="0dp"
+        android:layout_marginEnd="0dp"
+        android:background="#fff"
+        app:menu="@menu/menu_bottom_nav"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/toolBar">
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingBottom="16dp">
-
-            <!-- 必装应用 (URGENT, priority=3) -->
-            <TextView
-                android:id="@+id/tv_category_urgent"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="16dp"
-                android:text="必装应用（优先级：URGENT）"
-                android:textColor="@color/content_text_color"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_urgent"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:clipToPadding="false"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp" />
-
-            <!-- 推荐应用 (HIGH, priority=2) -->
-            <TextView
-                android:id="@+id/tv_category_high"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="24dp"
-                android:text="推荐应用（优先级：HIGH）"
-                android:textColor="@color/content_text_color"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_high"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:clipToPadding="false"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp" />
-
-            <!-- 常用应用 (NORMAL/LOW, priority=1/0) -->
-            <TextView
-                android:id="@+id/tv_category_normal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="24dp"
-                android:text="常用应用（优先级：NORMAL）"
-                android:textColor="@color/content_text_color"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_normal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:clipToPadding="false"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp" />
-
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

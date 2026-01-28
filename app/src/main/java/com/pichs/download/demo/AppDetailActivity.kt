@@ -12,21 +12,87 @@ import androidx.lifecycle.lifecycleScope
 import com.pichs.download.demo.databinding.ActivityAppDetailBinding
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.utils.LogUtils
+import com.pichs.xbase.kotlinext.dp
 import java.io.File
 
 class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
 
+    private var appInfo: DownloadItem? = null
 
-    private var url: String = ""
-    private var name: String = ""
-    private var packageNameStr: String = ""
-    private var appSize: Long = 0L
-    private var icon: String? = null
-    private var priority: Int = com.pichs.download.core.DownloadPriority.NORMAL.value
+    override fun afterOnCreate() {
+        appInfo = intent.getParcelableExtra("app_info")
+        if (appInfo == null) {
+            finish()
+            return
+        }
+
+        initUI(appInfo!!)
+        initDownloadState()
+        bindListeners()
+    }
+
+    private fun initUI(item: DownloadItem) {
+        binding.tvTitle.text = item.name
+        binding.tvPackage.text = item.packageName
+        if (!item.icon.isNullOrEmpty()) Glide.with(binding.ivIcon).load(item.icon).into(binding.ivIcon)
+
+        // Info Grid
+        binding.tvInfo1.text = item.version
+        binding.tvInfo2.text = formatSize(item.sizeBytes)
+        binding.tvInfo3.text = item.update_time
+
+        // Tags
+        val tagList = mutableListOf<String>()
+        item.categories?.let { tagList.addAll(it) }
+        item.tags?.let { tagList.addAll(it) }
+        binding.tvTags.text = tagList.joinToString("  ")
+
+        // Desc
+        binding.tvDesc.text = item.description.ifBlank { "暂无介绍" }
+
+        // Developer
+        val sb = StringBuilder()
+        if (item.developer.isNotBlank()) sb.append("开发者：").append(item.developer).append("\n")
+        if (item.registration_no.isNotBlank()) sb.append("备案号：").append(item.registration_no)
+        binding.tvDeveloperInfo.text = sb.toString()
+
+        // Screenshots
+        if (item.screenshots.isNullOrEmpty()) {
+            binding.rvScreenshots.visibility = android.view.View.GONE
+        } else {
+            binding.rvScreenshots.visibility = android.view.View.VISIBLE
+            binding.rvScreenshots.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false)
+            binding.rvScreenshots.adapter = ScreenshotAdapter(item.screenshots!!)
+            binding.rvScreenshots.addItemDecoration(object : androidx.recyclerview.widget.RecyclerView.ItemDecoration() {
+                override fun getItemOffsets(outRect: android.graphics.Rect, view: android.view.View, parent: androidx.recyclerview.widget.RecyclerView, state: androidx.recyclerview.widget.RecyclerView.State) {
+                    outRect.right = 8.dp
+                }
+            })
+        }
+
+        binding.ivBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        binding.btnDownload.setOnClickListener { onClickDownload() }
+    }
+
+    class ScreenshotAdapter(private val list: List<String>) : androidx.recyclerview.widget.RecyclerView.Adapter<ScreenshotAdapter.VH>() {
+        class VH(v: android.view.View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(v) {
+            val iv: android.widget.ImageView = v.findViewById(R.id.iv_screenshot)
+        }
+
+        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): VH {
+            val v = android.view.LayoutInflater.from(parent.context).inflate(R.layout.item_screenshot, parent, false)
+            return VH(v)
+        }
+
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            Glide.with(holder.iv).load(list[position]).into(holder.iv)
+        }
+
+        override fun getItemCount(): Int = list.size
+    }
 
     private fun canOpenInstalled(): Boolean {
-        val pkg = packageNameStr
-        if (pkg.isBlank()) return false
+        val pkg = appInfo?.packageName ?: return false
         val storeVC = CatalogRepository.getStoreVersionCode(this, pkg) ?: 0L
         return AppUtils.isInstalledAndUpToDate(this, pkg, storeVC)
     }
@@ -34,31 +100,8 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
     private var task: DownloadTask? = null
     private val flowListener = DownloadManager.flowListener
 
-    override fun afterOnCreate() {
-
-        url = intent.getStringExtra("url") ?: ""
-        name = intent.getStringExtra("name") ?: ""
-        packageNameStr = intent.getStringExtra("packageName") ?: ""
-        appSize = intent.getLongExtra("size", 0L)
-        icon = intent.getStringExtra("icon")
-        priority = intent.getIntExtra("priority", com.pichs.download.core.DownloadPriority.NORMAL.value)
-
-        initUI()
-        initDownloadState()
-        bindListeners()
-    }
-
-    private fun initUI() {
-        binding.tvTitle.text = name
-        binding.tvPackage.text = packageNameStr
-        binding.tvSize.text = formatSize(appSize)
-        if (!icon.isNullOrEmpty()) Glide.with(binding.ivIcon).load(icon).into(binding.ivIcon)
-        binding.btnBack.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        binding.btnDownload.setOnClickListener { onClickDownload() }
-    }
-
     private fun initDownloadState() {
-        // 尝试找到现有任务（通过 URL 匹配）
+        val url = appInfo?.url ?: return
         lifecycleScope.launch {
             task = DownloadManager.getTaskByUrl(url)
             bindButtonUI(task)
@@ -66,6 +109,7 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
     }
 
     private fun onClickDownload() {
+        val info = appInfo ?: return
         val t = task
         val dir = getExternalFilesDir(null)?.absolutePath ?: filesDir.absolutePath
         if (t == null) {
@@ -76,26 +120,17 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
         when (t.status) {
             DownloadStatus.DOWNLOADING -> {
                 DownloadManager.pause(t.id)
-                // 立即把本地任务置为 PAUSED，保证下次点击能 resume
                 this.task = t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
                 bindButtonUI(this.task)
             }
-
-            DownloadStatus.PAUSED -> {
-                DownloadManager.resume(t.id)
-            }
-
+            DownloadStatus.PAUSED -> DownloadManager.resume(t.id)
             DownloadStatus.PENDING, DownloadStatus.WAITING -> {
-                // 等待中可暂停：从队列移出
                 DownloadManager.pause(t.id)
-                // 立即把本地任务置为 PAUSED，保证下次点击能 resume
                 this.task = t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
                 bindButtonUI(this.task)
             }
-
             DownloadStatus.COMPLETED -> {
-                // 对齐首页：优先打开已安装；否则检查文件健康，健康则安装，否则触发重新下载
-                val pkg = packageNameStr
+                val pkg = info.packageName
                 val storeVC = CatalogRepository.getStoreVersionCode(this, pkg) ?: 0L
                 if (pkg.isNotBlank() && AppUtils.isInstalledAndUpToDate(this, pkg, storeVC)) {
                     if (!AppUtils.openApp(this, pkg)) {
@@ -107,153 +142,139 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
                 if (health == AppUtils.FileHealth.OK) {
                     openApk(t)
                 } else {
-                    // 重新下载
                     startOrRestartDownload(dir)
                 }
             }
-
-            DownloadStatus.FAILED -> {
-                // 失败重试
-                DownloadManager.resume(t.id)
-            }
-
+            DownloadStatus.FAILED -> DownloadManager.resume(t.id)
             else -> {}
         }
     }
 
-    /**
-     * 使用预检查流程请求下载
-     */
     private fun requestDownloadWithPreCheck(dir: String) {
+        val info = appInfo ?: return
         lifecycleScope.launch {
-            val result = DownloadManager.checkBeforeCreate(appSize)
-
+            val result = DownloadManager.checkBeforeCreate(info.sizeBytes)
             when (result) {
-                is com.pichs.download.model.CheckBeforeResult.Allow -> {
-                    LogUtils.d("CellularConfirmDialog， AppDetail CheckBeforeResult.Allow ----- 1")
-                    doStartDownload(dir)
-                }
-
-                is com.pichs.download.model.CheckBeforeResult.NoNetwork -> {
-                    LogUtils.d("CellularConfirmDialog， AppDetail CheckBeforeResult.NoNetwork ----- 2")
-
-                    showNoNetworkDialog(dir)
-                }
-
-                is com.pichs.download.model.CheckBeforeResult.WifiOnly -> {
-                    LogUtils.d("CellularConfirmDialog， AppDetail CheckBeforeResult.WifiOnly ----- 3")
-
-                    showWifiOnlyDialog(dir)
-                }
-
-                is com.pichs.download.model.CheckBeforeResult.NeedConfirmation -> {
-                    LogUtils.d("CellularConfirmDialog， AppDetail CheckBeforeResult.NeedConfirmation ----- 4")
-                    showCellularConfirmDialog(dir, result.estimatedSize)
-                }
-
-                else -> {
-                    LogUtils.d("CellularConfirmDialog， AppDetail else result=${result}----- 5")
-                }
+                is com.pichs.download.model.CheckBeforeResult.Allow -> doStartDownload(dir)
+                is com.pichs.download.model.CheckBeforeResult.NoNetwork -> showNoNetworkDialog(dir)
+                is com.pichs.download.model.CheckBeforeResult.WifiOnly -> showWifiOnlyDialog(dir)
+                is com.pichs.download.model.CheckBeforeResult.NeedConfirmation -> showCellularConfirmDialog(dir, result.estimatedSize)
+                else -> {}
             }
         }
     }
 
     private fun showNoNetworkDialog(dir: String) {
+        val info = appInfo ?: return
         CellularConfirmDialog.show(
-            totalSize = appSize,
+            totalSize = info.sizeBytes,
             taskCount = 1,
             mode = CellularConfirmDialog.MODE_NO_NETWORK,
-            onConfirm = { _ ->
-                doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.NETWORK_ERROR)
-            },
-            onCancel = {
-
-            }
+            onConfirm = { doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.NETWORK_ERROR) },
+            onCancel = {}
         )
     }
 
     private fun showWifiOnlyDialog(dir: String) {
+        val info = appInfo ?: return
         CellularConfirmDialog.show(
-            totalSize = appSize,
+            totalSize = info.sizeBytes,
             taskCount = 1,
             mode = CellularConfirmDialog.MODE_WIFI_ONLY,
-            onConfirm = {
-                doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE)
-            }, onCancel = {
-
-            })
+            onConfirm = { doStartDownloadAndPause(dir, com.pichs.download.model.PauseReason.WIFI_UNAVAILABLE) },
+            onCancel = {}
+        )
     }
 
     private fun showCellularConfirmDialog(dir: String, totalSize: Long) {
-        // 创建临时 DownloadItem 用于弹窗
-//        val item = DownloadItem(
-//            name = name,
-//            url = url,
-//            packageName = packageNameStr,
-//            versionCode = CatalogRepository.getStoreVersionCode(this, packageNameStr),
-//            icon = icon ?: "",
-//            size = appSize
-//        )
         CellularConfirmDialog.show(
             totalSize = totalSize,
             taskCount = 1,
             mode = CellularConfirmDialog.MODE_CELLULAR,
-            onConfirm = {
-                doStartDownload(dir, cellularConfirmed = true)
-            },
-            onCancel = {
-            })
+            onConfirm = { doStartDownload(dir, cellularConfirmed = true) },
+            onCancel = {}
+        )
     }
 
     private fun doStartDownload(dir: String, cellularConfirmed: Boolean = false) {
+        val info = appInfo ?: return
         lifecycleScope.launch {
-            val storeVC = CatalogRepository.getStoreVersionCode(this@AppDetailActivity, packageNameStr) ?: 0L
-            val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
-                mapOf(
-                    "name" to (name),
-                    "packageName" to (packageNameStr),
-                    "versionCode" to (storeVC),
-                    "icon" to (icon ?: ""),
-                    "size" to (appSize)
-                )
-            )
-            task = DownloadManager.download(url)
+            val storeVC = CatalogRepository.getStoreVersionCode(this@AppDetailActivity, info.packageName) ?: 0L
+            val extrasJson = ExtraMeta(
+                name = info.name,
+                packageName = info.packageName,
+                versionCode = storeVC,
+                icon = info.icon ?: "",
+                size = info.sizeBytes,
+                install_count = info.install_count,
+                description = info.description,
+                update_time = info.update_time,
+                version_name = info.version,
+                developer = info.developer,
+                registration_no = info.registration_no,
+                categories = info.categories,
+                tags = info.tags,
+                screenshots = info.screenshots
+            ).toJson()
+
+            // 优先使用传递过来的 priority，如果没有可以默认
+            val priority = when (info.priority) {
+                com.pichs.download.core.DownloadPriority.URGENT.value -> com.pichs.download.core.DownloadPriority.URGENT.value
+                com.pichs.download.core.DownloadPriority.HIGH.value -> com.pichs.download.core.DownloadPriority.HIGH.value
+                com.pichs.download.core.DownloadPriority.LOW.value -> com.pichs.download.core.DownloadPriority.LOW.value
+                else -> com.pichs.download.core.DownloadPriority.NORMAL.value
+            }
+
+            task = DownloadManager.download(info.url)
                 .path(dir)
-                .fileName(name)
-                .estimatedSize(appSize)
+                .fileName(info.name)
+                .estimatedSize(info.sizeBytes)
                 .extras(extrasJson)
                 .priority(priority)
                 .cellularConfirmed(cellularConfirmed)
                 .start()
 
-
-            // 刷新任务状态（start() 返回的可能是旧状态）
             task = DownloadManager.getTask(task?.id ?: "") ?: task
-
             bindButtonUI(task)
         }
     }
 
     private fun doStartDownloadAndPause(dir: String, pauseReason: com.pichs.download.model.PauseReason) {
-        val storeVC = CatalogRepository.getStoreVersionCode(this, packageNameStr) ?: 0L
-        val extrasJson = com.pichs.xbase.utils.GsonUtils.toJson(
-            mapOf(
-                "name" to (name),
-                "packageName" to (packageNameStr),
-                "versionCode" to (storeVC),
-                "icon" to (icon ?: ""),
-                "size" to (appSize)
-            )
-        )
-        val newTask = DownloadManager.download(url)
+        val info = appInfo ?: return
+        val storeVC = CatalogRepository.getStoreVersionCode(this, info.packageName) ?: 0L
+        val extrasJson = ExtraMeta(
+            name = info.name,
+            packageName = info.packageName,
+            versionCode = storeVC,
+            icon = info.icon ?: "",
+            size = info.sizeBytes,
+            install_count = info.install_count,
+            description = info.description,
+            update_time = info.update_time,
+            version_name = info.version,
+            developer = info.developer,
+            registration_no = info.registration_no,
+            categories = info.categories,
+            tags = info.tags,
+            screenshots = info.screenshots
+        ).toJson()
+
+        // 同样处理 Priority
+         val priority = when (info.priority) {
+            com.pichs.download.core.DownloadPriority.URGENT.value -> com.pichs.download.core.DownloadPriority.URGENT.value
+            com.pichs.download.core.DownloadPriority.HIGH.value -> com.pichs.download.core.DownloadPriority.HIGH.value
+            com.pichs.download.core.DownloadPriority.LOW.value -> com.pichs.download.core.DownloadPriority.LOW.value
+            else -> com.pichs.download.core.DownloadPriority.NORMAL.value
+        }
+
+        val newTask = DownloadManager.download(info.url)
             .path(dir)
-            .fileName(name)
-            .estimatedSize(appSize)
+            .fileName(info.name)
+            .estimatedSize(info.sizeBytes)
             .extras(extrasJson)
             .priority(priority)
             .start()
 
-        // 立即暂停，设置暂停原因
         DownloadManager.pauseTask(newTask.id, pauseReason)
         task = newTask.copy(status = DownloadStatus.PAUSED, pauseReason = pauseReason)
         bindButtonUI(task)
@@ -366,6 +387,7 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
 
     private fun openApkFile(file: File) {
         if (!file.exists()) return
+        val pkg = appInfo?.packageName ?: packageName
         val uri: Uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
         val intent = Intent(Intent.ACTION_VIEW).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

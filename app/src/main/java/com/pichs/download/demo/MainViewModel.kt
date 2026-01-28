@@ -8,7 +8,7 @@ import com.pichs.download.core.DownloadPriority
 import com.pichs.download.model.DownloadTask
 import com.pichs.download.utils.DownloadLog
 import com.pichs.shanhai.base.utils.LogUtils
-import com.pichs.xbase.utils.GsonUtils
+import com.pichs.xbase.utils.UiKit
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -27,6 +27,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _appList = MutableStateFlow<List<DownloadItem>>(emptyList())
     val appList: StateFlow<List<DownloadItem>> = _appList.asStateFlow()
 
+    // 游戏列表
+    private val _gameList = MutableStateFlow<List<DownloadItem>>(emptyList())
+    val gameList: StateFlow<List<DownloadItem>> = _gameList.asStateFlow()
+
     // UI 事件（用于通知 Activity 显示 Toast、弹窗等）
     private val _uiEvent = MutableSharedFlow<UiEvent>()
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
@@ -42,21 +46,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun loadAppListFromAssets() {
         viewModelScope.launch {
-            val jsonString = getApplication<Application>().assets
-                .open("app_list.json")
-                .bufferedReader()
-                .use { it.readText() }
-            loadAppList(jsonString)
+            loadAppList()
+        }
+    }
+
+    /**
+     * 从 Assets 加载游戏列表
+     */
+    fun loadGameListFromAssets() {
+        viewModelScope.launch {
+            loadGameList()
         }
     }
 
     /**
      * 加载应用列表
      */
-    private fun loadAppList(jsonString: String) {
-        val appListBean = GsonUtils.fromJson<AppListBean>(jsonString, AppListBean::class.java)
-        val list = appListBean.appList ?: emptyList()
-
+    private fun loadAppList() {
+        val list = CatalogRepository.getApps(UiKit.getApplication())?.appList ?: emptyList()
         // 自动关联已有任务
         list.forEach { item ->
             if (item.task == null) {
@@ -64,33 +71,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (existingTask != null) item.task = existingTask
             }
         }
-
         _appList.value = list
+    }
+
+    private fun loadGameList() {
+        val list = CatalogRepository.getGames(UiKit.getApplication())?.appList ?: emptyList()
+        // 自动关联已有任务
+        list.forEach { item ->
+            if (item.task == null) {
+                val existingTask = DownloadManager.getTaskByUrl(item.url)
+                if (existingTask != null) item.task = existingTask
+            }
+        }
+        _gameList.value = list
     }
 
     /**
      * 刷新列表中的任务状态
      */
     fun refreshTaskStates() {
-        val currentList = _appList.value.toMutableList()
-        currentList.forEachIndexed { index, item ->
+        // App List
+        val currentAppList = _appList.value.toMutableList()
+        currentAppList.forEachIndexed { index, item ->
             val existingTask = DownloadManager.getTaskByUrl(item.url)
             if (existingTask != null && item.task?.id != existingTask.id) {
-                currentList[index].task = existingTask
+                currentAppList[index].task = existingTask
             }
         }
-        _appList.value = currentList
+        _appList.value = currentAppList
+
+        // Game List
+        val currentGameList = _gameList.value.toMutableList()
+        currentGameList.forEachIndexed { index, item ->
+            val existingTask = DownloadManager.getTaskByUrl(item.url)
+            if (existingTask != null && item.task?.id != existingTask.id) {
+                currentGameList[index].task = existingTask
+            }
+        }
+        _gameList.value = currentGameList
     }
 
     /**
      * 更新指定任务
      */
     fun updateTask(task: DownloadTask) {
-        val currentList = _appList.value.toMutableList()
-        val index = currentList.indexOfFirst { it.url == task.url }
-        if (index >= 0) {
-            currentList[index].task = task
-            _appList.value = currentList
+        // Update App List
+        val currentAppList = _appList.value.toMutableList()
+        val appIndex = currentAppList.indexOfFirst { it.url == task.url }
+        if (appIndex >= 0) {
+            currentAppList[appIndex].task = task
+            _appList.value = currentAppList
+        }
+
+        // Update Game List
+        val currentGameList = _gameList.value.toMutableList()
+        val gameIndex = currentGameList.indexOfFirst { it.url == task.url }
+        if (gameIndex >= 0) {
+            currentGameList[gameIndex].task = task
+            _gameList.value = currentGameList
         }
     }
 
@@ -109,7 +147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // 计算总大小
-            val totalSize = appsToDownload.sumOf { it.size }
+            val totalSize = appsToDownload.sumOf { it.sizeBytes }
 
             DownloadLog.d("模拟批量下载", "准备下载 ${appsToDownload.size} 个应用，总大小: $totalSize")
 
@@ -176,7 +214,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val task = DownloadManager.download(app.url)
                     .path(downloadDir)
                     .fileName(fileName)
-                    .estimatedSize(app.size)
+                    .estimatedSize(app.sizeBytes)
                     .extras(extrasJson)
                     .start()
 
@@ -192,7 +230,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _uiEvent.emit(UiEvent.ShowToast(msg))
         }
     }
-    
+
     /**
      * 等待网络下载：创建任务并暂停（无网络时使用）
      * 框架层会在网络恢复后自动恢复
@@ -206,7 +244,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val task = DownloadManager.download(app.url)
                     .path(downloadDir)
                     .fileName(fileName)
-                    .estimatedSize(app.size)
+                    .estimatedSize(app.sizeBytes)
                     .extras(extrasJson)
                     .start()
 
@@ -232,7 +270,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun requestDownload(item: DownloadItem) {
         viewModelScope.launch {
-            val result = DownloadManager.checkBeforeCreate(item.size)
+            val result = DownloadManager.checkBeforeCreate(item.sizeBytes)
 
             when (result) {
                 is com.pichs.download.model.CheckBeforeResult.Allow -> {
@@ -241,12 +279,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 is com.pichs.download.model.CheckBeforeResult.NoNetwork -> {
                     // 无网络：弹窗让用户选择【连接WiFi】或【等待网络下载】
-                    _uiEvent.emit(UiEvent.ShowNoNetworkDialog(listOf(item), item.size))
+                    _uiEvent.emit(UiEvent.ShowNoNetworkDialog(listOf(item), item.sizeBytes))
                 }
 
                 is com.pichs.download.model.CheckBeforeResult.WifiOnly -> {
                     // 仅WiFi模式，弹窗让用户选择
-                    _uiEvent.emit(UiEvent.ShowWifiOnlyDialog(listOf(item), item.size))
+                    _uiEvent.emit(UiEvent.ShowWifiOnlyDialog(listOf(item), item.sizeBytes))
                 }
 
                 is com.pichs.download.model.CheckBeforeResult.NeedConfirmation -> {
@@ -282,13 +320,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             DownloadPriority.LOW.value -> DownloadPriority.LOW
             else -> DownloadPriority.NORMAL
         }
-        
+
         DownloadLog.d("MainViewModel", "下载任务: ${item.name}, priority=${priority.value}")
 
         val task = DownloadManager.downloadWithPriority(item.url, priority)
             .path(downloadDir)
             .fileName(fileName)
-            .estimatedSize(item.size)
+            .estimatedSize(item.sizeBytes)
             .extras(extrasJson)
             .cellularConfirmed(cellularConfirmed)
             .start()
@@ -310,7 +348,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val task = DownloadManager.download(app.url)
                 .path(downloadDir)
                 .fileName(fileName)
-                .estimatedSize(app.size)
+                .estimatedSize(app.sizeBytes)
                 .extras(extrasJson)
                 .cellularConfirmed(cellularConfirmed)
                 .start()
@@ -350,11 +388,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun updateItemTask(item: DownloadItem, task: DownloadTask) {
-        val currentList = _appList.value.toMutableList()
-        val index = currentList.indexOfFirst { it.url == item.url }
-        if (index >= 0) {
-            currentList[index].task = task
-            _appList.value = currentList
+        val currentAppList = _appList.value.toMutableList()
+        val appIndex = currentAppList.indexOfFirst { it.url == item.url }
+        if (appIndex >= 0) {
+            currentAppList[appIndex].task = task
+            _appList.value = currentAppList
+        }
+
+        val currentGameList = _gameList.value.toMutableList()
+        val gameIndex = currentGameList.indexOfFirst { it.url == item.url }
+        if (gameIndex >= 0) {
+            currentGameList[gameIndex].task = task
+            _gameList.value = currentGameList
         }
     }
 
@@ -364,7 +409,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             packageName = item.packageName,
             versionCode = item.versionCode,
             icon = item.icon,
-            size = item.size
+            size = item.sizeBytes,
+            install_count = item.install_count,
+            description = item.description,
+            update_time = item.update_time,
+            version_name = item.version,
+            developer = item.developer,
+            registration_no = item.registration_no,
+            categories = item.categories,
+            tags = item.tags,
+            screenshots = item.screenshots
         ).toJson()
     }
 
@@ -388,7 +442,7 @@ sealed class UiEvent {
 
     /** 仅WiFi模式提示弹窗 */
     data class ShowWifiOnlyDialog(val apps: List<DownloadItem>, val totalSize: Long) : UiEvent()
-    
+
     /** 无网络提示弹窗 */
     data class ShowNoNetworkDialog(val apps: List<DownloadItem>, val totalSize: Long) : UiEvent()
 }

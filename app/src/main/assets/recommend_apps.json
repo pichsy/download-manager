@@ -1,0 +1,984 @@
+{
+  "appList": [
+    {
+      "name": "UC浏览器",
+      "install_count": "4775.7万人下载",
+      "short_description": "资讯视频小说搜索",
+      "detail_url": "https://www.wandoujia.com/apps/36557",
+      "app_id": "36557",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/26/3/110_835dfc8eafa7983cdd91d0c264399985_con_130x130.png",
+      "size": "122.14MB",
+      "version": "18.5.6.1482",
+      "update_time": "2026/01/26 16:15",
+      "categories": [
+        "系统工具",
+        "浏览器"
+      ],
+      "tags": [
+        "常用工具",
+        "聊天社交",
+        "社交网络",
+        "新闻资讯",
+        "系统工具",
+        "必备软件",
+        "古装",
+        "网络工具"
+      ],
+      "developer": "广州市动景计算机科技有限公司",
+      "registration_no": "粤ICP备09210879号-56A",
+      "organizer": "广州市动景计算机科技有限公司",
+      "description": "UC21周年庆，我们一起越来越好！全球6亿人上网必备APP，群众的眼睛是雪亮的头条视频小说网盘小游戏，想你之所想一应俱全首页更清爽素雅，支持自定义壁纸；头条内容品质升级，大咖精品云集；还有更多惊喜改变等你来发现~【来听听用户的心声】从用智能手机就一直在使用的浏览器，非常的好用，也一路见证了它的成长。尽管功能越来越强大，但使用过程中还是很轻量的 ——呼吸在我耳边反正我从诺基亚时期就用UC到现在 ——U221102992老爸老妈天天为了看电视吵架，索性自己就把这款软件让他们看，没想到他们却喜欢上了在这里看视频，哈哈挺好 ——wetiiresfj1245非常好用，专注使用10年，忠实用户 ——万能甜用了UC浏览器之后就一直不想再换别的浏览器了，小说也很稳，没事的时候看看漫画也是不错的选择 ——蓝果子酱第一次心甘情愿的写评论，真的很好用，网速很快 ，尤其看小说视频超级棒！万年忠实粉丝！—叶向红丰富功能包罗万象，让你爱不释手【头条资讯】精彩头条，热点新闻永不错过【海量视频】全网上亿短视频，新鲜热点全收录【游戏交友】内置超多小游戏，真人匹配随时开战【海量小说】热门小说更快更新，阅读体验更省心【超速网盘】视频一键云收藏，极速离线无需等待；在yun.cn访问UC网盘网页版，无需客户端资源直接下，普通用户下载也不限速噢~【全网免流】阿里宝卡/鱼卡免费领，看视频/新闻/小说/下载，统统免流量【智能搜索】新资讯、好福利、精内容，一搜即得【订阅精品】事件追踪、优质账号、精品专栏，订阅欣赏好内容【极速省流】省流黑科技，节省超过30%流量【贴心细节】无痕浏览，保护你的隐私；夜间模式，爱护你的眼睛优秀有目共睹，拿奖拿到手软：2017《互联网周刊》年度产品奖2016 艾瑞金瑞奖最佳产品创新奖2015 艾瑞年度最佳工具应用奖2015 北京晨报最具影响力科技企业之「最具人气 APP」2014 金瑞奖中国移动互联网应用类最具影响力奖2013 手机中国年度最佳手机浏览器2013 中国移动应用隐私安全榜APP1002012 年度最佳浏览器奖千里相会，便是缘分。走过路过，不要错过。你的下个10年，UC一直陪伴。UC浏览器2026更新内容春节活动重磅来袭，上UC打卡到除夕，惊喜不停！",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/4/110_9c12b11dcb92a87af0619606c9f0140b.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/1/110_ce1fd33bc96f285fad5b6963bba21eac.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/6/110_a52853d5ffeebe54184d88a4dfe10e74.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/10/110_beb1ab00eb4e3d017f49fd426fb687e3.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/11/110_696fcb63b27b0028e8ce70ab2fcd9d26.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/36557/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.UCMobile",
+      "package_name": "com.UCMobile",
+      "version_code": "11482"
+    },
+    {
+      "name": "淘宝-天猫双11全球狂欢季",
+      "install_count": "5431.7万人下载",
+      "short_description": "太好逛了吧",
+      "detail_url": "https://www.wandoujia.com/apps/32267",
+      "app_id": "32267",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/23/11/106_579a5bf8f14c8656de67adc6de654bd5_con_130x130.png",
+      "size": "85.66MB",
+      "version": "10.57.10",
+      "update_time": "2026/01/23 13:41",
+      "categories": [
+        "网上购物",
+        "商城"
+      ],
+      "tags": [
+        "生活应用",
+        "安卓",
+        "网上购物",
+        "购物",
+        "必备软件",
+        "电商",
+        "阿里巴巴",
+        "电商应用"
+      ],
+      "developer": "浙江淘宝网络有限公司",
+      "registration_no": "浙B2-20080224-50A",
+      "organizer": "浙江淘宝网络有限公司",
+      "description": "淘宝是一个好逛、丰富、有趣的消费生活社区，每天有亿万消费者来淘宝“逛街”：发现好物、找到乐趣、表达体验……淘宝能满足人们生活中的各种需求：搜索和浏览商品、加入购物车、下单支付、物流查询、客服交流、发表购物评论、分享优质商品等等，还能通过本地功能，找到附近的生活优惠信息。淘宝好逛，是因为——1、在淘宝上，找到丰富的商品：各种各样的优质好物、神奇商品都在淘宝上。再小的需求，也能在淘宝上被满足；再小的爱好，也能在淘宝上找到同好。2、在淘宝上，获得好逛的体验：淘宝每天都会推荐优质、有趣的商品、服务和优惠信息。每个人都能在这里找到自己感兴趣的商品，足不出户就能逛到好物。3、在淘宝上，看到真实的内容：淘宝直播间里的实物展示、评论区里真实的买家秀，让人买起来更放心。人们也能在淘宝“逛逛”社区分享自己的购物体验、推荐优质商品。4、在淘宝上，买到优惠的商品：每年双11、618等大促活动，商家集体打折，人们能在淘宝上获得真正的实惠。同时，成为88VIP会员和品牌会员，还能享受更多福利。淘宝-天猫双11全球狂欢季2026更新内容● 年货狂欢季，官方立减商品8.8折起，叠券7.7折起● 最高领8.8折消费券，好货折上折● 万券可叠购物金，限时膨胀5折起● 淘宝直播，抢30亿预售红包● 天猫惊喜盒，0.01元赢千元独家礼● 淘宝百亿补贴，真补贴，真优惠",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/5/106_6de9c29572f4ba3299947ef68f62168a.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/6/106_6f395049fa0da46c912ccc4c57efd6ae.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/1/106_9299ba962abbb325ab54fc4258d0d7ff.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/3/106_1dcc680177e42ae3a37a3b1ca631b1b1.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/0/106_892ee5d2628b26aabb3d54a4c6e47724.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/32267/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.taobao.taobao",
+      "package_name": "com.taobao.taobao",
+      "version_code": "826"
+    },
+    {
+      "name": "QQ",
+      "install_count": "2亿人下载",
+      "short_description": "一起轻松做自己",
+      "detail_url": "https://www.wandoujia.com/apps/566489",
+      "app_id": "566489",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/20/2/110_6a052c0d48f7e9214a7d351ade5676ed_con_130x130.png",
+      "size": "380.57MB",
+      "version": "9.2.60",
+      "update_time": "2026/01/20 14:43",
+      "categories": [
+        "通讯社交",
+        "聊天",
+        "交友"
+      ],
+      "tags": [
+        "休闲",
+        "趣味",
+        "消除",
+        "文字",
+        "社交",
+        "视频",
+        "聊天",
+        "空间"
+      ],
+      "developer": "腾讯科技（深圳）有限公司",
+      "registration_no": "粤B2-20090059-1622A",
+      "organizer": "深圳市腾讯计算机系统有限公司",
+      "description": "在QQ，轻松社交- [聊天消息]随时随地好友和群消息；- [语音通话]、[视频聊天]和亲友自在畅聊；- [文件传输]手机电脑多端互传，轻松便捷。在QQ，轻松生活- [空间动态]快速获知好友动态，随时分享生活；- [移动支付]话费充值、转账收款、网购一应俱全；- [关怀模式]大字体、大图标，操作更简单，长辈使用更方便。在QQ，轻松娱乐- [游戏中心]体验热门手游乐趣，还有更多大神攻略分享；- [个性装扮]各种主题、名片、彩铃、气泡、挂件自由选。QQ将功能赋能，打造轻松欢乐的社交、娱乐与生活体验。-----联系我们-----如在使用过程中遇到任何问题，请联系我们：- 在线帮助：进入QQ设置 -> 关于QQ -> 帮助与反馈- 客服热线：4006 700 700（服务时间：8:00 - 23:00）*加入寻找丢失儿童公益项目，GPS在后台运行可能会影响电池续航时间QQ2026更新内容近期更新：- Q泡消息功能上线，你的消息有画面了；- 新增QQ闪传功能，10GB大文件极速传输，支持跨应用分享；- 群聊AI总结功能上线，可一键总结群聊未读消息，快速掌握聊天重点；- 群聊支持定时禁言，管理更灵活；- 新增QQ群接龙能力，支持导出表格。",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/2/110_bf3732118da0f1f7af9ec59ca0e60ac0.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/6/110_1d936b65d061153b72da13a80551e73b.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/10/110_0dfc2d70f175c36572bc4767c0efa6ba.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/11/110_48bcfca040b8f6629c374d9eb0dc2fd4.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/11/110_0eef7c15635678e67e411789c17ffde5.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/566489/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.tencent.mobileqq",
+      "package_name": "com.tencent.mobileqq",
+      "version_code": "13010"
+    },
+    {
+      "name": "抖音",
+      "install_count": "8332.6万人下载",
+      "short_description": "记录美好生活",
+      "detail_url": "https://www.wandoujia.com/apps/7461948",
+      "app_id": "7461948",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/21/6/106_0f133570d086ead7fa6a84d3fe46f307_con_130x130.png",
+      "size": "322.88MB",
+      "version": "37.5.0",
+      "update_time": "2026/01/21 12:39",
+      "categories": [
+        "摄影图像",
+        "美化",
+        "短视频"
+      ],
+      "tags": [],
+      "developer": "北京抖音科技有限公司",
+      "registration_no": "京ICP备16016397号-49A",
+      "organizer": "北京抖音科技有限公司",
+      "description": "上抖音，开红包，共度欢笑中国年！-2月3日，新春活动重磅来袭。上抖音搜索“跃马攀峰”，赢388元红包；-2月3日，上抖音参与集祥马卡，分3亿！ 与亲朋好友一同参与集卡活动，更多新春福利等你解锁；-2月16日，和家人一起开福气红包，分3亿！更多惊喜活动等你体验！具体玩法、参与方式及奖励情况，详见“欢笑中国年”活动规则。抖音，记录美好生活每天，都有亿万人打开抖音，让生活变得更加美好。●  看精彩直播屏幕里的美好现场，陪伴你的每分每秒。●  追上头短剧剧情高能不断，看得开心，追得过瘾。●  玩爆款特效丰富装扮效果，上一秒甜美，下一秒酷炫。●  看抖音精选凭热爱创作的优质中长视频，让时间不虚度。● 开启长辈模式享受贴心关爱与陪伴，看得更清，用得舒心。● 不仅如此，抖音还深入各领域，为美好生活，创造更多新可能。拿起抖音，农特产发现新销路，宝妈找到新工作，小店迎来新客群；打开抖音，古籍焕发新生命，非遗等来满堂彩，知识也从庙堂传入市井；有了抖音，退休老人可以在直播间发挥余热，孩子们得以在线上课堂茁壮成长，公益事业也能人人可及。抖音2026更新内容BUG修复。",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/2/106_16cdfef06b539e0ec241f849e8bb17a5.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/11/106_f4dc697e5356c37992a6149a18794d7a.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/1/106_c744a029b5782092e284c8a8104c3b5f.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/3/106_9ebb6eb4d02f01b8e8c66b21d73e3bed.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/7461948/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.ss.android.ugc.aweme",
+      "package_name": "com.ss.android.ugc.aweme",
+      "version_code": "370501"
+    },
+    {
+      "name": "微信",
+      "install_count": "2.3亿人下载",
+      "short_description": "你可以通过音视频通话、群聊、朋友圈来和朋友们分享生活，可以通过公众号、视频号获得文章、视频内容，以及",
+      "detail_url": "https://www.wandoujia.com/apps/596157",
+      "app_id": "596157",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/24/8/125_9bd76eaae98f8c9cb57215814c9df8fb_con_130x130.png",
+      "size": "243.3MB",
+      "version": "8.0.68",
+      "update_time": "2026/01/24 06:34",
+      "categories": [
+        "通讯社交",
+        "聊天"
+      ],
+      "tags": [
+        "娱乐",
+        "机器人",
+        "社交",
+        "安卓",
+        "聊天",
+        "社交应用",
+        "娱乐生活",
+        "语音"
+      ],
+      "developer": "深圳市腾讯计算机系统有限公司",
+      "registration_no": "粤B2-20090059-1621A",
+      "organizer": "深圳市腾讯计算机系统有限公司",
+      "description": "你可以通过音视频通话、群聊、朋友圈来和朋友们分享生活，可以通过公众号、视频号获得文章、视频内容，以及通过小程序方便地使用生活服务，还可以开启「关怀模式」，文字与按钮更大更清晰。微信2026更新内容解决了一些已知问题。",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2019/01/02/7/986215b9f974a7c96f1eca3e2a6622ba.png",
+        "https://android-screenimgs.25pp.com/fs08/2019/01/02/0/ed7b55baab7415b69338356af0fda394.png",
+        "https://android-screenimgs.25pp.com/fs08/2019/01/02/8/c1ba569e1d1d7981ec0a82776b626498.png",
+        "https://android-screenimgs.25pp.com/fs08/2019/01/02/3/6f34f73a129ccdb5853d52bead80f49d.png",
+        "https://android-screenimgs.25pp.com/fs08/2019/01/02/1/fce56af8a302ae17b3d47dcc2e9ee6d7.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/596157/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.tencent.mm",
+      "package_name": "com.tencent.mm",
+      "version_code": "3020"
+    },
+    {
+      "name": "快手",
+      "install_count": "6577.8万人下载",
+      "short_description": "拥抱每一种生活",
+      "detail_url": "https://www.wandoujia.com/apps/280621",
+      "app_id": "280621",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/23/11/106_e6581c5d12614fb48f8c1be38838043f_con_130x130.png",
+      "size": "171.42MB",
+      "version": "14.0.30.46307",
+      "update_time": "2026/01/23 15:00",
+      "categories": [
+        "摄影图像",
+        "相机",
+        "短视频"
+      ],
+      "tags": [
+        "趣味",
+        "可爱",
+        "小清新",
+        "太空",
+        "泡泡",
+        "社区",
+        "相机",
+        "图片处理"
+      ],
+      "developer": "北京快手科技有限公司",
+      "registration_no": "京ICP备15023266号-141A",
+      "organizer": "北京快手科技有限公司",
+      "description": "「有趣视频，一看就上瘾」好看的、好玩的，好笑的短视频，都在这。「一起同框，越玩越有戏」随时随地多人同框，搭戏模仿，有趣更有戏。「互动直播，有你更出众」随时随地侃大山，好看的小哥哥小姐姐都爱玩的直播在这里。「支持原创，潇洒做自己」脑洞大、才艺多，有绝活，给你大舞台。「美颜滤镜，拍出你的美」30款美颜滤镜，上百种魔法表情；要萌要酷随你变，怎么变都好看。快手2026更新内容- 进行了问题修复以及性能提升- 优化您的产品使用体验",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/3/106_30cacfbc5ee7737d2fc84f5af3e667db.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/3/106_fade9e57e2edbf6a8f9dd1ab73605085.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/8/106_a3d889ed9183ba5c970f3bfd0aa51096.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/4/106_46d3698a8a24e4ea5f800206ba063fc1.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/6/106_5d74a108429fc4a1c504d60911ce3063.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/280621/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.smile.gifmaker",
+      "package_name": "com.smile.gifmaker",
+      "version_code": "46307"
+    },
+    {
+      "name": "抖音极速版",
+      "install_count": "1256.1万人下载",
+      "short_description": "欢笑中国年",
+      "detail_url": "https://www.wandoujia.com/apps/8060330",
+      "app_id": "8060330",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/22/0/110_01f43e69ba59ab848193a2ce49c8e959_con_130x130.png",
+      "size": "184.82MB",
+      "version": "37.5.0",
+      "update_time": "2026/01/21 19:45",
+      "categories": [
+        "摄影图像",
+        "短视频"
+      ],
+      "tags": [],
+      "developer": "北京抖音科技有限公司",
+      "registration_no": "京ICP备16016397号-50A",
+      "organizer": "北京抖音科技有限公司",
+      "description": "上抖音极速版，开红包，共度欢笑中国年！-2月3日，新春活动重磅来袭。上抖音极速版参与“跃马攀峰”，最高赢388元红包；-2月3日，上抖音极速版参与集祥马卡，分3亿！ 与亲朋好友一同参与集卡活动，更多新春福利等你解锁；-2月16日，上抖音极速版，和家人一起开福气红包，分3亿！更多惊喜活动等你体验！具体玩法、参与方式及奖励情况，详见“欢笑中国年”活动规则。抖音极速版是记录美好生活，帮助用户表达自我的原创短视频分享平台。【金币红包】看视频、拍视频、邀好友，均可获得专属金币红包，玩法丰富有趣，助你轻松赚钱！【内容精彩】看视频、聊科技、精彩内容应有尽有，智能推荐专属内容，还能及时查阅达人与好友的动态。抖音极速版2026更新内容同享欢笑中国年，上抖音极速版赚新年红包！2026抖音极速版欢笑中国年活动开始啦！大量红包等你来赢！-「跃马攀峰」：集福气最高赢388元红包；-「集祥马卡」：和亲朋好友一起收集祥马卡，分3亿；-「福气红包」：新年和家人一起开福气红包，分3亿！更多新春福利，等你来！具体玩法、参与方式及奖励情况，详见“欢笑中国年”活动规则。",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/9/110_4ccdfc44465b39fa740b230309d0fffb.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/5/110_52495615e81648f730df6fe6e5defcae.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/10/110_cf0f52369fee74df08d16c7c5e0e1560.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/3/110_682734af3e9b2cef0751b245aa8cd0ea.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/8060330/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.ss.android.ugc.aweme.lite",
+      "package_name": "com.ss.android.ugc.aweme.lite",
+      "version_code": "370501"
+    },
+    {
+      "name": "快手极速版",
+      "install_count": "2614.9万人下载",
+      "short_description": "刷视频领现金",
+      "detail_url": "https://www.wandoujia.com/apps/7880556",
+      "app_id": "7880556",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/23/1/106_9710ed70d19297c9d865032c08116cb3_con_130x130.png",
+      "size": "106.8MB",
+      "version": "14.0.30.11071",
+      "update_time": "2026/01/23 15:00",
+      "categories": [
+        "摄影图像",
+        "短视频"
+      ],
+      "tags": [],
+      "developer": "北京快手科技有限公司",
+      "registration_no": "京ICP备15023266号-139A",
+      "organizer": "北京快手科技有限公司",
+      "description": "【更快】小安装包，快速下载。浏览更省流量，运行丝滑流畅。【更赞】覆盖精彩原创小视频，分享真实有趣的生活。【更好看】海量视频精挑细选，智能算法推荐。看更流行的，玩更热门的，只看你想看的视频。快手极速版2026更新内容- 进行了问题修复以及性能提升- 优化您的产品使用体验",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/6/106_68a62214cd8181bfdf630d6abe0b7d83.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/0/106_fe7b90513a5530b8edc51c14744ee38c.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/8/106_a910ef0bbd693b484ce85a705774fe91.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/0/106_e6f42d4a6af7ab8d60611ff3b98dc9c0.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/23/4/106_7a6b9c8bb02b4553ea026efe3c40ca2f.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/7880556/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.kuaishou.nebula",
+      "package_name": "com.kuaishou.nebula",
+      "version_code": "11071"
+    },
+    {
+      "name": "酷狗音乐",
+      "install_count": "8337万人下载",
+      "short_description": "听歌就在中国酷狗",
+      "detail_url": "https://www.wandoujia.com/apps/34221",
+      "app_id": "34221",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/14/9/110_7d1fe7a10877d7d7288f115408435dd1_con_130x130.png",
+      "size": "159.14MB",
+      "version": "20.5.0",
+      "update_time": "2026/01/13 20:45",
+      "categories": [
+        "影音播放",
+        "音乐"
+      ],
+      "tags": [
+        "休闲",
+        "节奏",
+        "音乐",
+        "音乐游戏",
+        "必备软件",
+        "直播",
+        "乐曲",
+        "音乐电台"
+      ],
+      "developer": "广州酷狗计算机科技有限公司",
+      "registration_no": "粤ICP备09017694号-30A",
+      "organizer": "广州酷狗计算机科技有限公司",
+      "description": "酷狗音乐-20周年限定版就是歌多，音效多，音质好千万高品质正版曲库随心听【酷狗音乐核心功能】1.横屏播放器：随心切换，即刻沉浸，横竖都好听；2.蝰蛇全景声音质全新蝰蛇全景声 2.0 音质升级，空间全景声渲染技术，AI还原5.1环绕声，让人身临其境享受音乐；3.更简洁的操作界面界面全新设计，去繁从简，点划之间尽享畅爽体验；4.乐库体验大有不同耳目一新的乐库，新歌速递、权威榜单、精选歌单，你要找的音乐，都在酷狗乐库；5.融合酷狗收音机音乐、情感、新闻……聆听不同的声音，感受不同世界，重拾不经意流去的调频时光；6.随身携带的手机KTV超过300万首海量伴奏，录音棚、KTV、音乐厅、演唱会……多种音效，蝰蛇(VIPER)音频渲染，让你开嗓即成天籁；7.互动社区，以歌会友精准定位附近好声音，同城歌王，谁有我强；8.海量听书内容有声小说、相声评书、儿童故事等内容应有尽有，享受美妙听书的乐趣，快来畅听精彩内容；9.演艺直播，有声有色每天都有超过6000位美女主播24小时不间断现场直播，你点她唱，与千万音乐爱好者同时互动，造就网络好声音；10.个性化换肤主题色随着背景图而改变，更有多款主题任君选择。酷狗音乐2026更新内容「音效我页」音效首页右上角进入我的音效页，解锁音效个性化管理---往期更新---「即刻评论」一起畅聊音乐精彩时刻「dts音效」在酷狗音乐内搜索“dts音效”，解锁极致聆听盛宴「横屏节奏炫光」每束光，都为音乐节奏而生～「短剧」海量短剧畅快看，精彩内容刷不停【如果您在使用过程中遇到问题，请您移步“APP内-侧边栏-帮助与反馈“提交反馈，谢谢】",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/14/11/110_a1a2c27d6bd79e83f60ec4b51878de12.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/14/5/110_5b3d07335ea2171c7bb68bd8e803403f.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/14/7/110_7b01a6233f711e38b24746a8a2aeae95.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/14/6/110_89d5f14f0c3326aebe580e805cfa0de9.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/14/9/110_07244f3c7e57dba431cb3e12ec0ba1a1.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/34221/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.kugou.android",
+      "package_name": "com.kugou.android",
+      "version_code": "20509"
+    },
+    {
+      "name": "百度",
+      "install_count": "3812.5万人下载",
+      "short_description": "新闻头条热门视频",
+      "detail_url": "https://www.wandoujia.com/apps/39899",
+      "app_id": "39899",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/25/6/106_edc967658dd8d9ff13d9ae9e1a57eb42_con_130x130.png",
+      "size": "155.44MB",
+      "version": "15.46.0.10",
+      "update_time": "2026/01/25 18:09",
+      "categories": [
+        "系统工具",
+        "浏览器"
+      ],
+      "tags": [
+        "常用工具",
+        "生活",
+        "新闻资讯",
+        "语音",
+        "必备软件",
+        "热门应用",
+        "网络工具",
+        "搜索"
+      ],
+      "developer": "百度（中国）有限公司",
+      "registration_no": "京ICP证030173号-217A",
+      "organizer": "北京百度网讯科技有限公司",
+      "description": "百度App，数亿用户优选的搜索和资讯客户端。更懂中文的语音搜索识别技术。热门新闻、视频抢先看，更有全网正版小说，海量独家短剧。【智能搜索】 强大的搜索引擎，搭载文心一言大模型，多模态搜索，所见即所得，更深度、精准理解你的搜索意图，快速识别图片内容，直达你想要的结果。【热门资讯】 精选新闻资讯、视频、漫画等优质内容，热门评论置顶显示，查看、互动更方便。【文心助手】AI全能助手，即时解决你的所有问题。深入研究、深度搜索，为你解决复杂问题；AI拍题，一键解惑学习难题；AI生图、AI生成视频、AI写作，精彩内容跃然屏幕，还能AI语音通话、视频通话、文字聊天，带给你全新的AI体验！【短视频】 首页底部快速进入视频频道，海量明星娱乐、搞笑段子、经典剧集视频，还能拍小视频记录身边新鲜事，简单操作能拍又能看。【语音识别】 加入更懂中文的语音识别技术，新增方言识别能力，支持语音播报资讯，精准理解你的语音指令，即使在嘈杂环境中也能清晰识别，沟通无障碍。【小说/短剧】 海量正版小说、短剧随心看，小说支持书架列表、阅读进度可多台设备自动云同步。短剧涵盖都市、爱情等多种题材，智能推荐，精准匹配百度2026更新内容修复已知问题，提升用户体验",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/25/1/106_9c5fe66bb4d8a5050f3e692b3a8aa428.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/25/3/106_ba0ef8a7a24d0e27f930100cb64c133f.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/25/6/106_db5eaa0bd210c25f8c72c61b5026bf0d.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/25/11/106_39939a745b1601d14610750ea878e545.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/25/1/106_ca25f292e4191010d7a7eb68af149c65.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/39899/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.baidu.searchbox",
+      "package_name": "com.baidu.searchbox",
+      "version_code": "509347072"
+    },
+    {
+      "name": "作业帮",
+      "install_count": "2602.9万人下载",
+      "short_description": "AI智能答疑学习",
+      "detail_url": "https://www.wandoujia.com/apps/2392449",
+      "app_id": "2392449",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/21/7/2_eb8c12434711f3086395ca0f9adbda73_con_130x130.png",
+      "size": "53.49MB",
+      "version": "14.40.2",
+      "update_time": "2026/01/21 14:45",
+      "categories": [
+        "考试学习",
+        "学习"
+      ],
+      "tags": [
+        "学习",
+        "问答",
+        "教育软件",
+        "解题",
+        "答疑"
+      ],
+      "developer": "广州极目未来文化科技有限公司",
+      "registration_no": "粤ICP备2023029972号-17A",
+      "organizer": "广州极目未来文化科技有限公司",
+      "description": "作业帮，AI时代的学习神器！拥有超19亿大数据题库的智能学习APP，依托领先AI技术，打造更准确、更高效的学习体验。【作业帮AI核心功能】AI智能答疑：支持搜单题、搜整页、搜作文，19亿题库秒出解析！AI深度解析解题思路，智能追问薄弱点，推荐关联知识点，让学习举一反三，作业难题不再愁。AI秒批作业：一键秒批全科作业，涵盖作业批改、口算批改和作文批改，错题解析+原题精讲，AI准确定位学习盲区，轻松帮助家长完成作业检查。AI校内同步：智能同步教材章节，准确定位考试重难点，个性化推荐同步练习题和单元测试，形成\"学-练-测\"完整闭环，助力快速掌握知识点。AI写作：同步语文学习进度，成文质量贴合范文标准，全面支持写全文、写英文、写开头结尾。AI作文批改，按照年级/体裁/单元作文内置批改标准。包括六维度评级、全文点评、句子纠错、佳句赏析、思路点拨、全文润色。视频讲解：93%超高讲解覆盖率，AI智能匹配原题/相似题视频解析，教材精讲准确推送，解题步骤清晰易懂，学习效率倍增。作业帮2026更新内容口算PK新赛季，学习竞技新模式，等你来挑战！",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/6/2_d6485186d5878192bd04f913d133c643.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/7/2_aa9f6fd504f6ae8f6a50a017c5d3c11f.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/5/2_85dc8d96ab047bc1009e1861622805eb.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/4/2_19d22f5d6a57e18363d4a58aaa0ba4f3.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/11/2_538b211e6a2c5ebda26bcb813e0b2059.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/2392449/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.baidu.homework",
+      "package_name": "com.baidu.homework",
+      "version_code": "2585"
+    },
+    {
+      "name": "哈啰",
+      "install_count": "2486.3万人下载",
+      "short_description": "出行骑车顺风车",
+      "detail_url": "https://www.wandoujia.com/apps/7460851",
+      "app_id": "7460851",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/27/7/110_0f6373e4b81fdc650e62d8a4b52b928a_con_130x130.png",
+      "size": "136.42MB",
+      "version": "6.98.70",
+      "update_time": "2026/01/27 14:00",
+      "categories": [
+        "健康运动",
+        "减肥健身"
+      ],
+      "tags": [],
+      "developer": "上海哈啰普惠科技有限公司",
+      "registration_no": "豫ICP备18032709号-3A",
+      "organizer": "上海哈啰普惠科技有限公司",
+      "description": "哈啰-陪伴生活每一天骑车打车，约顺风车，租车自驾【哈啰单车】哈啰单车免押金，扫码用车极速开锁购卡骑车更优惠【哈啰助力车】轻松骑行，一蹬就助力【哈啰打车】特价快车，立即出发，天天享折扣出租车，更快接送，高峰时段打车不发愁品牌联盟，一键呼叫多平台车型，体验更优【哈啰顺风车】临近出发时间订单被取消，补偿乘客优惠券，出行更安心！支持乘客出行备注高速费支付意愿，线上化收支流程，高效更安全！车主接单详情页全新升级，信息展示更清晰，接单更放心！【哈啰租车】芝麻信用，押金双免：芝麻分500分以上有机会免车辆押金及违章押金上门取送，准时准点极速下单，锁定车型，有车保障免费取消，无忧出行【哈啰快送跑腿】送鲜花、送蛋糕、送宠物，万物可送，又快又省送货福利来袭，快送、专送限时7折起，单单发货享折扣【哈啰加油】哈啰优选站，天天享特价优惠，加油品质有保障新人礼包：新用户享首单礼，最高满200元可减30元【哈啰充电】百万电桩，一个APP都搞定：已聚合小桔、星星、蔚来等多个品牌充电桩天天特价，比价充电更实惠： 新用户首单享7折优惠，老用户可低价购买超值优惠券包联系我们：微信公众号：哈啰服务号微博：@哈啰客服电话：95175177邮箱：service@hellobike.com哈啰2026更新内容修复问题，优化体验",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/11/110_e46e33645ea3cc5e61a4eaf999bbed32.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/3/110_cede98020bd04f55c325046b2d8ebc45.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/6/110_6dbc930a34eb6770aba3c63a870f2739.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/8/110_049f2aac93de14d5e95d9a5e7d9d1ac8.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/6/110_1cd74bb3fd8dcac468e27f0133ad88d4.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/7460851/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.jingyao.easybike",
+      "package_name": "com.jingyao.easybike",
+      "version_code": "1069870"
+    },
+    {
+      "name": "小红书",
+      "install_count": "496.2万人下载",
+      "short_description": "你的生活指南",
+      "detail_url": "https://www.wandoujia.com/apps/6233739",
+      "app_id": "6233739",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/27/5/106_2babdc7233430318d4d89039e51a1fb8_con_130x130.png",
+      "size": "153.96MB",
+      "version": "9.19.0",
+      "update_time": "2026/01/27 16:39",
+      "categories": [
+        "网上购物",
+        "全球导购"
+      ],
+      "tags": [
+        "新闻资讯",
+        "购物",
+        "阅读",
+        "海淘",
+        "商场"
+      ],
+      "developer": "行吟信息科技（上海）有限公司",
+      "registration_no": "沪ICP备13030189号-18A",
+      "organizer": "行吟信息科技（上海）有限公司",
+      "description": "欢迎来到小红书，这里是你专属的生活兴趣社区！在这里，热爱闪闪发光，好奇找到回响，一起来开启属于你的兴趣宇宙吧！发现精彩：世界那么大，兴趣那么多！无数和你一样充满好奇心的人，在这里分享着他们的热爱与探索。无论你是痴迷手作、沉醉音乐、钻研美食，还是向往远行、热衷穿搭、好奇科技……在这里，兴趣无边界，热爱无高低，都在这里自由流淌。遇见同好：世界很大，但同好很近。和兴趣相投的小红薯们，一起真诚交流、互相启发。一句评论，一次点赞，可能就会转角遇到灵魂拍档。在这里，每一份兴趣被听见，每一种热爱被温柔以待。勇敢发光：你的每一次尝试、每一点进步、每一份感动都值得被珍藏。小红书就是你记录兴趣生活的成长手账！大胆分享你的故事、心得、哪怕是小小的尝试。你的真实记录，不仅点亮了自己的热爱，更可能成为照亮另一个“兴趣同路人”的微光。热爱成真：兴趣不息，体验不止！在小红书，发现感兴趣的好物，一键种草，轻松下单拔草！看到超酷的线下活动，呼朋引伴，说走就走！这里不光是灵感源头，更是兴趣旅程的起点站。让每一次心动落地生根，让每一份热爱玩出花样。带上好奇心，在小红书，开启属于你的兴趣之旅吧！小红书2026更新内容- 优化产品体验，修复若干问题使用中有任何问题或建议，请前往【设置】 - 【帮助与客服】 - 【意见反馈】中告诉我们哦",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/7/106_84a7442060ee0fda827284fef0aa3c6f.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/3/106_e68c0ade7c28e5669386dab8f288e882.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/6/106_b91810bbd2b7e9452d02b139317cc495.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/2/106_01780270a48b135fa4b3759c0748c7bc.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/7/106_0df7450dd5746da7aaa8ffc3c65ab3dd.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/6233739/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.xingin.xhs",
+      "package_name": "com.xingin.xhs",
+      "version_code": "9190807"
+    },
+    {
+      "name": "哔哩哔哩",
+      "install_count": "2936万人下载",
+      "short_description": "上B站看视频",
+      "detail_url": "https://www.wandoujia.com/apps/281291",
+      "app_id": "281291",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/21/10/110_a571efda5272d16a1cac0b647c3dac9c_con_130x130.png",
+      "size": "179.89MB",
+      "version": "8.80.0",
+      "update_time": "2026/01/21 14:51",
+      "categories": [
+        "影音播放",
+        "视频"
+      ],
+      "tags": [
+        "关卡",
+        "娱乐",
+        "消灭",
+        "萌系",
+        "轻松",
+        "动画",
+        "视频",
+        "音乐"
+      ],
+      "developer": "上海宽娱数码科技有限公司",
+      "registration_no": "沪ICP备13002172号-5A",
+      "organizer": "上海宽娱数码科技有限公司",
+      "description": "【国产动画】《牧神记》霸体少年初入世，掀起延康浩荡风云。《深空彼岸》奔向深空，登仙彼岸。《中国奇谭2》观奇境，入万象人间。探人心，寻本真自我。《永生 新篇章》战天魔，斩神族，仙道无稽，我道为峰！《仙王的日常生活 第五季》逆天仙王的带妹日常。《玄界之门》天降神物，异血附体！白猿觉醒，风云激荡！【番剧动画】成为勇者拯救世界，才是惩罚真正的开始，《判处勇者刑》正在热播！中年大叔觉醒假面骑士之魂！《东岛丹三郎想成为假面骑士》热血开幕！变身骑士拯救世界，《假面骑士ZZZ》任务开始！这个女儿明明超强却过分可爱！来《无敌的我是英雄爸爸和精灵妈妈的女儿》开启一场智斗冒险之旅！狂犬公主的事你少管！《最后可以再拜托您一件事吗？》武斗系大小姐已上线！刺客不削怎么玩？《明明只是暗杀者，我的面板数值却比勇者还要强》即将出手！还有海量精彩番剧内容等着你，快来与小伙伴们一同观看吧！【电影】《震耳欲聋》正在热播！檀健次×兰西雅 演绎聋人反诈生死局！《浪浪人生》B站热播！黄渤×范丞丞 热血集结一家人，兴“疯”作浪笑对人生放肆爽！《志愿军：浴血和平》正在热播！英雄史诗收官之作，全景还原上甘岭战役！【电视剧】经典重启！《疑犯追踪》第一季B站开播！那句“你正在被监视”再度响起。《唐顿庄园》全系列B站热播！见证英国贵族庄园的时代变迁与人性光辉！《不期而遇的生活》B站热播中！董璇破局重生，职场合租双线开战！刑侦天花板《重案六组》全系列杀回B站！热血破案+烟火气，爷青回！跟着六组解锁真实破案名场面《梅林传奇》全系列B站热播！见证传奇法师的觉醒与王者亚瑟的崛起！《金昭玉醉》B站独播！双魂觉醒，共刃诛邪！禁断之恋是救赎还是深渊！【纪录片】《德爷的登阶奇旅》B站出品，德爷挑战全球成人礼《天使也有实习期》B站出品，真实记录医学生成长《当我老去的时候》B站出品，快乐不老，岁月正好《荒野求生 第六季》跟着贝尔去冒险！《锻刀大赛 第四季》铸刀竞巅峰，锋芒决胜负！《天网》系列侦破重大刑事案件，警钟长鸣！还有3000+部纪录片等你来看～【综艺】《2025bilibili跨年晚会》全球殿堂级艺术家齐聚，更有经典游戏国创IP联动！12月31日19:30直播，敬请期待~《笑有新生》集结喜剧新力量，一起开启充满欢声笑语的喜剧之旅！哔哩哔哩2026更新内容-我们优化了此版本的使用体验，并修复了一些bug！-浅浅吃了几串酱油筋、烤牛胸口、烤掌中宝、烤鸡皮、烤牛肥瘦……还有一盘炒方便面！嘻嘻~",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/8/110_8bb2b43cb58edf61cbb548c74e9430da.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/7/110_5d4caf4780b9709142307c5bfe5d5fb3.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/6/110_b653b5b26785a99e30ad3f76ad68c6fc.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/11/110_8bdfabb979787bfa91c8e8db76d82d43.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/281291/download/dot?ch=detail_qr_dl&pos=detail-ndownload-tv.danmaku.bili",
+      "package_name": "tv.danmaku.bili",
+      "version_code": "8800300"
+    },
+    {
+      "name": "QQ音乐",
+      "install_count": "3322万人下载",
+      "short_description": "十六年的音乐陪伴",
+      "detail_url": "https://www.wandoujia.com/apps/280003",
+      "app_id": "280003",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/20/9/106_405be203eaaf13591d19d8e535ee6318_con_130x130.png",
+      "size": "189.85MB",
+      "version": "20.0.5.8",
+      "update_time": "2026/01/20 11:09",
+      "categories": [
+        "影音播放",
+        "音乐"
+      ],
+      "tags": [
+        "音乐",
+        "娱乐生活",
+        "必备软件",
+        "播放器",
+        "音乐电台",
+        "音乐播放器",
+        "在线音乐",
+        "场景音乐"
+      ],
+      "developer": "腾讯音乐娱乐（深圳）有限公司",
+      "registration_no": "粤B2-20090059-2052A",
+      "organizer": "深圳市腾讯计算机系统有限公司",
+      "description": "• 过亿正版音乐，热歌新歌每日首发，你想听的都在这里• 海量的无损音乐曲库，优质而上乘的听觉享受• 精品有声书、播客、儿童故事、助眠节目…沉浸式陪伴，度过闲暇时光• 听歌识曲、哼唱识别，精准识别此刻播放或哼唱的歌曲• 翻译歌词，支持数十万首热门英日韩泰歌曲的汉译音译• 个性化推荐，全站依你的口味定制专属音乐内容• 车载互联，支持宝马、福特等车型的车载应用• 强大的搜索，歌手、专辑、歌单、MV、类型、歌词、拼音、语音多种搜索方式均支持QQ音乐2026更新内容「AI Agent」不止是助手 更是懂你的音乐管家「专属陪伴」多款形象治愈上线  听懂你音乐里的喜怒哀乐「NAC音质」自研音质上线，好品质，更省流「DTS:X音质」360度沉浸 还原细节 声动随心「臻品全景声3.0」空间听感升维，看见高品质音乐「播放器养鱼模式」简约羽白养鱼模式，等你一起来摸鱼「自定义播放器」指尖滑动，玩转简约羽白3D模式「自定义播放器」拍立得自定义贴纸，装扮你的播放空间「星光Tab」一站式追星入口 让热爱更专注「评论」@元宝，陪你一起“听”===往期更新====「播放器贴纸」支持摇一摇触发播放页贴纸彩蛋「智能混音」混音模板再度升级，进阶交融模式解锁全新丝滑过渡体验",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/3/106_e564c47a2baa947e53e4a6fbbc9edc74.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/8/106_490fd97f2db830b5106d0518fa8b65b2.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/8/106_328e674f6cf04c22bcd3e6067e716350.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/11/106_d125cab8f3ad82b0d51402fca599f0e6.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/20/8/106_9644f6bbc663517acee0269e50e4ed80.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/280003/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.tencent.qqmusic",
+      "package_name": "com.tencent.qqmusic",
+      "version_code": "6738"
+    },
+    {
+      "name": "夸克",
+      "install_count": "731万人下载",
+      "short_description": "千问AI助手",
+      "detail_url": "https://www.wandoujia.com/apps/7457948",
+      "app_id": "7457948",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/22/7/110_e2639f55d79ff55d7c4e5a29208197da_con_130x130.png",
+      "size": "135.63MB",
+      "version": "10.3.5.1010",
+      "update_time": "2026/01/22 11:05",
+      "categories": [
+        "系统工具",
+        "浏览器"
+      ],
+      "tags": [],
+      "developer": "广州市动悦信息技术有限公司",
+      "registration_no": "粤ICP备2022013084号-6A",
+      "organizer": "广州市动悦信息技术有限公司",
+      "description": "夸克是AI旗舰应用，使用阿里最强Qwen大模型，推理、理解、执行能力强大。夸克提供搜索、助手与云端服务，无论你在学习、办公、创作或生活中遇到什么问题，夸克都能即时响应、深入分析，并给出清晰、专业的解决方案，为你带来高效、全面、可信赖的 AI 体验。【千问助手】最佳助手，使用Qwen最新的模型，为你提供专业、高效的高质量解答。它基于优质知识源与强大的推理能力，在复杂场景下也能输出权威、准确的答案。先进模型：多模型可选，既适合日常问答写作，也适合科研级推理、公式计算等复杂的多步骤决策场景。深度搜索：具备强大的推理与执行能力，擅长处理复杂逻辑与多步骤决策。文采出众：从公文、论文到社交媒体文案，支持全体裁、多场景写作。多种文风，用语得体。表达清晰：回复结构化呈现，含图表与分点描述，复杂信息一目了然。多模理解：文字、语音、拍照都能对话，还可以上传文档、提炼要点、转换格式。【AI搜索】高效检索： 查资料、看资讯、找答案，夸克帮你快速找到最合适的结果。智能理解： 搜索更懂你，自动理解意图，答案更贴近问题。AI 总结： 即时生成摘要，汇总重点信息，让复杂问题一眼看懂。结果优化： 搜索结果更直观、更智能，节省时间更省心。纯净体验： 界面简洁无广告，信息更纯净，让搜索回归本质。【AI生产力工具】AI写作：全体裁写作，写方案、报告、文案，都能一句话生成，逻辑流畅自然。拍题批改：拍题答疑，难题讲解详实准确，学习效率倍增。夸克PPT：输入主题即可生成专业演示文档，自动排版与结构优化。夸克扫描王：拍照识别文字与表格，自动提取、整理、总结。夸克翻译：多语言即时互译与语义理解，阅读外文网页更顺畅。【夸克小说】海量书库： 百万级正版藏书，都市爽文、言情穿越、悬疑探案、玄幻修仙，应有尽有。极致阅读： 排版清爽、操作便捷，沉浸阅读更舒适。AI 听书： 多音色自然朗读，声音流畅真实，沉浸体验更生动。【夸克网盘】超大空间：6T超大空间，照片、文件安心存储。多端同步：手机电脑随时看。超级播放器：高清画质、AI字幕，沉浸式观影体验。如果你在使用产品过程中遇到了任何问题或需要我们协助，请通过以下方式联系我们，我们将尽快处理！反馈方式：-软件反馈：设置->意见反馈-邮件反馈：kksupport@service.alibaba.com夸克2026更新内容-进行了一些体验优化，使用更流畅",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/11/110_732444f3740102ec92edb515826cf256.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/10/110_c3cfa05582a00693e45b96e580222d32.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/2/110_253f842a8d94edc83e0c9f4ac3f823cc.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/3/110_940b39f771102eb4662be0ffda247c9d.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/11/110_78329ee67d94782dc8efdee0db89334e.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/7457948/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.quark.browser",
+      "package_name": "com.quark.browser",
+      "version_code": "1010"
+    },
+    {
+      "name": "番茄免费小说",
+      "install_count": "1271.6万人下载",
+      "short_description": "免费阅读海量小说",
+      "detail_url": "https://www.wandoujia.com/apps/8048758",
+      "app_id": "8048758",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/24/2/106_91285f2cb5fe76ca66f335cfdaa3fc3d_con_130x130.png",
+      "size": "111.13MB",
+      "version": "7.0.7.32",
+      "update_time": "2026/01/24 16:39",
+      "categories": [
+        "新闻阅读",
+        "小说"
+      ],
+      "tags": [],
+      "developer": "北京臻鼎科技有限公司",
+      "registration_no": "京ICP备18016437号-42A",
+      "organizer": "北京臻鼎科技有限公司",
+      "description": "【抖音旗下】番茄小说是抖音推出的免费阅读产品，提供海量正版小说。免费好书，尽在番茄！还有金币福利，看书能挣钱！【正版免费】正版小说，免费阅读。热门分类，都市爽文、言情穿越、玄幻修仙、武侠世界……你想看的这里都有。【海量短剧】拥有海量的短剧资源，包括都市热血、甜宠言情、职场婚恋、逆袭反转、逆天改命等多种类型，满足用户的不同喜好。【兴趣推荐】根据你的阅读爱好，个性化推荐，优质书单，书城精细化推荐，总有一款打动你！【活动福利】签到福利，金币福利，阅读福利……各种福利应有尽有，随时提现，只要你每天常来读！【听书畅读】这里每一本书都能听，让你阅读的时候，眼睛也能随时休息一下。番茄免费小说2026更新内容为您优化了体验细节。",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/24/9/106_7e2466119bb062b6deaeafeef561a912.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/24/7/106_b555e81971680da9b8a8999e87b06301.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/24/9/106_8d4e98c76dace376af457f24ce250d61.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/24/6/106_cb8fcd443eab3b8affa4898e17e3a968.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/24/6/106_25a0a803e0644965547927e6b49e3525.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/8048758/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.dragon.read",
+      "package_name": "com.dragon.read",
+      "version_code": "70732"
+    },
+    {
+      "name": "快对AI",
+      "install_count": "464万人下载",
+      "short_description": "整本教辅教材解答",
+      "detail_url": "https://www.wandoujia.com/apps/7666802",
+      "app_id": "7666802",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/15/9/110_99a267521aa0d5396ecd07d5b922e93a_con_130x130.png",
+      "size": "50.36MB",
+      "version": "6.87.0",
+      "update_time": "2026/01/15 15:54",
+      "categories": [
+        "考试学习",
+        "学习"
+      ],
+      "tags": [],
+      "developer": "广州极目未来文化科技有限公司",
+      "registration_no": "粤ICP备2023029972号-19A",
+      "organizer": "广州极目未来文化科技有限公司",
+      "description": "快对致力于为上亿用户提供整本教辅教材解答、答疑解惑、AI解题、AI写作、AI搜索、AI翻译、文件扫描等服务，接入deepseek大模型，AI答疑更智能。【家长】AI答疑，视频讲解，错题举一反三，智能批改，是家长的辅导好帮手。【学生】AI直接解题，步骤详尽，支持奥赛与综合题；作文一键生成，段落与字数自由定制。【大学生】AI秒解难题；拍照翻译助四六级备考；支持论文改写、报告生成；文件扫描去水印，一键导出。【职场】AI辅助写作，涵盖教案、策划、发言稿、小红书文案等；PPT一键生成。【快对特点】1、扫码查整本教辅解答：覆盖小初高、职高中专、大学超百万本教辅，正确率高。2、作业智能检查：一键批改，带解析，帮助检查作业对错。3、AI智能解题：解题Agent技术助力，解题快、步骤细、可追问，你的随身家教。4、全科解析答疑：涵盖语数英、政史地、物化生等多学科，提供知识点与练习题解析。5、多形式解析：含视频与文字讲解，帮助攻克易错点，提升学习效率。6、智能错题本：拍照去手写，保存错题，支持打印及生成PDF，自动归类，告别手抄。7、英语拍照翻译：整段翻译、取词翻译、分句精讲、原文朗读，识别准确，学习更轻松。8、海量学习资料：含习题解析、作文、试卷、笔记、手抄报、课件等。【快对VIP介绍】权益：视频解题、VIP问答、保存图片等。订阅周期：1个月、3个月、12个月，支持连续包月/季/年。取消续订：当前订阅期结束前24小时，于[我的-VIP中心-自动续费管理]内操作。会员协议：https://www.kuaiduizuoye.com/kdzy/vip/vipMemberService.html连续包月协议：https://www.kuaiduizuoye.com/kdzy/vip/vipFeeDetails.html【功能反馈建议群】：QQ群-916045816，欢迎加入讨论、反馈，参与内测！快对AI2026更新内容新学期快对穿新图标啦，已经覆盖95%新学期新书，来找找你的吧～修复已知问题，优化产品细节体验",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/15/9/110_eab08937ea2d43161b8d8ece5efeefa2.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/15/4/110_3dadea1a33796fedbc1b3b899e330e37.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/15/0/110_0230988d1c012e8f5a30ecadaf9f0dba.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/15/7/110_e29bc5a61cc2fd21a17c9d034742da33.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/15/10/110_2c6934ae19c26ef51944d6e8c11be3ab.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/7666802/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.kuaiduizuoye.scan",
+      "package_name": "com.kuaiduizuoye.scan",
+      "version_code": "1580"
+    },
+    {
+      "name": "腾讯视频",
+      "install_count": "5609.7万人下载",
+      "short_description": "刘晓庆聊人生逆袭",
+      "detail_url": "https://www.wandoujia.com/apps/280237",
+      "app_id": "280237",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/27/2/110_a3bb0cdba0af838c28140292840fa46a_con_130x130.png",
+      "size": "204.08MB",
+      "version": "9.03.00.31181",
+      "update_time": "2026/01/27 15:43",
+      "categories": [
+        "影音播放",
+        "视频"
+      ],
+      "tags": [
+        "休闲",
+        "益智休闲",
+        "模拟",
+        "防御",
+        "视频",
+        "新闻资讯",
+        "酷炫",
+        "阅读"
+      ],
+      "developer": "腾讯科技（北京）有限公司",
+      "registration_no": "粤B2-20090059-1807A",
+      "organizer": "腾讯科技（北京）有限公司",
+      "description": "【精彩内容，现在就要】《突然的喜欢》抽象甜爽！陈星旭王玉雯现代直女穿书攻略古早霸总《太平年》史诗大剧！白宇朱亚文董勇倪大红超强阵容演绎乱世风云《夜色正浓》心机诱捕出轨老公！江疏影佟大为揭秘成年人声色权欲《风过留痕》悬疑力作！龚俊姜武孙怡揭开绝密凶杀档案探查真相《御赐小仵作2》烧脑刺激全员回归！御赐女仵作高冷郡王查奇案《造城者》热血群像干劲拉满！赵丽颖黄晓明月海建城火力开年《日落时分说爱你》百元约会有人欢喜有人愁！纯礼CP厨房约会亲密贴贴，直球姐横刀夺爱男嘉宾太窒息？《有歌 第2季》岳云鹏惊喜加盟，刚来就被评委犀利点评吓到？《好友好有爱 第3季》抓马升级！男模哥阴阳怪气，女教师控诉自己遭霸凌，直言“想撕烂他们的嘴”！《震耳欲聋》檀健次帮聋人群体反诈，破定制骗局！《风林火山》华语绝版阵容动作猛片，金城武领衔、四大影帝飙戏，罪恶交锋！《一战再战》豆瓣8.1、小李子高分神作，绝地反击极限救女《一人之下》主线回归！探秘宝儿姐身世之谜《紫川》西南统领篇更新！看紫川秀收获爱情顺便剿匪《神印王座》龙皓晨登神特别篇！少年神明创世浩瀚，恭迎新神！《老街赵凤声》昔日老街穷小子竟成雇佣兵王，集结兄弟扫除黑恶护家乡。老街兵王归来，守护的是根！《荣华令》替嫁孤女为母入死局，与冷面将军结盟破侯府惊天阴谋，绝境共生杀出生路！《十三邀 第9季》：经典回归！许知远与那些持有独特见解的嘉宾同行，姚明、金国威、徐小虎等，深入世界的肌理，在不确定中寻找确信。《扬声 第2季》：新华社记者张扬，通过权威对话、纪实体验，深度对话辛芷蕾、王宁、郎朗、王兴兴等，厘清时代浪潮与多元关系中的人物和事件，讲述人物与这个时代的故事。《汪汪队立大功 第11季》狗狗们的全新救援行动开始！和熟悉的好朋友一起快乐冒险《喜羊羊与灰太狼之古古怪界有古怪》喜羊羊重返古古怪界，探索未知国度。《奇妙萌可之闪耀流星》共赴极光之约！开启星辰魔法新旅程！【意见反馈】如遇问题或者有好的建议，欢迎加入QQ体验群反馈，将会有萌哒哒的视频妹为大家解答，并有持续好礼相送！官方QQ群：527288510。腾讯视频2026更新内容《主咖和Ta的朋友们》名人不说暗话，明星脱口秀来袭！还有《小城大事》《剑来2》《势均力敌的我们 第2季》《25-26赛季NBA常规赛》等更多精彩内容等你来看！",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/5/110_ecf960fe925eb2072e8265018631275e.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/4/110_7ca1d976ec7fb69bad3132265a5f21af.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/1/110_1ca8b597b9bc67b71867b56e7a6289d4.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/5/110_9e03ad2c6e88f3d3eec5bdef5ab44923.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/3/110_d1dd7c20f9c41449a7187b1cd6f70bf7.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/280237/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.tencent.qqlive",
+      "package_name": "com.tencent.qqlive",
+      "version_code": "31181"
+    },
+    {
+      "name": "网易云音乐",
+      "install_count": "1801.8万人下载",
+      "short_description": "1.8亿内容畅听",
+      "detail_url": "https://www.wandoujia.com/apps/293217",
+      "app_id": "293217",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/16/10/110_bf237548180a921e094640fcec3875e6_con_130x130.png",
+      "size": "231.63MB",
+      "version": "9.4.50",
+      "update_time": "2026/01/15 17:30",
+      "categories": [
+        "影音播放",
+        "音乐"
+      ],
+      "tags": [],
+      "developer": "杭州网易云音乐科技有限公司",
+      "registration_no": "浙ICP备15006616号-14A",
+      "organizer": "杭州网易云音乐科技有限公司",
+      "description": "数亿用户推荐，和有趣的人一起听歌、互动、看评论！是当下最受年轻用户喜爱的音乐平台之一，同也是业内领先的音乐社区。在云村，不仅可以听到海量正版音乐，还能遇见和你同样热爱音乐的伙伴。用音乐连接彼此，用音乐传递美好力量。【海量曲库】收录华语/欧美/日韩等众多语种歌曲，涵盖电音/说唱/摇滚/ACG/古风/古典等超全音乐种类。【个性推荐】超准智能算法比你更懂你，根据日常听歌喜好，精准推荐你感兴趣的歌曲。【有声剧场】快速充电的人生书库、精彩纷呈的推理悬疑故事、脑洞大开的热门小说、甜到停不下来的热门广播剧、超级还原的原著都在云村。【精品播客】音乐推荐、热门翻唱、情感树洞、真实故事……你想听的这里都有；解压、充电、助眠……满足你的所有需求；超千万声音库，给你7*24小时的耳边陪伴。【品质歌单】超31亿歌单库，邀你一起定制跑步、学习、工作、聚会等全场景歌单。【精彩乐评】全网最热闹歌曲评论区。真实情感故事、连载小说、硬核科普、趣味段子、文学金句、流行玩梗，你想得到想不到的乐评都在这了。【趣味社区】在云村，你不仅可以听音乐，还可以看音乐、聊音乐、玩音乐。Mlog/一起听/动态/歌房等众多创新功能全方位满足你的使用体验。网易云音乐2026更新内容==内容版图，持续扩充==12月歌单已更新！Capper年度专辑《槍火天使 Gun-fire Angel》上线！肖战献唱《得闲谨制》电影主题曲，即刻聆听，一起走进平民“为家而战”的动人故事。热门音综持续更新中！《音乐缘计划2》《声生不息·华流季》《声名远扬2025》音源一键收听。格莱美奖得主、亚特兰大嘻哈弄潮儿21 Savage全新专辑《WHAT HAPPENED TO THE STREETS?》正式发布。== 近期更新 ==你的听歌氛围组来了！「琉璃光波」播放器上新，琉璃半透唱片，随歌曲律动变幻光波。「沉浸环绕声」听感升级，新版本对声场进行优化，提供更具沉浸感的音质体验。「红心歌单支持筛选分类」了！为你自动分类你喜欢的曲风、语种和歌手，还能发现 AI 为你归类的更多专属标签。「神光模式」承包你的听歌现场。副歌一响，神光来袭！新增多款舞美级别的歌词动效，全新复古迷幻、硬核氛围限免体验等你尝新。使用中遇到任何问题，请通过左侧边栏-“我的客服”进行反馈。",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/16/3/110_22bddf16131600c2453f8499ab328071.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/16/2/110_958b5822b19fb9bdd75239abe2ce9f1e.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/16/8/110_450a4f912bf4dfa606276c97521c976c.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/16/11/110_022c7c9c77890e6a5a24af6d6de3f44e.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/16/1/110_a519fa263932ddc680c931cb6ab00106.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/293217/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.netease.cloudmusic",
+      "package_name": "com.netease.cloudmusic",
+      "version_code": "9004050"
+    },
+    {
+      "name": "百度极速版",
+      "install_count": "900.6万人下载",
+      "short_description": "搜索资讯视频小说",
+      "detail_url": "https://www.wandoujia.com/apps/7616933",
+      "app_id": "7616933",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/21/6/2_6cf6a1d93afcb088ff8a155850bb18c9_con_130x130.png",
+      "size": "72.94MB",
+      "version": "6.90.0.10",
+      "update_time": "2026/01/21 17:41",
+      "categories": [
+        "系统工具",
+        "浏览器"
+      ],
+      "tags": [],
+      "developer": "百度（中国）有限公司",
+      "registration_no": "京ICP证030173号-220A",
+      "organizer": "北京百度网讯科技有限公司",
+      "description": "百度极速版，流畅体验，不卡顿。【新增功能更实用】新增扫一扫、游戏、插件中心，功能更齐全。【极速搜索更高效】简约搜索框，轻量设计，体验更流畅，结果更清晰。【精选内容更懂你】实时新闻、资讯视频、热门评论不间断，定制推荐更准确。【界面简洁更轻快】资讯分类标签，搭配简约搜索栏设计，更快进入详情，图文搭配更简单。【小说视频动漫】汇集海量热门小说、优质视频、动漫新番、影视资源，还有个性化推荐你更喜欢的内容，全新体验。【任务系统上线】任务系统全新上线，邀请好友做任务，金币自动兑换，天天领现金。百度极速版2026更新内容1.修复已知问题，提升用户体验2.汇聚超多热门影视，一键搜索，追剧更自由",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/2/2_df2ebc44ced40dbbfe75114639e8c0f4.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/9/2_1e836d1d78b4595a20642b5804dc5280.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/3/2_3c5de5bdb3f35608d86732b665aa4688.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/1/2_9737e5d9c8d35443e57c3e87528062de.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/6/2_a3aed9f905e131d0fc7e2ab36b15175b.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/7616933/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.baidu.searchbox.lite",
+      "package_name": "com.baidu.searchbox.lite",
+      "version_code": "123340032"
+    },
+    {
+      "name": "抖音火山版",
+      "install_count": "1578.7万人下载",
+      "short_description": "欢笑中国年",
+      "detail_url": "https://www.wandoujia.com/apps/6837011",
+      "app_id": "6837011",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/22/0/110_a31ec8041e18f4b5eac0dbae3d7fe4b3_con_130x130.png",
+      "size": "311.56MB",
+      "version": "37.5.0",
+      "update_time": "2026/01/21 19:41",
+      "categories": [
+        "影音播放",
+        "直播"
+      ],
+      "tags": [],
+      "developer": "北京抖音科技有限公司",
+      "registration_no": "京ICP备16016397号-51A",
+      "organizer": "北京抖音科技有限公司",
+      "description": "上抖音火山版，开红包，共度欢笑中国年！-2月3日，新春活动重磅来袭。上抖音火山版参与“跃马攀峰”，最高赢388元红包；-2月3日，上抖音火山版参与集祥马卡，分3亿！ 与亲朋好友一同参与集卡活动，更多新春福利等你解锁；-2月16日，上抖音火山版，和家人一起开福气红包，分3亿！更多惊喜活动等你体验！具体玩法、参与方式及奖励情况，详见“欢笑中国年”活动规则。火山版—原火山小视频在品牌升级后的火山，交到更多的朋友，看见更大的世界。【达人奇趣在火山，新鲜内容刷不停】在小视频和直播间发现你喜欢的人，发现喜欢你的人：圈子达人，新鲜资讯，家人朋友。让火山定制你专属的视频与直播内容，新鲜永远刷不停！【超多美颜滤镜，一秒编辑变大片】超多美颜滤镜、激萌自拍表情、海量背景音乐，功能强大易上手，创作属于自己的15s短视频，一秒编辑变大片，从此不担心丢失精彩生活片段！【支持高清播放上传】实时传递高清画面，录制上传更稳定；提前缓存免流量，大屏观看同样清晰。【温馨陪伴在】开启长辈模式，享受贴心关爱与陪伴，看得更清，用得舒心。@ 联系我们-应用内反馈：「我的」-「设置」-「反馈与帮助」-举报与投诉：jubao@huoshan.com抖音火山版2026更新内容同享欢笑中国年，上抖音火山版赚新年红包！2026抖音火山版欢笑中国年活动开始啦！大量红包等你来赢！-「跃马攀峰」：集福气最高赢388元红包；-「集祥马卡」：和亲朋好友一起收集祥马卡，分3亿；-「福气红包」：新年和家人一起开福气红包，分3亿！更多新春福利，等你来！具体玩法、参与方式及奖励情况，详见“欢笑中国年”活动规则。",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/11/110_e12db15704ae6c4fc049b1b112a19a64.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/7/110_b55419bb940b5ce50d7371718ec161a3.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/8/110_33c1e7807e8df2199db526dc0382488e.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/22/8/110_15d531d8e4d41a2a96649b3d6807333d.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/6837011/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.ss.android.ugc.live",
+      "package_name": "com.ss.android.ugc.live",
+      "version_code": "370501"
+    },
+    {
+      "name": "支付宝",
+      "install_count": "5293.3万人下载",
+      "short_description": "便捷生活一点就好",
+      "detail_url": "https://www.wandoujia.com/apps/279979",
+      "app_id": "279979",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/27/9/110_55fb79fd5311634249bb0f9bc8e28fc8_con_130x130.png",
+      "size": "210.29MB",
+      "version": "10.8.30.8000",
+      "update_time": "2026/01/26 16:45",
+      "categories": [
+        "金融理财",
+        "支付",
+        "银行",
+        "理财记账",
+        "借贷",
+        "投资",
+        "保险"
+      ],
+      "tags": [
+        "生活应用",
+        "生活服务",
+        "网上购物",
+        "购物",
+        "必备软件",
+        "金融理财",
+        "理财",
+        "支付"
+      ],
+      "developer": "支付宝（杭州）数字服务技术有限公司",
+      "registration_no": "浙ICP备16025414号-40A",
+      "organizer": "支付宝（杭州）信息技术有限公司",
+      "description": "支付宝是蚂蚁集团旗下业务，诞生于2004年，已经成长为的数字支付开放平台和服务业数字化经营开放平台。我们面向消费者、各行各业商家提供便捷、安全的数字支付服务，面向合作伙伴持续开放技术、产品，助力实现数字化升级。与此同时，大量商家机构通过支付宝App为消费者提供政务办事、扫码点单、生活缴费等超过1000种生活服务。截至目前，支付宝和合作伙伴一起服务8000万商家、10亿消费者。支付宝2026更新内容支付宝版来啦，优化多项细节，体验更加流畅，快来更新吧！",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/11/110_04c321884cfa34725fb58b9f56a58dc2.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/5/110_d6cd06946174d0454f227431caa71635.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/4/110_77e4c920e66f4c04aaab44d46c9dbc4e.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/6/110_204146661c40f765194cd4ca6828dc44.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/27/5/110_43825348314e8486f7245dc228a8d678.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/279979/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.eg.android.AlipayGphone",
+      "package_name": "com.eg.android.AlipayGphone",
+      "version_code": "3610"
+    },
+    {
+      "name": "西瓜视频",
+      "install_count": "3442.7万人下载",
+      "short_description": "海量影视随心看",
+      "detail_url": "https://www.wandoujia.com/apps/7063907",
+      "app_id": "7063907",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/21/4/106_7f6da1ca0543f13b8e3924ee1f6deecb_con_130x130.png",
+      "size": "78.87MB",
+      "version": "10.1.8",
+      "update_time": "2026/01/21 11:14",
+      "categories": [
+        "影音播放",
+        "视频"
+      ],
+      "tags": [],
+      "developer": "北京抖音信息服务有限公司",
+      "registration_no": "京ICP备12025439号-172A",
+      "organizer": "北京抖音信息服务有限公司",
+      "description": "西瓜视频抖音旗下中长视频平台，涵盖影视、剧情、资讯、明星、搞笑、生活记录等多类内容。每月超过320万创作人、1.8亿用户活跃在西瓜视频。【来西瓜视频 免费看短剧还能领金币】全场短剧免费看，一边看一边在赚金币！ 免费短剧看越多赚越多，连续签到领取翻倍金币奖励！都市言情、逆袭复仇、穿越脑洞、恋爱豪门、赘婿逆袭等多品类剧目，海量短剧应有尽有；操作简单，轻轻一点即可开始爽剧之旅，支持支持倍速观看、跳集播放、滑动切换等功能，带你畅游短剧！- 精彩短剧内容：《二十九》《午后玫瑰》《金猪玉叶》《桃花马上请长缨》《丐世龙婿》《结婚当天我成了豪门继承人》《女婿回乡》《闪婚小孕妻》《神尊归位》《龙升》《外卖老爹竟是满级大佬》《大夏傻神》《练气至尊》等【西瓜放映厅 你的专属私人影院】足不出户看大片，打造你的私人家庭影院！《涉过愤怒的海》《夺宝奇兵5》《疯狂元素城》《速度与激情10》《银河护卫队3》《满江红》《阿凡达：水之道》全网同步首发，还有经典电视剧、高分电影、热门综艺等精品内容，4K超高清更精彩。【在这里 看见不一样的烟火】你可以跟着@渔人阿烽去海边开盲盒，也可以跟着@洛桑和小志玛去雪山摘草药，还可以跟着@一朵北漂看看北漂家族如何把生活过的火热，更多不一样的烟火生活等你来发现！【西瓜直播 带你足不出户看世界】花样美食、游戏大神、趣味旅行、乡野生活，大千世界精彩目不暇接，快跟着主播们一起去看世界吧！【成为西瓜视频创作人 一起感受创作的力量】把课堂搬进博物馆的@水星逛博物馆，为全村老人拍照的@小白的奇幻旅行等超多创作人在西瓜等你，成为西瓜视频创作人，让更多人感受生活的温度，共享视频世界～*数据来源：QuestMobile西瓜视频2026更新内容提升体验，修复部分问题。",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/6/106_2724038ca514efb3e78b59744f4be659.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/4/106_c1772892c8cd240bf9bcd27f9ff83cdc.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/0/106_21ba1225ba0944edf600123a02f96a47.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/9/106_d81b6c34cce05c03da060b3adb824e23.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/21/8/106_27d8daee43e6ea6c38e4396e955914b2.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/7063907/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.ss.android.article.video",
+      "package_name": "com.ss.android.article.video",
+      "version_code": "1018"
+    },
+    {
+      "name": "驾考宝典",
+      "install_count": "1175.9万人安装",
+      "short_description": "",
+      "detail_url": "https://www.wandoujia.com/apps/280597",
+      "app_id": "280597",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/19/0/110_8f7195144ad40c569f180edadc150835_con_130x130.png",
+      "size": "260.24MB",
+      "version": "8.91.2",
+      "update_time": "2026/01/19 10:31",
+      "categories": [
+        "考试学习",
+        "考试",
+        "驾考"
+      ],
+      "tags": [
+        "模拟",
+        "驾驶",
+        "生活应用",
+        "日常出行",
+        "男性",
+        "教育软件",
+        "驾考",
+        "考驾照"
+      ],
+      "developer": "武汉木仓科技股份有限公司",
+      "registration_no": "鄂ICP备20007713号-29A",
+      "organizer": "武汉木仓科技股份有限公司",
+      "description": "驾考宝典已全面接入DeepSeek，AI智能学习伙伴，助力学员高效备考。驾考宝典实时同步更新2026年驾考科目一、科目四考试题库，通过历年大数据深度分析，精选全国优质驾校供学员学车选择，用科学有效的方法助力学员高效备考驾照资格考试！完整学车流程，为学员提供从报名到领驾照的一站式驾考服务，同时提供了科目二科目三模拟练车新的实操学习方式。深受驾校、教练、司机、学员喜爱的驾驶员模拟考试练习软件!【2026驾考新题库】1.题库新：根据新的驾考考试大纲，涵盖小车、客车、货车、摩托车、资格证题库，各地区题库实时更新；2.仿真模拟考：按照当前科目考试大纲要求，仿真模拟考试，提前模拟考场环境，攻克考试重难点；3.考点视频解析：高频考点+高频易错，以题带点，视频解析更轻松；4.VIP精简题库：根据考点精选重点题目，攻克考点难点，高效备考省时省力的考驾照宝典；【驾考直播课】1.直播解读2026考试知识点，摆脱枯燥学习模式，高效备考更轻松；2.讲师带学，从入门到通过考试，讲解细致的驾驶宝典；【科二科三3D模拟】1.科二科三考试项目，视频讲解流程教学，扣分点细致讲解的驾车宝典；2.驾驶证考试新的练车模式，模拟真实考试场景，手机看点位，随时随地练车；【精选驾校】精选全国优质驾校，距离近，口碑好，优惠多多的驾校宝典；【学员交流】学车过程中可以吐槽、晒照、聊天，交流学车技巧和心得；【联系我们】客服：APP内 - 我的- 帮助与反馈 - 客服意见反馈：APP内 - 我的- 帮助与反馈 - 提交意见反馈官方网站：https://www.jiakaobaodian.com微信公众号：驾考宝典400电话：400-056-1617驾考宝典2026更新内容1.2026新题库已实时更新，智慧题库真实考场模拟，提前感受考场难度和规则；2.AI陪练7*24小时陪伴，遇到不会的题目直接问；3.高频考点一对一讲解，老师专人辅导学得快；4.科二科三3D考前模拟，提前看考场，考试更有信心；",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/19/10/110_4bbced54bab4d6b0a82e9bee79306ed4.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/19/5/110_a5c3424f5160bafb721f70e5fa830976.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/19/2/110_4896c9fc029cfc20a7ab092952223c7d.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/19/1/110_1e5e11c6b1ccff02d1628d85d06809db.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/19/6/110_b6ae3729ddd77e03ea1632a4e8df29aa.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/280597/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.handsgo.jiakao.android",
+      "package_name": "com.handsgo.jiakao.android",
+      "version_code": "500089102"
+    },
+    {
+      "name": "UC浏览器",
+      "install_count": "4775.7万人安装",
+      "short_description": "",
+      "detail_url": "https://www.wandoujia.com/apps/36557",
+      "app_id": "36557",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/26/3/110_835dfc8eafa7983cdd91d0c264399985_con_130x130.png",
+      "size": "122.14MB",
+      "version": "18.5.6.1482",
+      "update_time": "2026/01/26 16:15",
+      "categories": [
+        "系统工具",
+        "浏览器"
+      ],
+      "tags": [
+        "常用工具",
+        "聊天社交",
+        "社交网络",
+        "新闻资讯",
+        "系统工具",
+        "必备软件",
+        "古装",
+        "网络工具"
+      ],
+      "developer": "广州市动景计算机科技有限公司",
+      "registration_no": "粤ICP备09210879号-56A",
+      "organizer": "广州市动景计算机科技有限公司",
+      "description": "UC21周年庆，我们一起越来越好！全球6亿人上网必备APP，群众的眼睛是雪亮的头条视频小说网盘小游戏，想你之所想一应俱全首页更清爽素雅，支持自定义壁纸；头条内容品质升级，大咖精品云集；还有更多惊喜改变等你来发现~【来听听用户的心声】从用智能手机就一直在使用的浏览器，非常的好用，也一路见证了它的成长。尽管功能越来越强大，但使用过程中还是很轻量的 ——呼吸在我耳边反正我从诺基亚时期就用UC到现在 ——U221102992老爸老妈天天为了看电视吵架，索性自己就把这款软件让他们看，没想到他们却喜欢上了在这里看视频，哈哈挺好 ——wetiiresfj1245非常好用，专注使用10年，忠实用户 ——万能甜用了UC浏览器之后就一直不想再换别的浏览器了，小说也很稳，没事的时候看看漫画也是不错的选择 ——蓝果子酱第一次心甘情愿的写评论，真的很好用，网速很快 ，尤其看小说视频超级棒！万年忠实粉丝！—叶向红丰富功能包罗万象，让你爱不释手【头条资讯】精彩头条，热点新闻永不错过【海量视频】全网上亿短视频，新鲜热点全收录【游戏交友】内置超多小游戏，真人匹配随时开战【海量小说】热门小说更快更新，阅读体验更省心【超速网盘】视频一键云收藏，极速离线无需等待；在yun.cn访问UC网盘网页版，无需客户端资源直接下，普通用户下载也不限速噢~【全网免流】阿里宝卡/鱼卡免费领，看视频/新闻/小说/下载，统统免流量【智能搜索】新资讯、好福利、精内容，一搜即得【订阅精品】事件追踪、优质账号、精品专栏，订阅欣赏好内容【极速省流】省流黑科技，节省超过30%流量【贴心细节】无痕浏览，保护你的隐私；夜间模式，爱护你的眼睛优秀有目共睹，拿奖拿到手软：2017《互联网周刊》年度产品奖2016 艾瑞金瑞奖最佳产品创新奖2015 艾瑞年度最佳工具应用奖2015 北京晨报最具影响力科技企业之「最具人气 APP」2014 金瑞奖中国移动互联网应用类最具影响力奖2013 手机中国年度最佳手机浏览器2013 中国移动应用隐私安全榜APP1002012 年度最佳浏览器奖千里相会，便是缘分。走过路过，不要错过。你的下个10年，UC一直陪伴。UC浏览器2026更新内容春节活动重磅来袭，上UC打卡到除夕，惊喜不停！",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/4/110_9c12b11dcb92a87af0619606c9f0140b.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/1/110_ce1fd33bc96f285fad5b6963bba21eac.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/6/110_a52853d5ffeebe54184d88a4dfe10e74.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/10/110_beb1ab00eb4e3d017f49fd426fb687e3.png",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/26/11/110_696fcb63b27b0028e8ce70ab2fcd9d26.png"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/36557/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.UCMobile",
+      "package_name": "com.UCMobile",
+      "version_code": "11482"
+    },
+    {
+      "name": "书旗小说",
+      "install_count": "2508.2万人安装",
+      "short_description": "",
+      "detail_url": "https://www.wandoujia.com/apps/288203",
+      "app_id": "288203",
+      "baidu_appid": "1603871535297429",
+      "icon_url": "https://android-artworks.25pp.com/fs08/2026/01/13/3/125_3c5de87fd2c26e200f0aed12ec6afe95_con_130x130.png",
+      "size": "62.05MB",
+      "version": "12.5.6.254",
+      "update_time": "2026/01/13 17:41",
+      "categories": [
+        "新闻阅读",
+        "小说"
+      ],
+      "tags": [
+        "新闻资讯",
+        "电子书",
+        "阅读",
+        "小说",
+        "阅读器",
+        "阅读软件",
+        "网络原创",
+        "阅读应用"
+      ],
+      "developer": "广州阿里巴巴文学信息技术有限公司",
+      "registration_no": "粤ICP备13078413号-8A",
+      "organizer": "至远悦读（广州）文学信息技术有限公司",
+      "description": "【2024年度金榜大赏即将揭幕】千万读者见证、上亿张金选票的选择——2月中旬，年度金榜书单即将揭晓，为佳作荣誉加冕！蝉联金榜一周年的No.1，提前锁定榜首之位！累计获得488.7万张金选票，近千万读者追读，数万人打出9.5分高分的佳作，《第 一 御 兽 师》，入站必看！书籍介绍：全球异变，魔兽入侵。 御兽师，肩负起拯救人类文明的重任。肖星宇穿越后，觉醒【神级御兽系统】。开启魔神之眼，可以看穿所有御兽隐藏进化路线、激活隐藏血脉、开启无限进化……多年后。，肖星宇身边上古神兽环绕，混沌天元龙、燃血凤凰王、冥府夜麒麟、弑神堕天使……身为龙国御兽师，肖星宇率领神兽大军踏碎山河，统治寰宇，将宇宙万族踩在脚下！【海量热门影视原著】《与凤行》赵丽颖、林更新领衔主演，灵界在逃碧苍王沈璃与上神行止，在一起除恶扬善、探索真相的过程中互生情愫。《白烁上神》白鹿、敖瑞鹏主演《白月梵星》影视原著小说，聪慧狡黠少女白烁×淡漠慵懒妖王梵樾，畅销书作家星零仙侠巅峰之作。《千朵桃花一世开》张彬彬、孙珍妮主演，雪城少城主与暗域圣女三个身份下的爱恋痴缠。《清明上河图密码》张颂文、白百何主演，北宋年间赵不尤一家人屡破奇案，守护东京城百姓平安！《舍不得星星》张新成、王玉雯领衔主演，蒋时延和唐漾从学校步入社会，从兄弟到逐渐动心，发展为恋人的爱情故事。《玫瑰的故事》刘亦菲、佟大为主演，讲述黄亦玫跨越二十余年的成长故事与情感心路。《橙色光芒》谭卓、高叶、刘奕君、林雨申主演《蔷薇风暴》原著，看女新闻人谢琳慧在逆境中触底反弹、东山再起！在线反馈：进入书旗小说app--＞我的--＞意见反馈书旗小说2026更新内容1. 优化听书启动速度，边听边读告别卡顿；2. 优化阅读器性能，看书体验更丝滑。",
+      "screenshots": [
+        "https://android-screenimgs.25pp.com/fs08/2026/01/13/3/125_a95648c87e41a36008c863a75ec039ff.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/13/4/125_8abe46d812d367fe17785ca012e9aa0f.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/13/8/125_da2e7e493888b6dfb4e88012b7c0bd16.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/13/4/125_337cbbbaf93a32e631f924ea08794f78.jpeg",
+        "https://android-screenimgs.25pp.com/fs08/2026/01/13/9/125_111f643fb5c22270a20c7330e80fd1d9.jpeg"
+      ],
+      "download_url": "https://www.wandoujia.com/apps/288203/download/dot?ch=detail_qr_dl&pos=detail-ndownload-com.shuqi.controller",
+      "package_name": "com.shuqi.controller",
+      "version_code": "333"
+    }
+  ]
+}

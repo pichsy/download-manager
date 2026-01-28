@@ -11,7 +11,16 @@ data class ExtraMeta(
     val packageName: String? = null,
     val versionCode: Long? = null,
     val icon: String? = null,
-    val size: Long? = null
+    val size: Long? = null,
+    val install_count: String? = null,
+    val description: String? = null,
+    val update_time: String? = null,
+    val version_name: String? = null,
+    val developer: String? = null,
+    val registration_no: String? = null,
+    val categories: List<String>? = null,
+    val tags: List<String>? = null,
+    val screenshots: List<String>? = null
 ) {
     companion object {
         /**

@@ -1,5 +1,7 @@
 package com.pichs.download.demo
 
+import android.content.Intent
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -24,12 +26,16 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
         binding.ivBack.setOnClickListener {
             finish()
         }
+
+        binding.ivDownloadSettings.setOnClickListener {
+            startActivity(Intent(this@DownloadManagerActivity, CellularSettingsActivity::class.java))
+        }
     }
 
     private fun setupViewPager() {
         binding.viewPager.adapter = DownloadPagerAdapter(this, fragments)
         binding.viewPager.offscreenPageLimit = 1
-        
+
         binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 updateTabState(position)
@@ -44,7 +50,7 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
         binding.tabCompleted.setOnClickListener {
             binding.viewPager.currentItem = 1
         }
-        
+
         // 初始状态
         updateTabState(0)
     }
@@ -56,16 +62,17 @@ class DownloadManagerActivity : BaseActivity<ActivityDownloadManagerBinding>() {
                 binding.tabDownloading.paint.isFakeBoldText = true
                 binding.tabCompleted.setTextColor(0x80333333.toInt())
                 binding.tabCompleted.paint.isFakeBoldText = false
-                
+
                 binding.indicatorDownloading.setBackgroundColor(0xFF6366F1.toInt())
                 binding.indicatorCompleted.setBackgroundColor(0x00000000)
             }
+
             1 -> {
                 binding.tabDownloading.setTextColor(0x80333333.toInt())
                 binding.tabDownloading.paint.isFakeBoldText = false
                 binding.tabCompleted.setTextColor(0xFF333333.toInt())
                 binding.tabCompleted.paint.isFakeBoldText = true
-                
+
                 binding.indicatorDownloading.setBackgroundColor(0x00000000)
                 binding.indicatorCompleted.setBackgroundColor(0xFF6366F1.toInt())
             }

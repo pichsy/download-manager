@@ -50,7 +50,7 @@ class CellularConfirmDialog(
          * @param mode 弹窗模式
          * @return CellularConfirmDialog? 如果没有顶部 Activity 或 Activity 无效则返回 null
          */
-        fun show(totalSize: Long, taskCount: Int, mode: Int, onConfirm: ((Boolean) -> Unit)? = null, onCancel: (() -> Unit)? = null) {
+        fun show(totalSize: Long, taskCount: Int, mode: Int = CellularConfirmDialog.MODE_CELLULAR, onConfirm: ((Boolean) -> Unit)? = null, onCancel: (() -> Unit)? = null) {
             if (totalSize <= 0L && taskCount == 0) {
                 Log.w(TAG, "CellularConfirmDialog show: totalSize==${totalSize}, taskCount==${taskCount}, cannot show dialog ")
                 return
