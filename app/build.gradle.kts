@@ -132,7 +132,7 @@ dependencies {
     api(project(":downloader"))
     
     // WheelPicker for professional wheel selection UI
-    api("dev.aige.pub:WheelPicker:1.2.0")
+//    api("dev.aige.pub:WheelPicker:1.2.0")
     // BasePopupWindow for popup management
-    api("io.github.razerdp:BasePopup:3.2.1")
+//    api("io.github.razerdp:BasePopup:3.2.1")
 }
