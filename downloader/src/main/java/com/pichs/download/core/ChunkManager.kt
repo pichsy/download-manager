@@ -13,46 +13,49 @@ internal class ChunkManager(private val chunkDao: DownloadChunkDao) {
     
     // 创建分片
     suspend fun createChunks(taskId: String, totalSize: Long, chunkCount: Int): List<DownloadChunk> {
-        if (totalSize <= 0 || chunkCount <= 0) {
-            // 单线程下载，创建一个完整分片
-            return listOf(
+        val now = System.currentTimeMillis()
+        val chunks: List<DownloadChunk> = if (totalSize <= 0) {
+            // 未知长度或空文件：单分片。未知长度用 Long.MAX_VALUE 表示开放区间
+            listOf(
                 DownloadChunk(
                     taskId = taskId,
                     index = 0,
                     startByte = 0,
-                    endByte = totalSize - 1,
+                    endByte = if (totalSize < 0) Long.MAX_VALUE else -1L,
                     downloaded = 0,
                     status = ChunkStatus.PENDING,
-                    updateTime = System.currentTimeMillis()
+                    updateTime = now
                 )
             )
+        } else {
+            val effectiveCount = chunkCount.coerceAtLeast(1)
+                .coerceAtMost(totalSize.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+            val chunkSize = totalSize / effectiveCount
+            buildList {
+                for (i in 0 until effectiveCount) {
+                    val startByte = i * chunkSize
+                    val endByte = if (i == effectiveCount - 1) totalSize - 1 else (i + 1) * chunkSize - 1
+                    add(
+                        DownloadChunk(
+                            taskId = taskId,
+                            index = i,
+                            startByte = startByte,
+                            endByte = endByte,
+                            downloaded = 0,
+                            status = ChunkStatus.PENDING,
+                            updateTime = now
+                        )
+                    )
+                }
+            }
         }
-        
-        val chunkSize = totalSize / chunkCount
-        val chunks = mutableListOf<DownloadChunk>()
-        
-        for (i in 0 until chunkCount) {
-            val startByte = i * chunkSize
-            val endByte = if (i == chunkCount - 1) totalSize - 1 else (i + 1) * chunkSize - 1
-            
-            chunks.add(
-                DownloadChunk(
-                    taskId = taskId,
-                    index = i,
-                    startByte = startByte,
-                    endByte = endByte,
-                    downloaded = 0,
-                    status = ChunkStatus.PENDING,
-                    updateTime = System.currentTimeMillis()
-                )
-            )
-        }
-        
-        // 保存到数据库
+
+        // 覆盖旧记录，避免分片数量变化后残留脏数据
         withContext(Dispatchers.IO) {
+            chunkDao.deleteByTask(taskId)
             chunkDao.insertAll(chunks.map { DownloadChunkEntity.fromModel(it) })
         }
-        
+
         return chunks
     }
     
@@ -64,24 +67,27 @@ internal class ChunkManager(private val chunkDao: DownloadChunkDao) {
     }
     
     // 更新分片进度
-    suspend fun updateChunkProgress(task: com.pichs.download.model.DownloadTask, chunkIndex: Int, downloaded: Long, status: ChunkStatus) {
+    suspend fun updateChunkProgress(taskId: String, chunkIndex: Int, downloaded: Long, status: ChunkStatus) {
         withContext(Dispatchers.IO) {
-            val chunks = chunkDao.getByTask(task.id)
-            val chunk = chunks.find { it.index == chunkIndex } ?: return@withContext
-            
+            val chunk = chunkDao.getByTaskAndIndex(taskId, chunkIndex) ?: return@withContext
+
             val updatedChunk = chunk.copy(
                 downloaded = downloaded,
                 status = status,
                 updateTime = System.currentTimeMillis()
             )
             chunkDao.update(updatedChunk)
-            
-            // 优化：移除此处对 triggerProgressUpdate 的调用
-            // 进度更新完全交由 Engine 控制，避免双重计算和竞态条件
-            // if (status == ChunkStatus.COMPLETED || status == ChunkStatus.DOWNLOADING) {
-            //    triggerProgressUpdate(task)
-            // }
         }
+    }
+
+    // 兼容旧调用
+    suspend fun updateChunkProgress(
+        task: com.pichs.download.model.DownloadTask,
+        chunkIndex: Int,
+        downloaded: Long,
+        status: ChunkStatus
+    ) {
+        updateChunkProgress(task.id, chunkIndex, downloaded, status)
     }
     
     // 触发进度更新

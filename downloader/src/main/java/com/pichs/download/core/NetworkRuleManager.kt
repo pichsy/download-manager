@@ -65,23 +65,30 @@ class NetworkRuleManager(
     fun checkCanDownload(task: DownloadTask): CheckAfterResult {
         val isWifi = NetworkUtils.isWifiAvailable(context)
         val isCellular = NetworkUtils.isCellularAvailable(context)
+        val isEthernet = NetworkUtils.isEthernetAvailable(context)
         
-        DownloadLog.d(TAG, "检查下载权限: task=${task.fileName}, wifi=$isWifi, cellular=$isCellular, cellularConfirmed=${task.cellularConfirmed}")
+        DownloadLog.d(TAG, "检查下载权限: task=${task.fileName}, wifi=$isWifi, cellular=$isCellular, ethernet=$isEthernet, cellularConfirmed=${task.cellularConfirmed}")
         
-        // 无网络
-        if (!isWifi && !isCellular) {
-            return CheckAfterResult.Deny(DenyReason.NO_NETWORK)
-        }
-        
-        // WiFi 可用，直接允许
-        if (isWifi) {
+        // 未知 transport（如 VPN）但网络可用时，按实际计费状态判断
+        if (!isWifi && !isCellular && !isEthernet) {
+            if (!NetworkUtils.isNetworkAvailable(context)) {
+                return CheckAfterResult.Deny(DenyReason.NO_NETWORK)
+            }
+            if (!isMeteredAllowed() && NetworkUtils.isMeteredNetwork(context)) {
+                return CheckAfterResult.Deny(DenyReason.WIFI_ONLY_MODE)
+            }
             return CheckAfterResult.Allow
         }
-        
+
+        // 非计费网络直接允许
+        if (isWifi || isEthernet) {
+            return CheckAfterResult.Allow
+        }
+
         // 以下是流量网络的情况
-        
-        // 仅 WiFi 模式，拒绝流量下载
-        if (config.wifiOnly) {
+
+        // 全局硬开关或仅 WiFi 模式，拒绝流量下载
+        if (!isMeteredAllowed() || config.wifiOnly) {
             return CheckAfterResult.Deny(DenyReason.WIFI_ONLY_MODE)
         }
         
@@ -109,28 +116,36 @@ class NetworkRuleManager(
         // 优先检查网络连接（硬性条件）
         val isWifi = NetworkUtils.isWifiAvailable(context)
         val isCellular = NetworkUtils.isCellularAvailable(context)
+        val isEthernet = NetworkUtils.isEthernetAvailable(context)
         
-        DownloadLog.d(TAG, "创建前检查: wifi=$isWifi, cellular=$isCellular, size=$totalSize, count=$count")
+        DownloadLog.d(TAG, "创建前检查: wifi=$isWifi, cellular=$isCellular, ethernet=$isEthernet, size=$totalSize, count=$count")
         
         // 无网络：直接拒绝，不论配置如何
-        if (!isWifi && !isCellular) {
-            return CheckBeforeResult.NoNetwork
+        if (!isWifi && !isCellular && !isEthernet) {
+            if (!NetworkUtils.isNetworkAvailable(context)) {
+                return CheckBeforeResult.NoNetwork
+            }
+            return if (!isMeteredAllowed() && NetworkUtils.isMeteredNetwork(context)) {
+                CheckBeforeResult.WifiOnly
+            } else {
+                CheckBeforeResult.Allow
+            }
+        }
+
+        // 非计费网络直接允许
+        if (isWifi || isEthernet) {
+            return CheckBeforeResult.Allow
+        }
+
+        // 全局硬开关优先于“创建前检查”开关：关闭流量后绝不能静默走蜂窝
+        if (!isMeteredAllowed() || config.wifiOnly) {
+            return CheckBeforeResult.WifiOnly
         }
 
         // 如果未启用创建前检查，且网络正常，则直接允许下载
         if (!config.checkBeforeCreate) {
             DownloadLog.d(TAG, "创建前检查未启用，且网络正常，直接允许下载")
             return CheckBeforeResult.Allow
-        }
-        
-        // WiFi 可用，直接允许
-        if (isWifi) {
-            return CheckBeforeResult.Allow
-        }
-        
-        // 仅 WiFi 模式
-        if (config.wifiOnly) {
-            return CheckBeforeResult.WifiOnly
         }
         
         // 根据阈值判断
@@ -165,6 +180,8 @@ class NetworkRuleManager(
      * 获取任务的有效大小（用于流量判断）
      * 优先级：剩余待下载大小 > 预估大小 > 总大小
      */
+    private fun isMeteredAllowed(): Boolean = downloadManager.currentConfig().allowMetered
+
     private fun getTaskEffectiveSize(task: DownloadTask): Long {
         return when {
             // 1. 优先使用剩余大小（最准确）- 适用于恢复任务、WiFi断开等场景
@@ -229,14 +246,15 @@ class NetworkRuleManager(
         onDeny: () -> Unit
     ) {
         val isWifi = NetworkUtils.isWifiAvailable(context)
+        val isEthernet = NetworkUtils.isEthernetAvailable(context)
         
         when {
-            // WiFi 可用，直接允许
-            isWifi -> {
+            // 非计费网络可用，直接允许
+            isWifi || isEthernet -> {
                 onAllow()
             }
-            // 仅 WiFi 模式，拒绝
-            config.wifiOnly -> {
+            // 全局硬开关或仅 WiFi 模式，拒绝
+            !isMeteredAllowed() || config.wifiOnly -> {
                 mainHandler.post {
                     checkAfterCallback?.showWifiOnlyHint(null)
                 }
@@ -306,8 +324,8 @@ class NetworkRuleManager(
         // 首先检查是否有流量网络可用
         val isCellular = NetworkUtils.isCellularAvailable(context)
         
-        if (config.wifiOnly) {
-            // 仅 WiFi 模式，暂停所有任务
+        if (!isMeteredAllowed() || config.wifiOnly) {
+            // 禁止流量或仅 WiFi 模式，暂停所有任务
             val count = pauseAllForWifiUnavailable()
             mainHandler.post {
                 checkAfterCallback?.showWifiDisconnectedHint(count)

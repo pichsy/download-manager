@@ -6,46 +6,17 @@ import com.pichs.download.core.CheckAfterCallback
 import com.pichs.download.core.NetworkScenario
 import com.pichs.download.model.DownloadTask
 import com.pichs.shanhai.base.utils.LogUtils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 /**
  * 下载决策回调实现
  * 使用端实现 UI 展示
  * 使用 StackManager 获取顶部 Activity
+ *
+ * 每次请求的回调都只保存在本次弹窗的闭包里，避免多次确认请求互相覆盖。
  */
 class MyCheckAfterCallback(
     private val applicationContext: Context
 ) : CheckAfterCallback {
-
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-
-    // 待执行的回调
-    private var pendingOnUseCellular: (() -> Unit)? = null
-    private var pendingOnConnectWifi: (() -> Unit)? = null
-
-    init {
-        // 监听确认事件
-        scope.launch {
-            CellularConfirmViewModel.confirmEvent.collect { event ->
-                when (event) {
-                    is CellularConfirmEvent.Confirmed -> {
-                        pendingOnUseCellular?.invoke()
-                        pendingOnUseCellular = null
-                        pendingOnConnectWifi = null
-                    }
-
-                    is CellularConfirmEvent.Denied -> {
-                        pendingOnConnectWifi?.invoke()
-                        pendingOnUseCellular = null
-                        pendingOnConnectWifi = null
-                    }
-                }
-            }
-        }
-    }
 
     /**
      * 根据场景决定如何展示 UI
@@ -61,47 +32,32 @@ class MyCheckAfterCallback(
 
         when (scenario) {
             NetworkScenario.CELLULAR_CONFIRMATION -> {
-                // 流量确认：弹窗
-                pendingOnUseCellular = onUseCellular
-                pendingOnConnectWifi = onConnectWifi
                 LogUtils.d("MyCheckAfterCallback requestConfirmation: showing dialog CELLULAR_CONFIRMATION")
-                CellularConfirmDialog.show(
+                val shown = CellularConfirmDialog.show(
                     totalSize,
                     pendingTasks.size,
                     CellularConfirmDialog.MODE_CELLULAR,
-                    onConfirm = {
-                        pendingOnUseCellular?.invoke()
-                        pendingOnUseCellular = null
-                        pendingOnConnectWifi = null
-                    },
-                    onCancel = {
-                        pendingOnConnectWifi?.invoke()
-                        pendingOnUseCellular = null
-                        pendingOnConnectWifi = null
-                    }
+                    onConfirm = { onUseCellular() },
+                    onCancel = { onConnectWifi() }
                 )
+                if (!shown) {
+                    // 没有可用 Activity 时保持暂停，等下次网络事件/手动恢复再确认
+                    onConnectWifi()
+                }
             }
 
             NetworkScenario.WIFI_ONLY_MODE -> {
-                // 仅WiFi模式：弹窗
-                pendingOnUseCellular = onUseCellular
-                pendingOnConnectWifi = onConnectWifi
                 LogUtils.d("MyCheckAfterCallback requestConfirmation: showing dialog WIFI_ONLY_MODE")
-                CellularConfirmDialog.show(
+                val shown = CellularConfirmDialog.show(
                     totalSize = totalSize,
                     taskCount = pendingTasks.size,
                     mode = CellularConfirmDialog.MODE_WIFI_ONLY,
-                    onConfirm = {
-                        pendingOnUseCellular?.invoke()
-                        pendingOnUseCellular = null
-                        pendingOnConnectWifi = null
-                    },
-                    onCancel = {
-                        pendingOnConnectWifi?.invoke()
-                        pendingOnUseCellular = null
-                        pendingOnConnectWifi = null
-                    }
+                    onConfirm = { onUseCellular() },
+                    onCancel = { onConnectWifi() }
                 )
+                if (!shown) {
+                    onConnectWifi()
+                }
             }
 
             NetworkScenario.NO_NETWORK -> {

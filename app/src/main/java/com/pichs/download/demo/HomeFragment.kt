@@ -68,21 +68,19 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
                 when (event) {
                     is UiEvent.ShowToast -> ToastUtils.show(event.message)
                     is UiEvent.ShowCellularConfirmDialog -> {
+                        if (!isVisible) return@collect
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.confirmBatchDownload(event.apps)
                         }
                         CellularConfirmDialog.show(
                             totalSize = event.totalSize,
                             taskCount = event.apps.size,
-                            mode = CellularConfirmDialog.MODE_CELLULAR,
-                            onConfirm = {
-
-                            }, onCancel = {
-
-                            })
+                            mode = CellularConfirmDialog.MODE_CELLULAR
+                        )
                     }
 
                     is UiEvent.ShowWifiOnlyDialog -> {
+                        if (!isVisible) return@collect
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.startDownloadAndPause(event.apps)
                         }
@@ -90,6 +88,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
                     }
 
                     is UiEvent.ShowNoNetworkDialog -> {
+                        if (!isVisible) return@collect
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.startDownloadAndPauseForNetwork(event.apps)
                         }

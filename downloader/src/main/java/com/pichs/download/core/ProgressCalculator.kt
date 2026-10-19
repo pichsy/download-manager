@@ -83,7 +83,7 @@ class ProgressCalculator {
             val updatedTask = task.copy(
                 status = DownloadStatus.DOWNLOADING,
                 progress = progress,
-                totalSize = totalSize,
+                totalSize = totalSize.coerceAtLeast(0),
                 currentSize = totalDownloaded,
                 speed = smoothedSpeed,
                 updateTime = com.pichs.download.utils.TimeUtils.currentMicros()
@@ -151,7 +151,8 @@ class ProgressCalculator {
     }
     
     /**
-     * 获取任务完成时的最终进度信息
+     * 获取任务完成时的最终进度信息。
+     * 只有下载字节数与总大小严格一致时才标记 COMPLETED，否则标记 FAILED。
      */
     fun getFinalProgress(
         task: DownloadTask,
@@ -159,15 +160,16 @@ class ProgressCalculator {
         totalSize: Long
     ): DownloadTask {
         val totalDownloaded = chunks.sumOf { it.downloaded }
-        val progress = if (totalSize > 0) {
-            ((totalDownloaded * 100) / totalSize).toInt().coerceIn(0, 100)
-        } else {
-            100
+        val progress = when {
+            totalSize > 0 -> ((totalDownloaded * 100) / totalSize).toInt().coerceIn(0, 100)
+            totalSize == 0L -> 100
+            else -> 0
         }
-        
+        val complete = totalSize >= 0 && totalDownloaded == totalSize
+
         return task.copy(
-            status = DownloadStatus.COMPLETED,
-            progress = 100,
+            status = if (complete) DownloadStatus.COMPLETED else DownloadStatus.FAILED,
+            progress = if (complete) 100 else progress,
             totalSize = totalSize,
             currentSize = totalDownloaded,
             speed = 0,

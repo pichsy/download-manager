@@ -1,51 +1,37 @@
 package com.pichs.download.demo
 
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-
 /**
- * 流量确认弹窗通信 ViewModel（单例）
- * 负责事件通信和待执行操作管理
+ * 流量确认弹窗通信（单例）
+ * 负责保存"用户确认后要执行的下载操作"。
+ *
+ * 回调直接同步执行：弹窗关闭时会取消自身协程作用域，
+ * 之前用协程派发 confirm/deny 可被 onDismiss 抢先取消，导致点击无反应。
  */
 object CellularConfirmViewModel {
-    
-    // 确认事件
-    private val _confirmEvent = MutableSharedFlow<CellularConfirmEvent>()
-    val confirmEvent: SharedFlow<CellularConfirmEvent> = _confirmEvent.asSharedFlow()
-    
-    // 待执行的下载操作（全局共享）
+
+    @Volatile
     var pendingAction: (() -> Unit)? = null
-    
+
     /**
      * 用户确认
      */
-    suspend fun confirm() {
-        pendingAction?.invoke()
+    fun confirm() {
+        val action = pendingAction
         pendingAction = null
-        _confirmEvent.emit(CellularConfirmEvent.Confirmed)
+        action?.invoke()
     }
-    
+
     /**
      * 用户拒绝
      */
-    suspend fun deny() {
+    fun deny() {
         pendingAction = null
-        _confirmEvent.emit(CellularConfirmEvent.Denied)
     }
-    
+
     /**
      * 清理
      */
     fun clear() {
         pendingAction = null
     }
-}
-
-/**
- * 确认事件
- */
-sealed class CellularConfirmEvent {
-    object Confirmed : CellularConfirmEvent()
-    object Denied : CellularConfirmEvent()
 }

@@ -193,10 +193,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * 用户确认后执行批量下载
+     * 用户已在弹窗中确认使用流量，直接标记任务为已确认，避免后置检查再次弹窗
      */
     fun confirmBatchDownload(apps: List<DownloadItem>) {
         viewModelScope.launch {
-            startBatchDownload(apps)
+            startBatchDownload(apps, cellularConfirmed = true)
             _uiEvent.emit(UiEvent.ShowToast("批量下载已开始：${apps.size} 个应用"))
         }
     }

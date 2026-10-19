@@ -11,11 +11,6 @@ import com.pichs.download.model.CellularThreshold
 import com.pichs.xbase.clickhelper.fastClick
 import com.pichs.xbase.stack.StackManager
 import com.pichs.xbase.utils.UiKit
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import razerdp.basepopup.BasePopupWindow
 import razerdp.util.animation.AnimationHelper
 import razerdp.util.animation.ScaleConfig
@@ -48,24 +43,24 @@ class CellularConfirmDialog(
         /**
          * 显示确认弹窗
          * @param mode 弹窗模式
-         * @return CellularConfirmDialog? 如果没有顶部 Activity 或 Activity 无效则返回 null
+         * @return true 表示弹窗已调度显示；false 表示没有可用的 Activity
          */
-        fun show(totalSize: Long, taskCount: Int, mode: Int = CellularConfirmDialog.MODE_CELLULAR, onConfirm: ((Boolean) -> Unit)? = null, onCancel: (() -> Unit)? = null) {
+        fun show(totalSize: Long, taskCount: Int, mode: Int = CellularConfirmDialog.MODE_CELLULAR, onConfirm: ((Boolean) -> Unit)? = null, onCancel: (() -> Unit)? = null): Boolean {
             if (totalSize <= 0L && taskCount == 0) {
                 Log.w(TAG, "CellularConfirmDialog show: totalSize==${totalSize}, taskCount==${taskCount}, cannot show dialog ")
-                return
+                return false
             }
             val topActivity = StackManager.get().getTopActivity()
             if (topActivity == null) {
                 Log.w(TAG, "CellularConfirmDialog show: topActivity is null, cannot show dialog")
-                return
+                return false
             }
             if (topActivity.isFinishing || topActivity.isDestroyed) {
                 Log.w(TAG, "CellularConfirmDialog show: topActivity is finishing or is destroyed, class=${topActivity.javaClass.simpleName}")
-                return
+                return false
             }
             // 传递 null，触发 ViewModel fallback
-            show(topActivity, totalSize, taskCount, mode, onConfirm, onCancel)
+            return show(topActivity, totalSize, taskCount, mode, onConfirm, onCancel)
         }
 
         /**
@@ -81,22 +76,24 @@ class CellularConfirmDialog(
             mode: Int,
             onConfirm: ((Boolean) -> Unit)? = null,
             onCancel: (() -> Unit)? = null
-        ) {
+        ): Boolean {
             if (totalSize <= 0L && taskCount == 0 || context !is android.app.Activity || context.isFinishing || context.isDestroyed) {
-                return
+                return false
             }
-            try {
+            return try {
                 context.runOnUiThread {
                     CellularConfirmDialog(context, totalSize, taskCount, mode, onConfirm, onCancel).showPopupWindow()
                 }
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "CellularConfirmDialog show: failed to show dialog", e)
+                false
             }
         }
     }
 
     private lateinit var binding: DialogCellularConfirmBinding
-    private val dialogScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var decided = false
 
     init {
         setContentView(R.layout.dialog_cellular_confirm)
@@ -172,23 +169,21 @@ class CellularConfirmDialog(
     }
 
     private fun handleConfirm() {
+        decided = true
         if (onConfirm != null) {
             onConfirm.invoke(true)
         } else {
-            dialogScope.launch {
-                CellularConfirmViewModel.confirm()
-            }
+            CellularConfirmViewModel.confirm()
         }
         dismiss()
     }
 
     private fun handleDeny() {
+        decided = true
         if (onCancel != null) {
             onCancel.invoke()
         } else {
-            dialogScope.launch {
-                CellularConfirmViewModel.deny()
-            }
+            CellularConfirmViewModel.deny()
         }
         dismiss()
     }
@@ -219,6 +214,13 @@ class CellularConfirmDialog(
 
     override fun onDismiss() {
         super.onDismiss()
-        dialogScope.cancel()
+        if (!decided) {
+            // 点击外部/返回键关闭视为拒绝，避免确认回调永久挂起
+            if (onCancel != null) {
+                onCancel.invoke()
+            } else {
+                CellularConfirmViewModel.deny()
+            }
+        }
     }
 }

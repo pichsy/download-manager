@@ -1,8 +1,11 @@
 package com.pichs.download.utils
 
 import com.pichs.download.model.PauseReason
+import java.io.EOFException
 import java.io.IOException
+import java.io.InterruptedIOException
 import java.net.ConnectException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
@@ -23,14 +26,21 @@ object ErrorClassifier {
             is SocketTimeoutException -> true
             is UnknownHostException -> true
             is SSLException -> true
+            is SocketException -> true
+            is EOFException -> true
+            is InterruptedIOException -> true
             is IOException -> {
-                // 检查IOException的消息，判断是否为网络相关
                 val message = throwable.message?.lowercase() ?: ""
                 message.contains("network") ||
                         message.contains("connection") ||
                         message.contains("timeout") ||
                         message.contains("unreachable") ||
-                        message.contains("refused")
+                        message.contains("refused") ||
+                        message.contains("unexpected end of stream") ||
+                        message.contains("stream reset") ||
+                        message.contains("broken pipe") ||
+                        message.contains("http/2") ||
+                        message.contains("eof")
             }
 
             else -> false

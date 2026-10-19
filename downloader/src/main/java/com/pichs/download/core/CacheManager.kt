@@ -1,6 +1,7 @@
 package com.pichs.download.core
 
 import com.pichs.download.model.DownloadTask
+import com.pichs.download.store.InMemoryTaskStore
 import com.pichs.download.store.TaskRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,6 +68,7 @@ internal class CacheManager(
         
         // 从数据库移除
         repository.delete(taskId)
+        updateCacheStats()
     }
     
     private suspend fun addToHotCache(task: DownloadTask) {
@@ -119,10 +121,11 @@ internal class CacheManager(
         updateCacheStats()
     }
     
-    private suspend fun updateCacheStats() {
+    private fun updateCacheStats() {
+        // 使用内存任务表统计，避免每次进度更新都做全表数据库查询
         val stats = CacheStats(
             hotCacheSize = hotCache.size,
-            totalTasks = repository.getAll().size,
+            totalTasks = InMemoryTaskStore.getAll().size,
             cacheHitRate = calculateHitRate()
         )
         _cacheStats.value = stats

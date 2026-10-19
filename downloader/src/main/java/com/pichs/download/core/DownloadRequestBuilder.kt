@@ -6,7 +6,7 @@ import android.os.Looper
 import com.pichs.download.config.Checksum
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
-import kotlinx.coroutines.runBlocking
+import com.pichs.download.utils.FileUtils
 import java.io.File
 import java.util.UUID
 
@@ -35,45 +35,53 @@ class DownloadRequestBuilder {
     fun cellularConfirmed(confirmed: Boolean) = apply { this.cellularConfirmed = confirmed }
 
     fun start(): DownloadTask {
-        val targetName = fileName ?: url.substringAfterLast('/').substringBefore('?')
-        val normalized = normalizeName(targetName)
+        val targetName = resolveTargetName()
+        val effectivePath = effectivePath()
         
-        // 如果未指定 path，使用默认下载目录
-        val effectivePath = if (path.isBlank()) DownloadManager.getEffectiveDownloadDirPath() else path
-        
-        // 检查是否已存在相同任务
-        val existing = runBlocking { 
-            DownloadManager.getAllTasks().firstOrNull {
-                it.url == url && it.filePath == effectivePath && normalizeName(it.fileName) == normalized
-            }
-        }
+        // 内存快照去重：恢复完成前也不会在主线程做全库扫描
+        val existing = DownloadManager.findExistingTask(url, effectivePath, targetName)
         
         if (existing != null) {
-            when (existing.status) {
+            // 查找与使用之间任务可能已被删除，此时按新任务处理
+            val latest = com.pichs.download.store.InMemoryTaskStore.get(existing.id)
+                ?: return createNewTask(targetName)
+
+            // 刷新请求头/鉴权信息后恢复，避免沿用已过期的 token
+            if (headers.isNotEmpty()) {
+                DownloadManager.setTaskHeaders(latest.id, headers)
+            }
+            checksum?.let { DownloadManager.setTaskChecksum(latest.id, it) }
+
+            when (latest.status) {
                 DownloadStatus.COMPLETED -> {
-                    val file = File(existing.filePath, existing.fileName)
+                    val file = File(latest.filePath, latest.fileName)
                     if (!file.exists()) {
                         // 文件被删除，删除任务记录并重新下载
-                        DownloadManager.deleteTask(existing.id, deleteFile = false)
+                        DownloadManager.deleteTask(latest.id, deleteFile = false)
                         return createNewTask(targetName)
                     } else {
                         // 文件存在，返回现有任务
-                        return existing
+                        return latest
                     }
                 }
                 DownloadStatus.CANCELLED, DownloadStatus.FAILED -> {
                     // 删除失败/取消的任务记录，重新下载
-                    DownloadManager.deleteTask(existing.id, deleteFile = false)
+                    DownloadManager.deleteTask(latest.id, deleteFile = false)
+                    // 清理旧任务的断点文件，避免留下无人认领的孤儿文件
+                    File(latest.filePath, "${latest.fileName}.${latest.id}.part")
+                        .takeIf { it.exists() }?.delete()
+                    File(latest.filePath, "${latest.fileName}.part")
+                        .takeIf { it.exists() }?.delete()
                     return createNewTask(targetName)
                 }
                 DownloadStatus.PAUSED -> {
                     // 直接恢复暂停的任务
-                    DownloadManager.resume(existing.id)
-                    return existing
+                    DownloadManager.resume(latest.id)
+                    return com.pichs.download.store.InMemoryTaskStore.get(latest.id) ?: latest
                 }
                 else -> {
-                    // 其他状态，返回现有任务
-                    return existing
+                    // 其他状态（含下载中/等待中），返回内存中的最新快照
+                    return latest
                 }
             }
         }
@@ -86,10 +94,8 @@ class DownloadRequestBuilder {
      */
     fun buildTask(): DownloadTask {
         require(url.isNotBlank()) { "[DownloadRequestBuilder] url is blank" }
-        val targetName = fileName ?: url.substringAfterLast('/').substringBefore('?')
-        
-        // 如果未指定 path，使用默认下载目录
-        val effectivePath = if (path.isBlank()) DownloadManager.getEffectiveDownloadDirPath() else path
+        val targetName = resolveTargetName()
+        val effectivePath = effectivePath()
         
         val task = DownloadTask(
             id = UUID.randomUUID().toString(),
@@ -113,13 +119,13 @@ class DownloadRequestBuilder {
         if (headers.isNotEmpty()) {
             DownloadManager.setTaskHeaders(task.id, headers)
         }
+        applyChecksum(task.id, useConfigDefault = true)
         
         return task
     }
 
     private fun createNewTask(targetName: String): DownloadTask {
-        // 如果未指定 path，使用默认下载目录
-        val effectivePath = if (path.isBlank()) DownloadManager.getEffectiveDownloadDirPath() else path
+        val effectivePath = effectivePath()
         
         val task = DownloadTask(
             id = UUID.randomUUID().toString(),
@@ -143,11 +149,55 @@ class DownloadRequestBuilder {
         if (headers.isNotEmpty()) {
             DownloadManager.setTaskHeaders(task.id, headers)
         }
+        applyChecksum(task.id, useConfigDefault = true)
 
         // 创建任务
         DownloadManager.checkAfterCreate(task)
-        return task
+        // checkAfterCreate 可能已经修改任务状态（如无网络时置为 PAUSED），返回内存中的最新值
+        return com.pichs.download.store.InMemoryTaskStore.get(task.id) ?: task
+    }
+
+    private fun resolveTargetName(): String {
+        return FileUtils.resolveFileName(
+            url = url,
+            fileName = fileName,
+            resolver = DownloadManager.currentFileNameResolver()
+        )
     }
 
     private fun normalizeName(name: String): String = name.substringBeforeLast('.').lowercase()
+
+    private fun effectivePath(): String = FileUtils.canonicalPath(
+        if (path.isBlank()) DownloadManager.getEffectiveDownloadDirPath() else path
+    )
+
+    private fun applyChecksum(taskId: String, useConfigDefault: Boolean) {
+        val value = if (useConfigDefault) {
+            checksum ?: DownloadManager.currentConfig().checksum
+        } else {
+            checksum
+        }
+        value?.let { DownloadManager.setTaskChecksum(taskId, it) }
+    }
+
+    internal fun resolveKey(): DownloadRequestKey {
+        val targetName = resolveTargetName()
+        return DownloadRequestKey(url, effectivePath(), normalizeName(targetName))
+    }
+
+    internal fun applyHeadersTo(taskId: String) {
+        if (headers.isNotEmpty()) {
+            DownloadManager.setTaskHeaders(taskId, headers)
+        }
+    }
+
+    internal fun applyChecksumTo(taskId: String) {
+        applyChecksum(taskId, useConfigDefault = false)
+    }
 }
+
+internal data class DownloadRequestKey(
+    val url: String,
+    val path: String,
+    val normalizedFileName: String
+)

@@ -61,14 +61,26 @@ internal class NetworkMonitor(private val context: Context) {
     }
     
     private fun updateNetworkType() {
-        val activeNetwork = connectivityManager.activeNetwork ?: return
-        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return
-        
-        val networkType = when {
+        // 电池状态没有回调，顺带在每次网络变化时刷新一次
+        updateBatteryStatus()
+
+        val activeNetwork = connectivityManager.activeNetwork
+        if (activeNetwork == null) {
+            _networkType.value = NetworkType.UNKNOWN
+            return
+        }
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+        if (capabilities == null ||
+            !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        ) {
+            _networkType.value = NetworkType.UNKNOWN
+            return
+        }
+
+        val type = when {
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkType.WIFI
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> NetworkType.ETHERNET
             capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> {
-                // 根据带宽判断网络类型
                 val bandwidth = capabilities.getLinkDownstreamBandwidthKbps()
                 when {
                     bandwidth > 10000 -> NetworkType.CELLULAR_5G
@@ -77,10 +89,34 @@ internal class NetworkMonitor(private val context: Context) {
                     else -> NetworkType.CELLULAR_2G
                 }
             }
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ->
+                resolveUnderlyingType() ?: NetworkType.ETHERNET
             else -> NetworkType.UNKNOWN
         }
-        
-        _networkType.value = networkType
+
+        _networkType.value = type
+    }
+
+    /**
+     * VPN 的 NetworkCapabilities 只暴露 VPN transport，尝试从其他可用网络推断底层类型。
+     * 推断不出来时按非计费网络处理，避免 VPN 下被误判为断网。
+     */
+    @Suppress("DEPRECATION")
+    private fun resolveUnderlyingType(): NetworkType? {
+        return try {
+            connectivityManager.allNetworks.firstNotNullOfOrNull { network ->
+                val caps = connectivityManager.getNetworkCapabilities(network) ?: return@firstNotNullOfOrNull null
+                if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return@firstNotNullOfOrNull null
+                when {
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkType.WIFI
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> NetworkType.ETHERNET
+                    caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkType.CELLULAR_4G
+                    else -> null
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
     
     private fun updateBatteryStatus() {

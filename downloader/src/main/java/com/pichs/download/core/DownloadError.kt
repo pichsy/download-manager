@@ -1,5 +1,11 @@
 package com.pichs.download.core
 
+/**
+ * 文件内容与调用方提供的校验值不一致。
+ * 不继承 IOException，避免被网络/存储错误分类误判为可恢复暂停。
+ */
+internal class ChecksumMismatchException(message: String) : Exception(message)
+
 sealed class DownloadError : Exception() {
     object NetworkError : DownloadError()
     object FileSystemError : DownloadError()

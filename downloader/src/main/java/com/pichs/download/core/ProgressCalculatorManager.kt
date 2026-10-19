@@ -21,10 +21,9 @@ object ProgressCalculatorManager {
      * @return ProgressCalculator实例
      */
     fun getCalculator(taskId: String): ProgressCalculator {
-        return calculatorMap.getOrPut(taskId) { 
-            ProgressCalculator().also {
-                DownloadLog.d("ProgressCalculatorManager", "为任务创建新的ProgressCalculator: $taskId")
-            }
+        return calculatorMap.computeIfAbsent(taskId) {
+            DownloadLog.d("ProgressCalculatorManager", "为任务创建新的ProgressCalculator: $taskId")
+            ProgressCalculator()
         }
     }
     

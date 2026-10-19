@@ -10,12 +10,11 @@ ext["ossrhPassword"] = ''
 
 File secretPropsFile = project.rootProject.file('local.properties')
 if (secretPropsFile.exists()) {
-    println "输出 local.properties"
+    println "加载 local.properties"
     Properties p = new Properties()
     p.load(new FileInputStream(secretPropsFile))
     p.each { name, value ->
         ext[name] = value
-        println("输出 local.properties name = $name value = $value")
     }
 } else {
     println "No props file, loading env vars"

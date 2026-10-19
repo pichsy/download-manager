@@ -4,7 +4,9 @@ import com.pichs.download.config.RetentionConfig
 import com.pichs.download.config.RetentionStats
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
+import com.pichs.download.store.InMemoryTaskStore
 import com.pichs.download.store.TaskRepository
+import com.pichs.download.utils.FileUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -57,8 +59,8 @@ internal class RetentionManager(
         val protectionPeriodMs = config.protectionPeriodHours * 60 * 60 * 1000L
         
         val tasksToClean = allTasks.filter { task ->
-            // ✅ 先检查是否在保护期内
-            val age = now - task.updateTime
+            // ✅ 先检查是否在保护期内（updateTime 为微秒，需转毫秒）
+            val age = now - com.pichs.download.utils.TimeUtils.toMillis(task.updateTime)
             if (age < protectionPeriodMs) {
                 return@filter false  // 保护期内，不清理
             }
@@ -90,12 +92,12 @@ internal class RetentionManager(
         // ✅ 先过滤掉保护期内的任务，再按状态分组
         val completedTasks = allTasks
             .filter { it.status == DownloadStatus.COMPLETED }
-            .filter { now - it.updateTime >= protectionPeriodMs }  // 排除保护期
+            .filter { now - com.pichs.download.utils.TimeUtils.toMillis(it.updateTime) >= protectionPeriodMs }
             .sortedByDescending { it.updateTime }
         
         val failedTasks = allTasks
             .filter { it.status == DownloadStatus.FAILED }
-            .filter { now - it.updateTime >= protectionPeriodMs }  // 排除保护期
+            .filter { now - com.pichs.download.utils.TimeUtils.toMillis(it.updateTime) >= protectionPeriodMs }
             .sortedByDescending { it.updateTime }
         
         // 保留最近N个，删除其余的
@@ -115,7 +117,7 @@ internal class RetentionManager(
         // ✅ 按优先级和大小排序，优先删除低优先级、大文件，但排除保护期内的任务
         val tasksToDelete = allTasks
             .filter { it.status == DownloadStatus.COMPLETED }
-            .filter { now - it.updateTime >= protectionPeriodMs }  // 排除保护期
+            .filter { now - com.pichs.download.utils.TimeUtils.toMillis(it.updateTime) >= protectionPeriodMs }
             .sortedWith(
                 compareBy<DownloadTask> { it.priority } // 低优先级在前
                     .thenByDescending { it.totalSize } // 大文件在前
@@ -130,20 +132,24 @@ internal class RetentionManager(
     
     private suspend fun deleteTaskAndFile(task: DownloadTask, reason: String) {
         try {
-            // 删除文件
-            val file = File(task.filePath, task.fileName)
-            if (file.exists()) {
-                file.delete()
+            // 内存状态已变化（例如用户刚恢复该任务）时跳过，避免误删
+            val live = DownloadManager.getTaskImmediate(task.id)
+            if (live != null && live.status != task.status) return
+
+            // 删除文件（清洗文件名，防止历史脏数据造成路径穿越）
+            val safeName = FileUtils.sanitizeFileName(task.fileName)
+            val shared = FileOwnership.isReferencedByOtherTask(
+                task.id, task.filePath, task.fileName, InMemoryTaskStore.getAll()
+            )
+            if (!shared) {
+                File(task.filePath, safeName).takeIf { it.exists() }?.delete()
+                // 删除临时文件（旧命名与带任务 ID 的新命名）
+                File(task.filePath, "$safeName.part").takeIf { it.exists() }?.delete()
             }
+            File(task.filePath, "$safeName.${task.id}.part").takeIf { it.exists() }?.delete()
             
-            // 删除临时文件
-            val tempFile = File(task.filePath, "${task.fileName}.part")
-            if (tempFile.exists()) {
-                tempFile.delete()
-            }
-            
-            // 删除数据库记录
-            repository.delete(task.id)
+            // 删除数据库记录与内存状态（串行持久化队列保证顺序）
+            DownloadManager.removeTaskState(task.id)
             
             DownloadLogger.logTaskEvent(
                 LogLevel.INFO,
@@ -151,10 +157,6 @@ internal class RetentionManager(
                 task,
                 mapOf("reason" to reason)
             )
-            
-            // 发送删除事件
-            DownloadEventBus.emitTaskEvent(TaskEvent.TaskRemoved(task.id))
-            
         } catch (e: Exception) {
             DownloadLogger.logErrorEvent(
                 LogLevel.ERROR,
@@ -181,7 +183,8 @@ internal class RetentionManager(
             failedTasks = failedTasks.size,
             cancelledTasks = cancelledTasks.size,
             totalSize = allTasks.sumOf { it.totalSize },
-            oldestTask = allTasks.minByOrNull { it.createTime }?.createTime ?: 0L
+            oldestTask = allTasks.minByOrNull { it.createTime }?.createTime
+                ?.let { com.pichs.download.utils.TimeUtils.toMillis(it) } ?: 0L
         )
     }
 }

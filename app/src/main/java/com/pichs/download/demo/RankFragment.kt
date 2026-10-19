@@ -58,6 +58,7 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
                 when (event) {
                     is UiEvent.ShowToast -> ToastUtils.show(event.message)
                     is UiEvent.ShowCellularConfirmDialog -> {
+                        if (!isVisible) return@collect
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.confirmBatchDownload(event.apps)
                         }
@@ -65,6 +66,7 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
                     }
 
                     is UiEvent.ShowWifiOnlyDialog -> {
+                        if (!isVisible) return@collect
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.startDownloadAndPause(event.apps)
                         }
@@ -72,6 +74,7 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
                     }
 
                     is UiEvent.ShowNoNetworkDialog -> {
+                        if (!isVisible) return@collect
                         CellularConfirmViewModel.pendingAction = {
                             viewModel.startDownloadAndPauseForNetwork(event.apps)
                         }

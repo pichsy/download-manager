@@ -191,6 +191,8 @@ class DownloadingFragment : Fragment() {
         if (idx >= 0) {
             downloading[idx] = task
             adapter.updateItem(task)
+        } else if (isActiveStatus(task.status)) {
+            addTask(task)
         }
     }
 
@@ -199,7 +201,31 @@ class DownloadingFragment : Fragment() {
         if (idx >= 0) {
             downloading[idx] = task
             adapter.updateItemWithProgress(task, progress, speed)
+        } else if (isActiveStatus(task.status)) {
+            addTask(task)
         }
+    }
+
+    /**
+     * 新任务创建后不会主动刷新页面，收到首个状态/进度回调时补进列表。
+     */
+    private fun addTask(task: DownloadTask) {
+        if (downloading.any { it.id == task.id }) return
+        downloading.add(task)
+        downloading.sortWith(
+            compareByDescending<DownloadTask> { it.priority }
+                .thenByDescending { it.createTime }
+        )
+        adapter.submit(downloading)
+        updateEmptyState()
+    }
+
+    private fun isActiveStatus(status: DownloadStatus): Boolean = when (status) {
+        DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED,
+        DownloadStatus.PENDING, DownloadStatus.WAITING,
+        DownloadStatus.FAILED -> true
+
+        else -> false
     }
 
     private fun updateSingleImmediate(taskId: String, newStatus: DownloadStatus) {

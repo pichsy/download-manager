@@ -40,6 +40,10 @@ android {
     buildFeatures {
         viewBinding = true
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 
@@ -64,6 +68,8 @@ dependencies {
     api(libs.androidx.room.ktx)
     api(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
+
+    testImplementation(libs.junit)
 }
 
 

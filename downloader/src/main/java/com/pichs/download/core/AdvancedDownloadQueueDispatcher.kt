@@ -36,14 +36,19 @@ internal class AdvancedDownloadQueueDispatcher {
     
     // 并发控制
     private val maxConcurrentTasks = AtomicInteger(config.maxConcurrentTasks)
-    
+
+    // 等待队列中的任务 ID，防止同一任务被重复入队
+    private val queuedIds = ConcurrentHashMap.newKeySet<String>()
+
     /**
-     * 入队：添加任务到等待队列
+     * 入队：添加任务到等待队列（同一任务只允许存在一份）
      */
     fun enqueue(task: DownloadTask) {
-        taskQueue.offer(task)
+        if (queuedIds.add(task.id)) {
+            taskQueue.offer(task)
+        }
     }
-    
+
     /**
      * 出队：从等待队列取出最高优先级任务，加入运行映射
      * @return 取出的任务，如果并发已满或队列为空，返回 null
@@ -51,17 +56,18 @@ internal class AdvancedDownloadQueueDispatcher {
     fun dequeue(): DownloadTask? {
         if (runningTasks.size >= maxConcurrentTasks.get()) return null
         val task = taskQueue.poll() ?: return null
-        
+        queuedIds.remove(task.id)
+
         // 加入运行映射
         runningTasks[task.id] = task
-        
+
         // 按优先级分组
         when (task.priority) {
             3 -> urgentTasks[task.id] = task
             2 -> normalTasks[task.id] = task
             else -> backgroundTasks[task.id] = task
         }
-        
+
         return task
     }
     
@@ -87,13 +93,16 @@ internal class AdvancedDownloadQueueDispatcher {
      * 重新入队：将被抢占的任务放回等待队列
      */
     fun requeue(task: DownloadTask) {
-        taskQueue.offer(task)
+        if (queuedIds.add(task.id)) {
+            taskQueue.offer(task)
+        }
     }
-    
+
     /**
      * 移除任务：从等待队列和运行映射中都移除
      */
     fun remove(taskId: String) {
+        queuedIds.remove(taskId)
         taskQueue.removeIf { it.id == taskId }
         runningTasks.remove(taskId)
         urgentTasks.remove(taskId)
@@ -115,11 +124,11 @@ internal class AdvancedDownloadQueueDispatcher {
     // ==================== 配置方法 ====================
     
     fun setMaxConcurrentTasks(count: Int) { 
-        maxConcurrentTasks.set(count)
+        maxConcurrentTasks.set(count.coerceAtLeast(1))
     }
     
     fun updateConfig(newConfig: SchedulerConfig) {
-        maxConcurrentTasks.set(newConfig.maxConcurrentTasks)
+        maxConcurrentTasks.set(newConfig.maxConcurrentTasks.coerceAtLeast(1))
     }
     
     fun getCurrentConcurrencyLimit(): Int = maxConcurrentTasks.get()
