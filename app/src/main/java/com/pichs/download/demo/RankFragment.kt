@@ -8,10 +8,11 @@ import android.net.Uri
 import android.view.View
 import androidx.core.content.FileProvider
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
-import com.drake.brv.utils.setup
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.FormatUtils.formatFileSize
 import com.pichs.download.model.DownloadStatus
@@ -34,18 +35,17 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
 
     private val softwareList = arrayListOf<DownloadItem>()
     private val gameList = arrayListOf<DownloadItem>()
-
-    // Flow监听器
-    private val flowListener = DownloadManager.flowListener
+    private val tasksByUrl = HashMap<String, DownloadTask>()
+    private val cellsBinder = CellsBinder()
 
     // Track adapters for the two pages
-    private var softwareAdapter: com.drake.brv.BindingAdapter? = null
-    private var gameAdapter: com.drake.brv.BindingAdapter? = null
+    private var softwareAdapter: StoreAppAdapter? = null
+    private var gameAdapter: StoreAppAdapter? = null
 
     override fun afterOnCreateView(rootView: View?) {
         initViewPager()
         loadData()
-        bindFlowListener()
+        observeTaskState()
 
         // Handle UI Events from ViewModel (shared)
         viewLifecycleOwner.lifecycleScope.launch {
@@ -111,42 +111,14 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
                 rv.layoutManager = LinearLayoutManager(rv.context)
                 rv.setItemAnimatorDisable()
 
+                val adapter = StoreAppAdapter(R.layout.item_app_store_cells, cellsBinder)
+                rv.adapter = adapter
                 if (position == 0) {
-                    rv.setup {
-                        addType<DownloadItem>(R.layout.item_app_store_cells)
-                        onBind {
-                            val item = getModel<DownloadItem>()
-                            val vb = getBinding<ItemAppStoreCellsBinding>()
-                            bindItem(vb, item)
-                        }
-                        onPayload {
-                            val payload = it.firstOrNull() as? String?
-                            if (payload == "PROGRESS_UPDATE") {
-                                val item = getModel<DownloadItem>()
-                                val vb = getBinding<ItemAppStoreCellsBinding>()
-                                bindButtonUI(vb, item.task, item, checkInstalled = false)
-                            }
-                        }
-                    }.models = softwareList
-                    softwareAdapter = rv.adapter as com.drake.brv.BindingAdapter
+                    softwareAdapter = adapter
+                    adapter.submitList(buildRows(softwareList))
                 } else {
-                    rv.setup {
-                        addType<DownloadItem>(R.layout.item_app_store_cells)
-                        onBind {
-                            val item = getModel<DownloadItem>()
-                            val vb = getBinding<ItemAppStoreCellsBinding>()
-                            bindItem(vb, item)
-                        }
-                        onPayload {
-                            val payload = it.firstOrNull() as? String?
-                            if (payload == "PROGRESS_UPDATE") {
-                                val item = getModel<DownloadItem>()
-                                val vb = getBinding<ItemAppStoreCellsBinding>()
-                                bindButtonUI(vb, item.task, item, checkInstalled = false)
-                            }
-                        }
-                    }.models = gameList
-                    gameAdapter = rv.adapter as com.drake.brv.BindingAdapter
+                    gameAdapter = adapter
+                    adapter.submitList(buildRows(gameList))
                 }
             }
 
@@ -180,7 +152,7 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
                 withContext(Dispatchers.IO) { checkInstalledStatus(list) }
                 softwareList.clear()
                 softwareList.addAll(list)
-                softwareAdapter?.notifyDataSetChanged()
+                submitRows()
             }
         }
 
@@ -189,8 +161,41 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
                 withContext(Dispatchers.IO) { checkInstalledStatus(list) }
                 gameList.clear()
                 gameList.addAll(list)
-                gameAdapter?.notifyDataSetChanged()
+                submitRows()
             }
+        }
+    }
+
+    private fun observeTaskState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                DownloadManager.flowDownloadListener.observeAllTasks().collect { tasks ->
+                    tasksByUrl.clear()
+                    tasks.forEach { tasksByUrl[it.url] = it }
+                    submitRows()
+                }
+            }
+        }
+    }
+
+    private fun submitRows() {
+        softwareAdapter?.submitList(buildRows(softwareList))
+        gameAdapter?.submitList(buildRows(gameList))
+    }
+
+    private fun buildRows(list: List<DownloadItem>): List<StoreAppRow> {
+        return list.map { item ->
+            StoreAppRow(item, tasksByUrl[item.url], item.isInstalled)
+        }
+    }
+
+    private inner class CellsBinder : StoreAppAdapter.Binder {
+        override fun bind(view: View, row: StoreAppRow) {
+            bindItem(ItemAppStoreCellsBinding.bind(view), row)
+        }
+
+        override fun bindProgress(view: View, row: StoreAppRow) {
+            bindButtonUI(ItemAppStoreCellsBinding.bind(view), row.task, row.installed)
         }
     }
 
@@ -203,7 +208,8 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
     }
 
     @SuppressLint("SetTextI18n")
-    private fun bindItem(vb: ItemAppStoreCellsBinding, item: DownloadItem) {
+    private fun bindItem(vb: ItemAppStoreCellsBinding, row: StoreAppRow) {
+        val item = row.item
         if (!item.icon.isNullOrEmpty()) {
             Glide.with(vb.ivIcon).load(item.icon).into(vb.ivIcon)
         } else {
@@ -214,15 +220,10 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
         vb.tvAppSize.text = "大小:" + formatFileSize(item.sizeBytes)
         vb.tvAppVersion.text = "版本:${item.version}"
 
-        if (item.task == null) {
-            val existingTask = DownloadManager.getTaskByUrl(item.url)
-            if (existingTask != null) item.task = existingTask
-        }
-
-        bindButtonUI(vb, item.task, item, checkInstalled = true)
+        bindButtonUI(vb, row.task, row.installed)
 
         vb.btnUpdate.fastClick {
-            handleClick(item, vb)
+            handleClick(item)
         }
 
         vb.ivIcon.fastClick { openDetail(item) }
@@ -230,9 +231,9 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
     }
 
     private fun bindButtonUI(
-        vb: ItemAppStoreCellsBinding, task: DownloadTask?, item: DownloadItem? = null, checkInstalled: Boolean = false
+        vb: ItemAppStoreCellsBinding, task: DownloadTask?, installed: Boolean = false
     ) {
-        if (checkInstalled && item != null && item.isInstalled) {
+        if (installed) {
             vb.btnUpdate.setText("打开")
             vb.btnUpdate.setProgress(100)
             vb.btnUpdate.isEnabled = true
@@ -283,7 +284,7 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
         }
     }
 
-    private fun handleClick(item: DownloadItem, vb: ItemAppStoreCellsBinding) {
+    private fun handleClick(item: DownloadItem) {
         viewLifecycleOwner.lifecycleScope.launch {
             val pkg = item.packageName.orEmpty()
             val storeVC = item.versionCode
@@ -298,15 +299,10 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
             }
 
             val task = DownloadManager.getTaskByUrl(item.url)
-            if (task != null) {
-                item.task = task
-            }
 
             when (task?.status) {
                 DownloadStatus.DOWNLOADING -> {
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
-                    val pausedTask = task.copy(status = DownloadStatus.PAUSED)
-                    updateItemTask(pausedTask)
                 }
 
                 DownloadStatus.PAUSED -> {
@@ -319,8 +315,6 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
 
                 DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
-                    val pausedTask = task.copy(status = DownloadStatus.PAUSED)
-                    updateItemTask(pausedTask)
                 }
 
                 DownloadStatus.COMPLETED -> {
@@ -329,7 +323,6 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
                         openApk(task)
                     } else {
                         DownloadManager.deleteTask(task.id, deleteFile = false)
-                        item.task = null
                         startDownload(item)
                     }
                 }
@@ -367,76 +360,4 @@ class RankFragment : BaseFragment<FragmentRankBinding>() {
         startActivity(i)
     }
 
-    private fun bindFlowListener() {
-        flowListener.bindToLifecycle(lifecycleOwner = this, onTaskProgress = { task, progress, speed ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTaskWithProgress(task, progress, speed)
-        }, onTaskComplete = { task, file ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        }, onTaskError = { task, error ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        }, onTaskPaused = { task ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        }, onTaskResumed = { task ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        }, onTaskCancelled = { task ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        })
-    }
-
-    private fun updateItemTask(task: DownloadTask) {
-        updateListItem(softwareList, softwareAdapter, task)
-        updateListItem(gameList, gameAdapter, task)
-    }
-
-    private fun updateListItem(list: List<DownloadItem>, adapter: com.drake.brv.BindingAdapter?, task: DownloadTask) {
-        val idx = list.indexOfFirst { it.url == task.url }
-        if (idx >= 0) {
-            (list as MutableList)[idx].task = task
-            adapter?.notifyItemChanged(idx)
-        }
-    }
-
-    private val lastProgressUpdateTimeMap = mutableMapOf<String, Long>()
-    private val progressUpdateInterval = 300L
-
-    private fun updateItemTaskWithProgress(task: DownloadTask, progress: Int, speed: Long) {
-        if (progress >= 100 || task.status == DownloadStatus.COMPLETED) {
-            lastProgressUpdateTimeMap.remove(task.id)
-            updateListItemWithProgress(softwareList, softwareAdapter, task)
-            updateListItemWithProgress(gameList, gameAdapter, task)
-            return
-        }
-
-        val now = System.currentTimeMillis()
-        val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
-        if (now - lastUpdateTime < progressUpdateInterval) {
-            return
-        }
-        lastProgressUpdateTimeMap[task.id] = now
-
-        updateListItemWithProgress(softwareList, softwareAdapter, task)
-        updateListItemWithProgress(gameList, gameAdapter, task)
-    }
-
-    private fun updateListItemWithProgress(list: List<DownloadItem>, adapter: com.drake.brv.BindingAdapter?, task: DownloadTask) {
-        val idx = list.indexOfFirst { it.url == task.url }
-        if (idx >= 0) {
-            (list as MutableList)[idx].task = task
-            // Prevent Completed flickering
-            if (list[idx].task?.status == DownloadStatus.COMPLETED && task.status != DownloadStatus.COMPLETED) {
-                return
-            }
-            list[idx].task = task
-            // Ensure on main thread
-            binding.viewPager.post {
-                adapter?.notifyItemChanged(idx, "PROGRESS_UPDATE")
-            }
-        }
-    }
 }

@@ -3,12 +3,16 @@ package com.pichs.download.demo
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import com.bumptech.glide.Glide
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
 import kotlinx.coroutines.launch
-import androidx.lifecycle.lifecycleScope
 import com.pichs.download.demo.databinding.ActivityAppDetailBinding
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.utils.LogUtils
@@ -27,8 +31,7 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
         }
 
         initUI(appInfo!!)
-        initDownloadState()
-        bindListeners()
+        observeDownloadState()
     }
 
     private fun initUI(item: DownloadItem) {
@@ -62,7 +65,9 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
         } else {
             binding.rvScreenshots.visibility = android.view.View.VISIBLE
             binding.rvScreenshots.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false)
-            binding.rvScreenshots.adapter = ScreenshotAdapter(item.screenshots!!)
+            binding.rvScreenshots.adapter = ScreenshotAdapter().apply {
+                submitList(item.screenshots ?: emptyList())
+            }
             binding.rvScreenshots.addItemDecoration(object : androidx.recyclerview.widget.RecyclerView.ItemDecoration() {
                 override fun getItemOffsets(outRect: android.graphics.Rect, view: android.view.View, parent: androidx.recyclerview.widget.RecyclerView, state: androidx.recyclerview.widget.RecyclerView.State) {
                     outRect.right = 8.dp
@@ -74,7 +79,7 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
         binding.btnDownload.setOnClickListener { onClickDownload() }
     }
 
-    class ScreenshotAdapter(private val list: List<String>) : androidx.recyclerview.widget.RecyclerView.Adapter<ScreenshotAdapter.VH>() {
+    class ScreenshotAdapter : ListAdapter<String, ScreenshotAdapter.VH>(SCREENSHOT_DIFF) {
         class VH(v: android.view.View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(v) {
             val iv: android.widget.ImageView = v.findViewById(R.id.iv_screenshot)
         }
@@ -85,10 +90,15 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
         }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
-            Glide.with(holder.iv).load(list[position]).into(holder.iv)
+            Glide.with(holder.iv).load(getItem(position)).into(holder.iv)
         }
 
-        override fun getItemCount(): Int = list.size
+        companion object {
+            private val SCREENSHOT_DIFF = object : DiffUtil.ItemCallback<String>() {
+                override fun areItemsTheSame(oldItem: String, newItem: String): Boolean = oldItem == newItem
+                override fun areContentsTheSame(oldItem: String, newItem: String): Boolean = oldItem == newItem
+            }
+        }
     }
 
     private fun canOpenInstalled(): Boolean {
@@ -98,13 +108,24 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
     }
 
     private var task: DownloadTask? = null
-    private val flowListener = DownloadManager.flowListener
 
-    private fun initDownloadState() {
+    private fun observeDownloadState() {
         val url = appInfo?.url ?: return
         lifecycleScope.launch {
             task = DownloadManager.getTaskByUrl(url)
             bindButtonUI(task)
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                DownloadManager.flowDownloadListener.observeAllTasks().collect { tasks ->
+                    val current = task?.let { t -> tasks.firstOrNull { it.id == t.id } }
+                        ?: tasks.firstOrNull { it.url == url }
+                    if (current != null) {
+                        task = current
+                        bindButtonUI(current)
+                    }
+                }
+            }
         }
     }
 
@@ -118,17 +139,9 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
             return
         }
         when (t.status) {
-            DownloadStatus.DOWNLOADING -> {
-                DownloadManager.pause(t.id)
-                this.task = t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
-                bindButtonUI(this.task)
-            }
+            DownloadStatus.DOWNLOADING -> DownloadManager.pause(t.id)
             DownloadStatus.PAUSED -> DownloadManager.resume(t.id)
-            DownloadStatus.PENDING, DownloadStatus.WAITING -> {
-                DownloadManager.pause(t.id)
-                this.task = t.copy(status = DownloadStatus.PAUSED, speed = 0L, updateTime = System.currentTimeMillis())
-                bindButtonUI(this.task)
-            }
+            DownloadStatus.PENDING, DownloadStatus.WAITING -> DownloadManager.pause(t.id)
             DownloadStatus.COMPLETED -> {
                 val pkg = info.packageName
                 val storeVC = CatalogRepository.getStoreVersionCode(this, pkg) ?: 0L
@@ -233,9 +246,6 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
                 .priority(priority)
                 .cellularConfirmed(cellularConfirmed)
                 .start()
-
-            task = DownloadManager.getTask(task?.id ?: "") ?: task
-            bindButtonUI(task)
         }
     }
 
@@ -276,8 +286,7 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
             .start()
 
         DownloadManager.pauseTask(newTask.id, pauseReason)
-        task = newTask.copy(status = DownloadStatus.PAUSED, pauseReason = pauseReason)
-        bindButtonUI(task)
+        task = newTask
 
         val msg = when (pauseReason) {
             com.pichs.download.model.PauseReason.NETWORK_ERROR -> "已加入下载队列，等待网络连接"
@@ -341,43 +350,6 @@ class AppDetailActivity : BaseActivity<ActivityAppDetailBinding>() {
                 binding.btnDownload.isEnabled = true
             }
         }
-    }
-
-    private fun bindListeners() {
-        flowListener.bindToLifecycle(
-            lifecycleOwner = this,
-            onTaskProgress = { task, progress, speed ->
-                if (task.id == this@AppDetailActivity.task?.id) {
-                    // 同步本地引用，确保后续点击使用最新状态
-                    this@AppDetailActivity.task = task
-                    bindButtonUI(task)
-                }
-            },
-            onTaskComplete = { task, file ->
-                if (task.id == this@AppDetailActivity.task?.id) {
-                    this@AppDetailActivity.task = task
-                    bindButtonUI(task)
-                }
-            },
-            onTaskError = { task, error ->
-                if (task.id == this@AppDetailActivity.task?.id) {
-                    this@AppDetailActivity.task = task
-                    bindButtonUI(task)
-                }
-            },
-            onTaskPaused = { task ->
-                if (task.id == this@AppDetailActivity.task?.id) {
-                    this@AppDetailActivity.task = task
-                    bindButtonUI(task)
-                }
-            },
-            onTaskResumed = { task ->
-                if (task.id == this@AppDetailActivity.task?.id) {
-                    this@AppDetailActivity.task = task
-                    bindButtonUI(task)
-                }
-            }
-        )
     }
 
     private fun openApk(task: DownloadTask) {

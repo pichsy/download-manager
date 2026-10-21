@@ -4,14 +4,16 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.DownloadManagerActivity
 import com.pichs.download.demo.ExtraMeta
 import com.pichs.download.model.DownloadStatus
+import com.pichs.download.model.DownloadTask
 import com.pichs.download.utils.SpeedUtils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
@@ -23,7 +25,6 @@ class FloatBallHelper(private val context: Context) : DefaultLifecycleObserver {
 
     private var floatBallView: FloatBallView? = null
     private var lifecycleOwner: LifecycleOwner? = null
-    private val flowListener = DownloadManager.flowListener
 
     /**
      * 绑定生命周期
@@ -40,35 +41,13 @@ class FloatBallHelper(private val context: Context) : DefaultLifecycleObserver {
      * 绑定下载监听器
      */
     private fun bindDownloadListener() {
-        lifecycleOwner?.let { owner ->
-            flowListener.bindToLifecycle(
-                lifecycleOwner = owner,
-                onTaskProgress = { task, progress, speed ->
-                    // 获取应用名
-                    val meta = ExtraMeta.fromJson(task.extras)
-                    val appName = meta?.name ?: task.fileName.substringBeforeLast(".")
-                    val speedText = SpeedUtils.formatDownloadSpeed(speed)
-                    floatBallView?.updateProgress(appName, progress, speedText)
-                },
-                onTaskComplete = { task, _ ->
-                    // 下载完成，检查是否还有其他正在下载的任务
-                    checkAndUpdateActiveTask()
-                },
-                onTaskError = { task, _ ->
-                    checkAndUpdateActiveTask()
-                },
-                onTaskPaused = { task ->
-                    checkAndUpdateActiveTask()
-                },
-                onTaskResumed = { task ->
-                    val meta = ExtraMeta.fromJson(task.extras)
-                    val appName = meta?.name ?: task.fileName.substringBeforeLast(".")
-                    floatBallView?.updateProgress(appName, task.progress, "0KB/s")
-                },
-                onTaskCancelled = { task ->
-                    checkAndUpdateActiveTask()
+        val owner = lifecycleOwner ?: return
+        owner.lifecycleScope.launch {
+            owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                DownloadManager.flowDownloadListener.observeAllTasks().collect { tasks ->
+                    updateActiveTask(tasks)
                 }
-            )
+            }
         }
     }
 
@@ -76,20 +55,22 @@ class FloatBallHelper(private val context: Context) : DefaultLifecycleObserver {
      * 检查并更新当前活跃的下载任务
      */
     private fun checkAndUpdateActiveTask() {
-        CoroutineScope(Dispatchers.Main).launch {
-            val allTasks = DownloadManager.getAllTasks()
-            val activeTask = allTasks.firstOrNull { 
-                it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.WAITING 
-            }
-            if (activeTask != null) {
-                val meta = ExtraMeta.fromJson(activeTask.extras)
-                val appName = meta?.name ?: activeTask.fileName.substringBeforeLast(".")
-                val speedText = SpeedUtils.formatDownloadSpeed(activeTask.speed)
-                floatBallView?.updateProgress(appName, activeTask.progress, speedText)
-            } else {
-                // 没有活跃任务，显示默认状态
-                floatBallView?.updateProgress("无下载", 0, "0KB/s")
-            }
+        lifecycleOwner?.lifecycleScope?.launch {
+            updateActiveTask(DownloadManager.getAllTasks())
+        }
+    }
+
+    private fun updateActiveTask(tasks: List<DownloadTask>) {
+        val activeTask = tasks.firstOrNull { it.status == DownloadStatus.DOWNLOADING }
+            ?: tasks.firstOrNull { it.status == DownloadStatus.WAITING }
+        if (activeTask != null) {
+            val meta = ExtraMeta.fromJson(activeTask.extras)
+            val appName = meta?.name ?: activeTask.fileName.substringBeforeLast(".")
+            val speedText = SpeedUtils.formatDownloadSpeed(activeTask.speed)
+            floatBallView?.updateProgress(appName, activeTask.progress, speedText)
+        } else {
+            // 没有活跃任务，显示默认状态
+            floatBallView?.updateProgress("无下载", 0, "0KB/s")
         }
     }
 

@@ -7,9 +7,63 @@
 
 ---
 
+## v2.2.0 (2026-10-21)
+
+### 🚀 新增功能
+
+- **列表状态 API `observeTasks(statuses, order)`**
+    - 把任务列表当作一份可重放的状态，Flow 自动处理过滤、排序和页面重建恢复
+    - 不传参数时直接复用 `DownloadManager.tasksState`，没有额外开销
+    - 过滤结果与上次相同时不重复发射，无关任务的进度刷新不会触发列表重排
+
+- **一次性事件 API `observeEvents()`**
+    - 提供 `Completed` / `Failed` / `Paused` / `Resumed` / `Cancelled` 事件
+    - 冷流以订阅时的快照为基线，只上报订阅之后的跃迁，旋转、重进页面不会重复回调历史完成事件
+
+- **进度 Diff API**
+    - 新增 `DownloadTask.diffFrom(previous)` 与 `DownloadTaskChange`（`NONE` / `PROGRESS` / `CONTENT`）
+    - 配合 `ListAdapter` payload 使用，进度变化只执行局部绑定
+
+- **常用排序 `DownloadTaskOrder`**
+    - 内置 `PRIORITY`（优先级 + 创建时间）、`RECENT`（创建时间）、`UPDATED`（更新时间）三种比较器
+
+- **恢复期快照**
+    - 历史任务载入内存后立即发射一次 `tasksState`，避免冷启动时列表首帧长时间为空
+
+### 🐛 修复
+
+- 建立完成契约：校验 206/Content-Range 与 416，修复未知长度、CDN 尺寸变化下的分片与断点续传
+- 修复暂停/抢占/重复入队状态机竞态、断网暂停与错误分类
+- 修复临时文件冲突、最终文件同名抢占与跨任务误删；新增文件占用注册表和旧 `.part` 迁移清理
+- 持久化请求头与远端校验器，支持完成后 MD5/SHA-256 校验及失败重试
+- 启动清理孤儿 meta、路径规范化，`start()` 去除全库阻塞扫描
+- 补充全局 headers/interceptor、自适应分片、蜂窝流量确认、进度背压与低存储清理
+
+### 📝 文档与 Demo
+
+- README 新增 Flow 列表接入指南、`ListAdapter` + payload 示例，以及业务列表的 `StoreAppRow` 行模型模式
+- Demo 首页、排行榜、下载中、已完成、详情页、悬浮球全部迁移到状态流 + DiffUtil
+- 新增 22 个列表状态/事件/Diff/排序相关测试，当前共 118 个单元测试
+
+### ⚠️ 破坏性变更
+
+- 无。`bindToLifecycle`、`bindToScope` 与原有回调方式继续兼容。
+
+---
+
+## v2.1.6 (2026-01-26)
+
+### 🐛 修复
+
+- 引入 Dual-Lock 机制修复进度卡在 99% 的问题，确保 `COMPLETED` 不会被迟到的进度包覆盖
+- 修复 `FlowDownloadListener` 初始绑定时可能产生的冗余回调
+- 强制 `DOWNLOADING` -> `COMPLETED` 的状态流转不可逆
+
+---
+
 ## v2.1.5 (2026-01-22)
 
-### � 优化改进
+### 🔧 优化改进
 
 - **网络监听优化**
     - 使用 `registerDefaultNetworkCallback` 替代 `NetworkRequest.Builder`

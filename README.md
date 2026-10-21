@@ -65,7 +65,7 @@
 
 ```kotlin
 dependencies {
-    implementation("com.gitee.pichs:downloader:2.1.6")
+    implementation("com.gitee.pichs:downloader:2.2.0")
 }
 ```
 
@@ -175,29 +175,75 @@ DownloadManager.downloadBackground(url)
 
 ### 响应式监听
 
+列表页推荐订阅 `observeTasks`，把列表当成一份可重放的状态；完成、失败、暂停等一次性副作用使用 `observeEvents`。原有的 `bindToLifecycle` 仍然可用，不需要改老代码。
+
+#### 列表状态（推荐）
+
 ```kotlin
-class MainActivity : AppCompatActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        DownloadManager.flowListener.bindToLifecycle(
-            lifecycleOwner = this,
-            onTaskProgress = { task, progress, speed ->
-                updateProgress(task.id, progress, speed)
-            },
-            onTaskComplete = { task, file ->
-                showDownloadComplete(task, file)
-            },
-            onTaskError = { task, error ->
-                showDownloadError(task, error)
-            },
-            onTaskPaused = { task -> updateUI(task) },
-            onTaskResumed = { task -> updateUI(task) },
-            onTaskCancelled = { task -> updateUI(task) }
-        )
+viewLifecycleOwner.lifecycleScope.launch {
+    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+        DownloadManager.flowDownloadListener
+            .observeTasks(
+                statuses = setOf(
+                    DownloadStatus.DOWNLOADING,
+                    DownloadStatus.PAUSED,
+                    DownloadStatus.PENDING,
+                    DownloadStatus.WAITING,
+                    DownloadStatus.FAILED
+                ),
+                order = DownloadTaskOrder.PRIORITY
+            )
+            .collect { tasks ->
+                adapter.submitList(tasks)
+            }
     }
 }
+```
+
+- `statuses = null` 表示不过滤，`order = null` 表示沿用创建时间升序；两者都不传时直接复用 `tasksState`，没有额外开销。
+- 列表页配合 `ListAdapter` + `DownloadTask.diffFrom()` 使用，进度更新只触发 payload 局部刷新。
+- 旋转、重进页面都会拿到最新状态，不需要在 `onResume` 里手动刷新。
+
+#### 一次性事件（推荐）
+
+```kotlin
+viewLifecycleOwner.lifecycleScope.launch {
+    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+        DownloadManager.flowDownloadListener
+            .observeEvents()
+            .collect { event ->
+                when (event) {
+                    is DownloadEvent.Completed -> showDownloadComplete(event.task, event.file)
+                    is DownloadEvent.Failed -> showDownloadError(event.task)
+                    is DownloadEvent.Paused -> updateUI(event.task)
+                    is DownloadEvent.Resumed -> updateUI(event.task)
+                    is DownloadEvent.Cancelled -> updateUI(event.task)
+                }
+            }
+    }
+}
+```
+
+`observeEvents()` 是冷流，订阅时以当前快照作为基线，只上报订阅之后发生的状态跃迁，旋转后不会重复弹出历史完成事件。应用级通知请在 Application/Service 作用域订阅。
+
+#### 回调方式（兼容）
+
+```kotlin
+DownloadManager.flowDownloadListener.bindToLifecycle(
+    lifecycleOwner = this,
+    onTaskProgress = { task, progress, speed ->
+        updateProgress(task.id, progress, speed)
+    },
+    onTaskComplete = { task, file ->
+        showDownloadComplete(task, file)
+    },
+    onTaskError = { task, error ->
+        showDownloadError(task, error)
+    },
+    onTaskPaused = { task -> updateUI(task) },
+    onTaskResumed = { task -> updateUI(task) },
+    onTaskCancelled = { task -> updateUI(task) }
+)
 ```
 
 ### 任务查询
@@ -284,126 +330,132 @@ val pkg = meta?.packageName
 
 ## 🎨 UI 集成指南
 
-### RecyclerView 列表集成
+### RecyclerView 列表接入（推荐）
 
-**1. 创建 Adapter**
+列表页只需要维护一个 `ListAdapter`，任务增删、排序、状态迁移全部由 `observeTasks` 驱动。
+
+**1. Adapter：用 DiffUtil 区分整行变化和进度变化**
 
 ```kotlin
 class DownloadTaskAdapter(
     private val onAction: (DownloadTask) -> Unit
-) : RecyclerView.Adapter<DownloadTaskVH>() {
+) : ListAdapter<DownloadTask, DownloadTaskVH>(Diff) {
 
-    private val tasks = mutableListOf<DownloadTask>()
+    companion object {
+        const val PAYLOAD_PROGRESS = "PROGRESS_UPDATE"
 
-    fun submit(list: List<DownloadTask>) {
-        tasks.clear()
-        tasks.addAll(list)
-        notifyDataSetChanged()
-    }
+        private val Diff = object : DiffUtil.ItemCallback<DownloadTask>() {
+            override fun areItemsTheSame(oldItem: DownloadTask, newItem: DownloadTask) =
+                oldItem.id == newItem.id
 
-    // 更新单个任务状态
-    fun updateItem(task: DownloadTask) {
-        val idx = tasks.indexOfFirst { it.id == task.id }
-        if (idx >= 0) {
-            tasks[idx] = task
-            notifyItemChanged(idx)
+            override fun areContentsTheSame(oldItem: DownloadTask, newItem: DownloadTask) =
+                oldItem == newItem
+
+            override fun getChangePayload(oldItem: DownloadTask, newItem: DownloadTask): Any? =
+                if (newItem.diffFrom(oldItem) == DownloadTaskChange.PROGRESS)
+                    PAYLOAD_PROGRESS else null
         }
     }
 
-    // 专门用于进度更新（带Payload局部刷新）
-    fun updateProgress(task: DownloadTask) {
-        val idx = tasks.indexOfFirst { it.id == task.id }
-        if (idx >= 0) {
-            tasks[idx] = task
-            notifyItemChanged(idx, "PROGRESS_UPDATE")  // Payload 避免完整绑定
-        }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DownloadTaskVH {
+        return DownloadTaskVH(createItemView(parent))
     }
 
-    override fun onBindViewHolder(holder: DownloadTaskVH, position: Int, payloads: List<Any>) {
-        if (payloads.contains("PROGRESS_UPDATE")) {
-            // 仅更新进度，不重新加载图片等
-            holder.updateProgress(tasks[position])
+    override fun onBindViewHolder(holder: DownloadTaskVH, position: Int) {
+        holder.bind(getItem(position))
+    }
+
+    override fun onBindViewHolder(
+        holder: DownloadTaskVH,
+        position: Int,
+        payloads: MutableList<Any>
+    ) {
+        if (payloads.contains(PAYLOAD_PROGRESS)) {
+            holder.updateProgress(getItem(position))
         } else {
-            holder.bind(tasks[position])
+            super.onBindViewHolder(holder, position, payloads)
         }
     }
 }
 ```
 
-**2. 绑定 Flow 监听器**
+**2. Fragment：只收集一份列表状态**
 
 ```kotlin
-class DownloadListActivity : AppCompatActivity() {
+private val activeStatuses = setOf(
+    DownloadStatus.DOWNLOADING,
+    DownloadStatus.PAUSED,
+    DownloadStatus.PENDING,
+    DownloadStatus.WAITING,
+    DownloadStatus.FAILED
+)
 
-    private val adapter = DownloadTaskAdapter { task -> handleClick(task) }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // 绑定监听器到生命周期
-        DownloadManager.flowListener.bindToLifecycle(
-            lifecycleOwner = this,
-            onTaskProgress = { task, progress, speed ->
-                // 进度更新使用局部刷新
-                adapter.updateProgress(task)
-            },
-            onTaskComplete = { task, file ->
-                adapter.updateItem(task)
-                refreshCompletedList()
-            },
-            onTaskError = { task, error ->
-                adapter.updateItem(task)
-            },
-            onTaskPaused = { task ->
-                adapter.updateItem(task)
-            },
-            onTaskResumed = { task ->
-                adapter.updateItem(task)
+viewLifecycleOwner.lifecycleScope.launch {
+    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+        DownloadManager.flowDownloadListener
+            .observeTasks(activeStatuses, DownloadTaskOrder.PRIORITY)
+            .collect { tasks ->
+                adapter.submitList(tasks) { updateEmptyState() }
             }
-        )
     }
 }
 ```
 
-### 进度更新防抖机制
-
-高频进度回调可能导致 UI 卡顿，建议添加防抖：
+已完成列表只需要换一组参数：
 
 ```kotlin
-class ProgressDebouncer {
-    private val lastUpdateTime = mutableMapOf<String, Long>()
-    private val interval = 300L  // 300ms 防抖间隔
-
-    fun shouldUpdate(taskId: String, progress: Int): Boolean {
-        // 100% 进度必须更新
-        if (progress >= 100) {
-            lastUpdateTime.remove(taskId)
-            return true
-        }
-
-        val now = System.currentTimeMillis()
-        val last = lastUpdateTime[taskId] ?: 0L
-
-        if (now - last >= interval) {
-            lastUpdateTime[taskId] = now
-            return true
-        }
-        return false
-    }
-}
-
-// 使用示例
-private val debouncer = ProgressDebouncer()
-
-DownloadManager.flowListener.bindToLifecycle(
-    lifecycleOwner = this,
-    onTaskProgress = { task, progress, speed ->
-        if (debouncer.shouldUpdate(task.id, progress)) {
-            adapter.updateProgress(task)
-        }
-    }
+DownloadManager.flowDownloadListener.observeTasks(
+    statuses = setOf(DownloadStatus.COMPLETED),
+    order = DownloadTaskOrder.UPDATED
 )
 ```
+
+> [!NOTE]
+> SDK 已把进度更新限制在约 200ms 一次，并在 100% 时强制刷新；使用 `observeTasks` + payload 后不需要再手写防抖，也不需要 `notifyDataSetChanged()`。
+
+#### 业务列表：把下载任务叠加到自己的数据上
+
+商店、排行榜等页面通常有自己的业务列表，下载任务只是其中一列。推荐使用不可变行模型，任务状态变化时重建行快照交给 DiffUtil：
+
+```kotlin
+data class StoreAppRow(
+    val item: AppItem,
+    val task: DownloadTask?,
+    val installed: Boolean
+)
+
+private val rowDiff = object : DiffUtil.ItemCallback<StoreAppRow>() {
+    override fun areItemsTheSame(oldItem: StoreAppRow, newItem: StoreAppRow) =
+        oldItem.item.url == newItem.item.url
+
+    override fun areContentsTheSame(oldItem: StoreAppRow, newItem: StoreAppRow) =
+        oldItem == newItem
+
+    override fun getChangePayload(oldItem: StoreAppRow, newItem: StoreAppRow): Any? {
+        if (oldItem.item != newItem.item || oldItem.installed != newItem.installed) return null
+        val oldTask = oldItem.task ?: return null
+        val newTask = newItem.task ?: return null
+        return if (newTask.diffFrom(oldTask) == DownloadTaskChange.PROGRESS)
+            PAYLOAD_PROGRESS else null
+    }
+}
+
+// Fragment：一份任务表 + 业务列表，按 URL 合并成行
+private val tasksByUrl = HashMap<String, DownloadTask>()
+
+DownloadManager.flowDownloadListener.observeAllTasks().collect { tasks ->
+    tasksByUrl.clear()
+    tasks.forEach { tasksByUrl[it.url] = it }
+    adapter.submitList(catalog.map { StoreAppRow(it, tasksByUrl[it.url], it.installed) })
+}
+```
+
+- 只有进度变化时走 `bindProgress()`，图片、标题等不会重新加载。
+- 点击按钮时用 `DownloadManager.getTaskByUrl(url)` 获取最新任务，不要在业务对象上缓存 `task` 副本，否则暂停/恢复后会拿到旧状态。
+
+#### 旧版手动维护列表
+
+`bindToLifecycle` 和逐个回调 `updateItem` 的方式仍然兼容，已有项目可以继续使用；新页面建议采用上面的状态流方案。
 
 ### 按钮状态绑定
 
@@ -1115,6 +1167,9 @@ private fun handleClick(item: AppItem) {
 
 ### RecyclerView 集成最佳实践
 
+> [!NOTE]
+> 新项目优先使用上面的 `observeTasks` + `ListAdapter` 方案；下面是旧版手动维护列表的补充技巧。
+
 #### 1. 使用 Payload 局部刷新进度
 
 避免进度更新时重新绑定整个 ViewHolder：
@@ -1222,7 +1277,7 @@ NetworkMonitor(
 |------|------|---------|
 | 点击按钮无反应/卡顿 | `PackageManager` 查询在主线程 | 预计算或移到后台线程 |
 | 进度更新卡顿 | 高频刷新 RecyclerView | 添加 300ms 防抖 + Payload 局部刷新 |
-| 任务状态不同步 | 未订阅 Flow 监听器 | 使用 `flowListener.bindToLifecycle()` |
+| 任务状态不同步 | 未订阅 Flow 监听器 | 使用 `observeTasks` 或 `flowDownloadListener.bindToLifecycle()` |
 | 重复创建任务 | 未检查已有任务 | 先调用 `getTaskByUrl()` 检查 |
 | 任务完成后按钮显示"下载" | 未关联任务对象 | 在 `onBind` 时关联 `item.task` |
 
@@ -1259,15 +1314,30 @@ NetworkMonitor(
 查看完整更新日志：[CHANGELOG.md](./CHANGELOG.md)
 
 
-## 🆕 v2.1.6 更新日志
+## 🆕 v2.2.0 更新日志
 
-> **强烈建议升级到此版本！本次更新修复了核心状态一致性问题。**
+> 新增列表状态与一次性事件 API，并合入 2.1.6 之后的下载正确性、稳定性修复，强烈建议升级。
 
-- 🐞 **修复进度卡在 99% 的问题**  
-  引入 **Dual-Lock (双重锁) 机制**，彻底解决并发场景下（如 Worker 线程滞后）导致的状态回滚问题。确保任务一旦标记为 `COMPLETED`，绝不会被迟到的进度包覆盖。
+- 🚀 **列表接入更简单**
+    - 新增 `observeTasks(statuses, order)`：一份 Flow 驱动整个列表，过滤、排序、页面重建恢复都由 SDK 处理；不传参数时直接复用 `tasksState`，没有额外开销。
+    - 新增 `DownloadTask.diffFrom()` 与 `DownloadTaskChange`：区分进度变化和整行变化，配合 `ListAdapter` payload 只刷新进度。
+    - 新增 `DownloadTaskOrder`：内置 `PRIORITY` / `RECENT` / `UPDATED` 排序。
 
-- ⚡️ **优化回调逻辑**  
-  修复 `FlowDownloadListener` 在初始化绑定时可能产生的冗余回调洪水，现在启动时的状态同步更加精准和高效。
+- 🔔 **一次性事件**
+    - 新增 `observeEvents()`：`Completed` / `Failed` / `Paused` / `Resumed` / `Cancelled`。
+    - 冷流以订阅时快照为基线，旋转、重进页面不会重复回调历史完成事件。
 
-- 🔒 **增强状态一致性**  
-  `DownloadManager` 内核与 `FlowDownloadListener` 协同工作，严格强制状态流转（`DOWNLOADING` -> `COMPLETED`）的不可逆性。
+- 🐞 **下载正确性修复**
+    - 校验 206/Content-Range 与 416，修复未知长度、CDN 尺寸变化下的分片与断点续传。
+    - 修复暂停/抢占/重复入队状态机竞态、断网暂停与错误分类。
+    - 修复临时文件冲突、最终文件同名抢占与跨任务误删；新增文件占用注册表和旧 `.part` 迁移清理。
+    - 持久化请求头与远端校验器，支持完成后 MD5/SHA-256 校验及失败重试。
+    - 启动清理孤儿 meta、路径规范化，`start()` 去除全库阻塞扫描。
+
+- 🎨 **Demo 全面迁移**
+    - 首页、排行榜、下载中、已完成、详情页、悬浮球全部改为状态流 + DiffUtil 接入。
+
+- 🧪 **测试**
+    - 118 个单元测试全部通过。
+
+> 完整历史记录见 [CHANGELOG.md](./CHANGELOG.md)。

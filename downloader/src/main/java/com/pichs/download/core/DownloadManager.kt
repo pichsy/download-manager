@@ -136,6 +136,9 @@ object DownloadManager {
     private val _tasksState = MutableStateFlow<List<DownloadTask>>(emptyList())
     val tasksState = _tasksState.asStateFlow()
 
+    internal val tasksRestored: Boolean
+        get() = isRestored
+
     // Flow: 单任务进度
     private val taskProgressFlows = java.util.concurrent.ConcurrentHashMap<String, MutableSharedFlow<Pair<Int, Long>>>()
 
@@ -528,6 +531,9 @@ object DownloadManager {
                         else -> Unit
                     }
                 }
+
+                // 历史任务已进入内存，先推一次状态，避免恢复期间列表首帧长时间为空
+                _tasksState.value = InMemoryTaskStore.getAll().sortedBy { it.createTime }
 
                 if (tasksToResume.isEmpty()) {
                     DownloadLog.d(TAG, "没有需要恢复的任务")

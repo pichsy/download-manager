@@ -4,12 +4,36 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
+import com.pichs.download.model.DownloadTaskChange
+import com.pichs.download.model.diffFrom
 import com.pichs.download.demo.widget.ProgressButton
 import com.pichs.xwidget.cardview.XCardImageView
 import com.pichs.xwidget.view.XTextView
+
+private const val PAYLOAD_PROGRESS = "PROGRESS_UPDATE"
+
+private val DOWNLOAD_TASK_DIFF = object : DiffUtil.ItemCallback<DownloadTask>() {
+    override fun areItemsTheSame(oldItem: DownloadTask, newItem: DownloadTask): Boolean {
+        return oldItem.id == newItem.id
+    }
+
+    override fun areContentsTheSame(oldItem: DownloadTask, newItem: DownloadTask): Boolean {
+        return oldItem == newItem
+    }
+
+    override fun getChangePayload(oldItem: DownloadTask, newItem: DownloadTask): Any? {
+        return if (newItem.diffFrom(oldItem) == DownloadTaskChange.PROGRESS) {
+            PAYLOAD_PROGRESS
+        } else {
+            null
+        }
+    }
+}
 
 /**
  * 下载任务通用 Adapter
@@ -17,45 +41,13 @@ import com.pichs.xwidget.view.XTextView
 class DownloadTaskAdapter(
     private val onButtonClick: (DownloadTask) -> Unit,
     private val onLoadIcon: (ImageView, DownloadTask) -> Unit
-) : RecyclerView.Adapter<DownloadTaskAdapter.TaskViewHolder>() {
+) : ListAdapter<DownloadTask, DownloadTaskAdapter.TaskViewHolder>(DOWNLOAD_TASK_DIFF) {
 
     // 删除回调
     var onDelete: ((DownloadTask) -> Unit)? = null
 
-    private val data = mutableListOf<DownloadTask>()
-
-    fun submit(list: List<DownloadTask>) {
-        data.clear()
-        data.addAll(list)
-        notifyDataSetChanged()
-    }
-
-    fun updateItem(task: DownloadTask) {
-        val idx = data.indexOfFirst { it.id == task.id }
-        if (idx >= 0) {
-            data[idx] = task
-            notifyItemChanged(idx)
-        }
-    }
-
-    fun updateItemWithProgress(task: DownloadTask, progress: Int, speed: Long) {
-        val idx = data.indexOfFirst { it.id == task.id }
-        if (idx >= 0) {
-            data[idx] = task
-            notifyItemChanged(idx, "PROGRESS_UPDATE")
-        }
-    }
-
-    fun removeItem(task: DownloadTask) {
-        val idx = data.indexOfFirst { it.id == task.id }
-        if (idx >= 0) {
-            data.removeAt(idx)
-            notifyItemRemoved(idx)
-        }
-    }
-
     override fun getItemId(position: Int): Long {
-        return data.getOrNull(position)?.id?.hashCode()?.toLong() ?: RecyclerView.NO_ID
+        return getItem(position).id.hashCode().toLong()
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
@@ -64,15 +56,17 @@ class DownloadTaskAdapter(
         return TaskViewHolder(v, onButtonClick, onLoadIcon, onDelete)
     }
 
-    override fun getItemCount(): Int = data.size
-
     override fun onBindViewHolder(holder: TaskViewHolder, position: Int) {
-        holder.bind(data[position])
+        holder.bind(getItem(position))
     }
 
-    override fun onBindViewHolder(holder: TaskViewHolder, position: Int, payloads: MutableList<Any>) {
-        if (payloads.isNotEmpty()) {
-            holder.updateProgress(data[position])
+    override fun onBindViewHolder(
+        holder: TaskViewHolder,
+        position: Int,
+        payloads: MutableList<Any>
+    ) {
+        if (payloads.contains(PAYLOAD_PROGRESS)) {
+            holder.updateProgress(getItem(position))
         } else {
             super.onBindViewHolder(holder, position, payloads)
         }

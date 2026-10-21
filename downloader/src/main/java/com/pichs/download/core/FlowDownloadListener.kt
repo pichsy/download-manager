@@ -12,7 +12,9 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
@@ -31,11 +33,34 @@ class FlowDownloadListener {
     }
 
     /**
+     * 监听过滤、排序后的任务列表。
+     *
+     * 不传参数时直接复用 [DownloadManager.tasksState]；列表页建议配合
+     * ListAdapter + [com.pichs.download.model.DownloadTask.diffFrom] 使用。
+     *
+     * @param statuses 需要展示的状态，null 表示全部
+     * @param order 排序方式，null 表示沿用任务创建时间升序
+     */
+    fun observeTasks(
+        statuses: Set<DownloadStatus>? = null,
+        order: Comparator<DownloadTask>? = null
+    ): Flow<List<DownloadTask>> {
+        if (statuses == null && order == null) return DownloadManager.tasksState
+        return flow {
+            val deriver = DownloadTaskListDeriver(statuses, order)
+            DownloadManager.tasksState.collect { tasks ->
+                deriver.derive(tasks)?.let { emit(it) }
+            }
+        }
+    }
+
+    /**
      * 监听特定任务的状态变化
      */
     fun observeTask(taskId: String): Flow<DownloadTask?> {
         return DownloadManager.tasksState
             .map { tasks: List<DownloadTask> -> tasks.find { it.id == taskId } }
+            .distinctUntilChanged()
     }
 
     /**
@@ -67,6 +92,22 @@ class FlowDownloadListener {
     fun observeFailedTasks(): Flow<List<DownloadTask>> {
         return DownloadManager.tasksState
             .map { tasks: List<DownloadTask> -> tasks.filter { it.status == DownloadStatus.FAILED } }
+    }
+
+    /**
+     * 监听一次性下载事件。
+     *
+     * 订阅时以当前快照为基线，只上报订阅之后发生的状态跃迁，旋转/重进页面不会
+     * 重复回调历史完成、暂停事件。事件是冷流，全局副作用请在 Application 或
+     * Service 作用域订阅。
+     */
+    fun observeEvents(): Flow<DownloadEvent> = flow {
+        val tracker = DownloadEventTracker(DownloadManager.getAllTasks())
+        DownloadManager.tasksState.collect { tasks ->
+            // 恢复完成前 StateFlow 可能还是初始空列表，不能让它清空基线
+            if (!DownloadManager.tasksRestored && tasks.isEmpty()) return@collect
+            tracker.update(tasks).forEach { emit(it) }
+        }
     }
 
     /**
@@ -209,8 +250,9 @@ class FlowDownloadListener {
                             progressJobs[task.id] = launch {
                                 observeTaskProgress(task.id)
                                     .conflate()
-                                    .collect { (progress, speed) ->
-                                        val latestTask = DownloadManager.getTask(task.id) ?: return@collect
+                                    .collect progressCollect@ { (progress, speed) ->
+                                        val latestTask = DownloadManager.getTask(task.id)
+                                            ?: return@progressCollect
                                         if (latestTask.status == DownloadStatus.DOWNLOADING) {
                                             emitProgress(latestTask, progress, speed)
                                         }

@@ -6,15 +6,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.FragmentDownloadListBinding
 import com.pichs.download.model.DownloadStatus
 import com.pichs.download.model.DownloadTask
+import com.pichs.download.model.DownloadTaskOrder
 import com.pichs.shanhai.base.api.entity.qiniuHostUrl
-import com.pichs.shanhai.base.utils.LogUtils
 import com.pichs.xbase.kotlinext.setItemAnimatorDisable
 import kotlinx.coroutines.launch
 
@@ -26,7 +28,6 @@ class CompletedFragment : Fragment() {
     private var _binding: FragmentDownloadListBinding? = null
     private val binding get() = _binding!!
 
-    private val completed = mutableListOf<DownloadTask>()
     private lateinit var adapter: DownloadTaskAdapter
 
     override fun onCreateView(
@@ -41,14 +42,7 @@ class CompletedFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupRecycler()
-        bindListeners()
-        refreshList()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        android.util.Log.d("DownloadDemo", "CompletedFragment: onResume - refreshing list")
-        refreshList()
+        observeTasks()
     }
 
     private fun setupRecycler() {
@@ -59,13 +53,25 @@ class CompletedFragment : Fragment() {
         adapter.onDelete = { task ->
             DeleteConfirmDialog(requireContext()) {
                 DownloadManager.deleteTask(task.id, deleteFile = true)
-                removeFromList(task.id)
             }.showPopupWindow()
         }
         binding.recyclerView.setItemAnimatorDisable()
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         adapter.setHasStableIds(true)
         binding.recyclerView.adapter = adapter
+    }
+
+    private fun observeTasks() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                DownloadManager.flowDownloadListener
+                    .observeTasks(COMPLETED_STATUSES, DownloadTaskOrder.UPDATED)
+                    .collect { tasks ->
+                        adapter.submitList(tasks)
+                        updateEmptyState(tasks.isEmpty())
+                    }
+            }
+        }
     }
 
     private fun handleClickItem(task: DownloadTask) {
@@ -91,7 +97,6 @@ class CompletedFragment : Fragment() {
             // 文件缺失或损坏，删除旧任务并重新下载
             viewLifecycleOwner.lifecycleScope.launch {
                 DownloadManager.deleteTask(task.id, deleteFile = true)
-                removeFromList(task.id)
 
                 // 重新创建下载任务
                 val dir = requireContext().externalCacheDir?.absolutePath
@@ -102,17 +107,6 @@ class CompletedFragment : Fragment() {
                     .start()
                 Toast.makeText(requireContext(), "开始重新下载", Toast.LENGTH_SHORT).show()
             }
-        }
-    }
-
-    private fun removeFromList(taskId: String) {
-        val idx = completed.indexOfFirst { it.id == taskId }
-        if (idx >= 0) {
-            android.util.Log.d("DownloadDemo", "CompletedFragment: removing task $taskId")
-            val task = completed[idx]
-            completed.removeAt(idx)
-            adapter.removeItem(task)
-            updateEmptyState()
         }
     }
 
@@ -133,38 +127,9 @@ class CompletedFragment : Fragment() {
         }
     }
 
-    private fun refreshList() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            val all = DownloadManager.getAllTasks()
-            android.util.Log.d("DownloadDemo", "CompletedFragment: getAllTasks size=${all.size}")
-
-            val filtered = all.filter { it.status == DownloadStatus.COMPLETED }
-                .sortedByDescending { it.updateTime }
-                .distinctBy { it.id }
-
-            android.util.Log.d("DownloadDemo", "CompletedFragment: completed size=${filtered.size}")
-
-            completed.clear()
-            completed.addAll(filtered)
-            adapter.submit(completed)
-            updateEmptyState()
-        }
-    }
-
-    private fun updateEmptyState() {
-        binding.emptyView.visibility = if (completed.isEmpty()) View.VISIBLE else View.GONE
+    private fun updateEmptyState(isEmpty: Boolean) {
+        binding.emptyView.visibility = if (isEmpty) View.VISIBLE else View.GONE
         binding.tvEmpty.text = "暂无已完成任务"
-    }
-
-    private fun bindListeners() {
-        DownloadManager.flowListener.bindToLifecycle(
-            lifecycleOwner = viewLifecycleOwner,
-            onTaskComplete = { task, file ->
-                LogUtils.d("DownloadDemo", "CompletedFragment:bindListeners onTaskComplete： task=${task.fileName}, file=${file.absolutePath}")
-                if (!isAdded) return@bindToLifecycle
-                refreshList()
-            }
-        )
     }
 
     private fun openApk(task: DownloadTask) {
@@ -186,5 +151,9 @@ class CompletedFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    companion object {
+        private val COMPLETED_STATUSES = setOf(DownloadStatus.COMPLETED)
     }
 }

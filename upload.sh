@@ -46,7 +46,7 @@ echo "Module名称           ：$MODULE_NAME"
 echo "构建输出目录         ：$BUILD_DIR"
 echo "压缩文件名           ：$ZIP_NAME"
 echo "压缩文件完整路径     ：$ZIP_FILE"
-echo "Sonatype Token前10位 ：${TOKEN:0:10}***（部分隐藏）"
+echo "Sonatype Token        ：****（已隐藏）"
 echo "PUBLISH_VERSION      ：$PUBLISH_VERSION"
 echo "=============================="
 echo ""
@@ -85,15 +85,7 @@ echo "上传 $ZIP_FILE 到 Sonatype==> https://central.sonatype.com/api/v1/publi
 #  --header "Authorization: Bearer $TOKEN" \
 #  --form "bundle=@$ZIP_FILE" \
 #  https://central.sonatype.com/api/v1/publisher/upload
-# 先输出参数。
-echo curl -X 'POST' \
-  "https://central.sonatype.com/api/v1/publisher/upload?name=$MODULE_NAME%3A${PUBLISH_VERSION}&publishingType=AUTOMATIC" \
-  -H 'accept: text/plain' \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: multipart/form-data' \
-  -F "bundle=@$ZIP_FILE;type=application/zip"
-
-curl -X 'POST' \
+curl -sS -X 'POST' \
   "https://central.sonatype.com/api/v1/publisher/upload?name=$MODULE_NAME%3A${PUBLISH_VERSION}&publishingType=AUTOMATIC" \
   -H 'accept: text/plain' \
   -H "Authorization: Bearer $TOKEN" \

@@ -8,10 +8,11 @@ import android.provider.Settings
 import android.view.View
 import androidx.core.content.FileProvider
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
-import com.drake.brv.utils.setup
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.core.DownloadPriority
 import com.pichs.download.model.DownloadStatus
@@ -39,15 +40,17 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
     // Keeping logic similar to Activity, but scoped to Fragment
     private val viewModel: MainViewModel by activityViewModels()
 
-    // Flow监听器
-    private val flowListener = DownloadManager.flowListener
-
+    private val tasksByUrl = HashMap<String, DownloadTask>()
+    private val horizontalBinder = HorizontalBinder()
+    private val urgentAdapter = StoreAppAdapter(R.layout.item_horizontal_app, horizontalBinder)
+    private val highAdapter = StoreAppAdapter(R.layout.item_horizontal_app, horizontalBinder)
+    private val normalAdapter = StoreAppAdapter(R.layout.item_horizontal_app, horizontalBinder)
 
     override fun afterOnCreateView(rootView: View?) {
         initListener()
-        initCategoryLists()
         initRecyclerViews()
-        bindFlowListener()
+        initCategoryLists()
+        observeTaskState()
     }
 
     private fun initListener() {
@@ -135,75 +138,62 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
                     }
                 }
 
-                binding.rvUrgent.adapter?.notifyDataSetChanged()
-                binding.rvHigh.adapter?.notifyDataSetChanged()
-                binding.rvNormal.adapter?.notifyDataSetChanged()
+                submitRows()
             }
         }
     }
 
-    @SuppressLint("SetTextI18n")
+    private fun observeTaskState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                DownloadManager.flowDownloadListener.observeAllTasks().collect { tasks ->
+                    tasksByUrl.clear()
+                    tasks.forEach { tasksByUrl[it.url] = it }
+                    submitRows()
+                }
+            }
+        }
+    }
+
+    private fun submitRows() {
+        urgentAdapter.submitList(buildRows(urgentList))
+        highAdapter.submitList(buildRows(highList))
+        normalAdapter.submitList(buildRows(normalList))
+    }
+
+    private fun buildRows(list: List<DownloadItem>): List<StoreAppRow> {
+        return list.map { item ->
+            StoreAppRow(item, tasksByUrl[item.url], item.isInstalled)
+        }
+    }
+
     private fun initRecyclerViews() {
         binding.rvUrgent.setItemAnimatorDisable()
         binding.rvUrgent.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        binding.rvUrgent.setup {
-            addType<DownloadItem>(R.layout.item_horizontal_app)
-            onBind {
-                val item = getModel<DownloadItem>()
-                val vb = getBinding<ItemHorizontalAppBinding>()
-                bindHorizontalItem(vb, item, DownloadPriority.URGENT.value)
-            }
-            onPayload {
-                val payload = it.firstOrNull() as? String?
-                if (payload == "PROGRESS_UPDATE") {
-                    val item = getModel<DownloadItem>()
-                    val vb = getBinding<ItemHorizontalAppBinding>()
-                    bindButtonUI(vb, item.task, item, checkInstalled = false)
-                }
-            }
-        }.models = urgentList
+        binding.rvUrgent.adapter = urgentAdapter
 
         binding.rvHigh.setItemAnimatorDisable()
         binding.rvHigh.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        binding.rvHigh.setup {
-            addType<DownloadItem>(R.layout.item_horizontal_app)
-            onBind {
-                val item = getModel<DownloadItem>()
-                val vb = getBinding<ItemHorizontalAppBinding>()
-                bindHorizontalItem(vb, item, DownloadPriority.HIGH.value)
-            }
-            onPayload {
-                val payload = it.firstOrNull() as? String?
-                if (payload == "PROGRESS_UPDATE") {
-                    val item = getModel<DownloadItem>()
-                    val vb = getBinding<ItemHorizontalAppBinding>()
-                    bindButtonUI(vb, item.task, item, checkInstalled = false)
-                }
-            }
-        }.models = highList
+        binding.rvHigh.adapter = highAdapter
 
         binding.rvNormal.setItemAnimatorDisable()
         binding.rvNormal.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        binding.rvNormal.setup {
-            addType<DownloadItem>(R.layout.item_horizontal_app)
-            onBind {
-                val item = getModel<DownloadItem>()
-                val vb = getBinding<ItemHorizontalAppBinding>()
-                bindHorizontalItem(vb, item, DownloadPriority.NORMAL.value)
-            }
-            onPayload {
-                val payload = it.firstOrNull() as? String?
-                if (payload == "PROGRESS_UPDATE") {
-                    val item = getModel<DownloadItem>()
-                    val vb = getBinding<ItemHorizontalAppBinding>()
-                    bindButtonUI(vb, item.task, item, checkInstalled = false)
-                }
-            }
-        }.models = normalList
+        binding.rvNormal.adapter = normalAdapter
+    }
+
+    private inner class HorizontalBinder : StoreAppAdapter.Binder {
+        override fun bind(view: View, row: StoreAppRow) {
+            bindHorizontalItem(ItemHorizontalAppBinding.bind(view), row)
+        }
+
+        override fun bindProgress(view: View, row: StoreAppRow) {
+            bindButtonUI(ItemHorizontalAppBinding.bind(view), row.task, row.installed)
+        }
     }
 
     @SuppressLint("SetTextI18n")
-    private fun bindHorizontalItem(vb: ItemHorizontalAppBinding, item: DownloadItem, priority: Int) {
+    private fun bindHorizontalItem(vb: ItemHorizontalAppBinding, row: StoreAppRow) {
+        val item = row.item
         if (!item.icon.isNullOrEmpty()) {
             Glide.with(vb.ivCover).load(item.icon).into(vb.ivCover)
         } else {
@@ -212,7 +202,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 
         vb.tvAppName.text = item.name
 
-        when (priority) {
+        when (item.priority) {
             DownloadPriority.URGENT.value -> {
                 vb.tvPriority.text = "必装"
                 vb.tvPriority.setNormalBackgroundColor(Color.parseColor("#FF5722"))
@@ -229,21 +219,16 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
             }
         }
 
-        if (item.task == null) {
-            val existingTask = DownloadManager.getTaskByUrl(item.url)
-            if (existingTask != null) item.task = existingTask
-        }
+        bindButtonUI(vb, row.task, row.installed)
 
-        bindButtonUI(vb, item.task, item, checkInstalled = true)
-
-        vb.btnDownload.fastClick { handleClick(item, vb) }
+        vb.btnDownload.fastClick { handleClick(item) }
         vb.ivCover.fastClick { openDetail(item) }
     }
 
     private fun bindButtonUI(
-        vb: ItemHorizontalAppBinding, task: DownloadTask?, item: DownloadItem? = null, checkInstalled: Boolean = false
+        vb: ItemHorizontalAppBinding, task: DownloadTask?, installed: Boolean = false
     ) {
-        if (checkInstalled && item != null && item.isInstalled) {
+        if (installed) {
             vb.btnDownload.setText("打开")
             vb.btnDownload.setProgress(100)
             vb.btnDownload.isEnabled = true
@@ -294,7 +279,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
         }
     }
 
-    private fun handleClick(item: DownloadItem, vb: ItemHorizontalAppBinding) {
+    private fun handleClick(item: DownloadItem) {
         viewLifecycleOwner.lifecycleScope.launch {
             val pkg = item.packageName.orEmpty()
             val storeVC = item.versionCode
@@ -309,14 +294,9 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
             }
 
             val task = DownloadManager.getTaskByUrl(item.url)
-            if (task != null) {
-                item.task = task
-            }
             when (task?.status) {
                 DownloadStatus.DOWNLOADING -> {
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
-                    val pausedTask = task.copy(status = DownloadStatus.PAUSED)
-                    updateItemTask(pausedTask)
                 }
 
                 DownloadStatus.PAUSED -> {
@@ -329,8 +309,6 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 
                 DownloadStatus.WAITING, DownloadStatus.PENDING -> {
                     DownloadManager.pauseTask(task.id, com.pichs.download.model.PauseReason.USER_MANUAL)
-                    val pausedTask = task.copy(status = DownloadStatus.PAUSED)
-                    updateItemTask(pausedTask)
                 }
 
                 DownloadStatus.COMPLETED -> {
@@ -339,14 +317,13 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
                         openApk(task)
                     } else {
                         DownloadManager.deleteTask(task.id, deleteFile = false)
-                        item.task = null
-                        startDownload(item, vb)
+                        startDownload(item)
                     }
                 }
 
-                DownloadStatus.FAILED -> startDownload(item, vb)
+                DownloadStatus.FAILED -> startDownload(item)
                 null -> {
-                    startDownload(item, vb)
+                    startDownload(item)
                 }
 
                 else -> {}
@@ -354,7 +331,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
         }
     }
 
-    private fun startDownload(item: DownloadItem, vb: ItemHorizontalAppBinding) {
+    private fun startDownload(item: DownloadItem) {
         viewModel.requestDownload(item)
     }
 
@@ -502,11 +479,6 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
 
             val tasks = DownloadManager.startTasks(builders)
 
-            tasks.forEach { task ->
-                val item = createList.find { it.url == task.url }
-                if (item != null) item.task = task
-            }
-
             DownloadLog.d("HomeFragment", "批量新建了 ${tasks.size} 个任务")
         }
     }
@@ -522,81 +494,6 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>() {
             putExtra("app_info", item)
         }
         startActivity(i)
-    }
-
-    private fun bindFlowListener() {
-        flowListener.bindToLifecycle(lifecycleOwner = this, onTaskProgress = { task, progress, speed ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTaskWithProgress(task, progress, speed)
-        }, onTaskComplete = { task, file ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        }, onTaskError = { task, error ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        }, onTaskPaused = { task ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        }, onTaskResumed = { task ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        }, onTaskCancelled = { task ->
-            if (isDetached) return@bindToLifecycle
-            updateItemTask(task)
-        })
-    }
-
-    private fun updateItemTask(task: DownloadTask) {
-        updateListItem(urgentList, binding.rvUrgent, task)
-        updateListItem(highList, binding.rvHigh, task)
-        updateListItem(normalList, binding.rvNormal, task)
-    }
-
-    private fun updateListItem(list: List<DownloadItem>, rv: androidx.recyclerview.widget.RecyclerView, task: DownloadTask) {
-        val idx = list.indexOfFirst { it.url == task.url }
-        if (idx >= 0) {
-            (list as MutableList)[idx].task = task
-            rv.adapter?.notifyItemChanged(idx)
-        }
-    }
-
-    private val lastProgressUpdateTimeMap = mutableMapOf<String, Long>()
-    private val progressUpdateInterval = 300L
-
-    private fun updateItemTaskWithProgress(task: DownloadTask, progress: Int, speed: Long) {
-        if (progress >= 100 || task.status == DownloadStatus.COMPLETED) {
-            lastProgressUpdateTimeMap.remove(task.id)
-            updateListItemWithProgress(urgentList, binding.rvUrgent, task)
-            updateListItemWithProgress(highList, binding.rvHigh, task)
-            updateListItemWithProgress(normalList, binding.rvNormal, task)
-            return
-        }
-
-        val now = System.currentTimeMillis()
-        val lastUpdateTime = lastProgressUpdateTimeMap[task.id] ?: 0L
-        if (now - lastUpdateTime < progressUpdateInterval) {
-            return
-        }
-        lastProgressUpdateTimeMap[task.id] = now
-
-        updateListItemWithProgress(urgentList, binding.rvUrgent, task)
-        updateListItemWithProgress(highList, binding.rvHigh, task)
-        updateListItemWithProgress(normalList, binding.rvNormal, task)
-    }
-
-    private fun updateListItemWithProgress(list: List<DownloadItem>, rv: androidx.recyclerview.widget.RecyclerView, task: DownloadTask) {
-        val idx = list.indexOfFirst { it.url == task.url }
-        if (idx >= 0) {
-            val currentItem = (list as MutableList)[idx]
-            if (currentItem.task?.status == DownloadStatus.COMPLETED && task.status != DownloadStatus.COMPLETED) {
-                return
-            }
-
-            currentItem.task = task
-            rv.post {
-                rv.adapter?.notifyItemChanged(idx, "PROGRESS_UPDATE")
-            }
-        }
     }
 
 }

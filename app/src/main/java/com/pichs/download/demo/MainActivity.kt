@@ -5,9 +5,12 @@ import android.content.res.Configuration
 import android.provider.Settings
 import androidx.activity.viewModels
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.pichs.download.core.DownloadManager
 import com.pichs.download.demo.databinding.ActivityMainBinding
+import com.pichs.download.model.DownloadStatus
 import com.pichs.download.utils.DownloadLog
 import com.pichs.shanhai.base.base.BaseActivity
 import com.pichs.shanhai.base.receiver.InstallBroadcastReceiver
@@ -16,6 +19,7 @@ import com.pichs.shanhai.base.utils.toast.ToastUtils
 import com.pichs.download.demo.floatwindow.FloatBallView
 import com.pichs.download.model.DownloadTask
 import com.pichs.xbase.utils.GsonUtils
+import kotlinx.coroutines.launch
 
 class MainActivity : BaseActivity<ActivityMainBinding>() {
 
@@ -31,9 +35,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     private var rankFragment: RankFragment? = null
     private var mineFragment: MineFragment? = null
     private var currentFragment: Fragment? = null
-
-    // Flow监听器 (For FloatBall)
-    private val flowListener = DownloadManager.flowListener
 
     override fun afterOnCreate() {
         NetworkMonitor(onNetworkChanged = { isWifi ->
@@ -135,16 +136,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     }
 
     private fun bindFlowListener() {
-        flowListener.bindToLifecycle(lifecycleOwner = this, onTaskProgress = { task, progress, speed ->
-            if (isDestroyed) return@bindToLifecycle
-            updateFloatBallProgress(task, progress, speed)
-        }, onTaskComplete = { task, file ->
-            // ensure float ball knows?
-        }, onTaskError = { task, error ->
-        }, onTaskPaused = { task ->
-        }, onTaskResumed = { task ->
-        }, onTaskCancelled = { task ->
-        })
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                DownloadManager.flowDownloadListener.observeAllTasks().collect { tasks ->
+                    val active = tasks.firstOrNull { it.status == DownloadStatus.DOWNLOADING }
+                        ?: tasks.firstOrNull { it.status == DownloadStatus.WAITING }
+                    if (active != null) {
+                        updateFloatBallProgress(active, active.progress, active.speed)
+                    }
+                }
+            }
+        }
     }
 
     private fun updateFloatBallProgress(task: DownloadTask, progress: Int, speed: Long) {
